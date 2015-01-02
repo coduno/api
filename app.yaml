@@ -1,0 +1,10 @@
+version: master
+runtime: go
+api_version: go1
+
+handlers:
+- url: /api/.*
+  script: _go_app
+
+- url: /app
+  static_dir: app
