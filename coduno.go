@@ -5,17 +5,18 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"net/http"
 	"strings"
 )
 
-var db = new(sql.DB)
+func connectDatabase() (*sql.DB, error) {
+	return sql.Open("mysql", "root@cloudsql(coduno:mysql)/coduno")
+}
 
 func init() {
-	db, _ = sql.Open("mysql", "root@cloudsql(coduno:db)/coduno")
-
 	http.HandleFunc("/api/token", token)
 }
 
@@ -32,7 +33,7 @@ func generateToken() (string, error) {
 func token(w http.ResponseWriter, req *http.Request) {
 	context := appengine.NewContext(req)
 
-	if ok, username, _ := authenticate(req); ok {
+	if err, username := authenticate(req); err == nil {
 		token, err := generateToken()
 		if err != nil {
 			http.Error(w, "Failed to generate token.", http.StatusInternalServerError)
@@ -41,21 +42,47 @@ func token(w http.ResponseWriter, req *http.Request) {
 			fmt.Fprintf(w, token)
 		}
 	} else {
+		// This could be either invalid/missing credentials or
+		// the database failing, so let's issue a warning.
+		context.Warningf(err.Error())
 		http.Error(w, "Invalid credentials.", http.StatusForbidden)
 	}
 }
 
-func authenticate(req *http.Request) (bool, string, string) {
+func authenticate(req *http.Request) (error, string) {
 	username, password, ok := basicAuth(req)
-	if !ok { // no Authorization header present
-		return false, "", ""
+	if !ok {
+		return errors.New("No Authorization header present"), ""
 	}
-	return check(username, password)
+	return check(username, password), username
 }
 
-func check(username, password string) (bool, string, string) {
-	// TODO use DB to check for something meaningful
-	return username == "flowlo" && password == "cafebabe", username, password
+func check(username, password string) error {
+	db, err := connectDatabase()
+
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	rows, err := db.Query("select count(*) from users where username = ? and password = sha2(concat(?, salt), 512)", username, password)
+
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	var result string
+	rows.Next()
+	rows.Scan(&result)
+
+	if result != "1" {
+		return errors.New("Failed to validate credentials.")
+	}
+
+	return nil
 }
 
 // BasicAuth returns the username and password provided in the request's
