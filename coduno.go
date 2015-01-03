@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"gitlab"
+	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -18,6 +20,27 @@ func connectDatabase() (*sql.DB, error) {
 
 func init() {
 	http.HandleFunc("/api/token", token)
+	http.HandleFunc("/push", push)
+}
+
+func push(w http.ResponseWriter, req *http.Request) {
+	context := appengine.NewContext(req)
+	body, err := ioutil.ReadAll(req.Body)
+
+	if err != nil {
+		context.Warningf(err.Error())
+	} else if len(body) < 1 {
+		context.Warningf("Received empty body.")
+	} else {
+		push, err := gitlab.NewPush(body)
+
+		if err != nil {
+			context.Warningf(err.Error())
+		} else {
+			commit := push.Commits[0]
+			context.Infof("Received push from %s", commit.Author.Email)
+		}
+	}
 }
 
 func generateToken() (string, error) {

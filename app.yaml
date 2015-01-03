@@ -6,5 +6,8 @@ handlers:
 - url: /api/.*
   script: _go_app
 
+- url: /push
+  script: _go_app
+
 - url: /app
   static_dir: app
