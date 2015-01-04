@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 var gitlabToken = "YHQiqMx3qUfj8_FxpFe4"
@@ -27,9 +28,29 @@ func connectDatabase() (*sql.DB, error) {
 	return sql.Open("mysql", "root@cloudsql(coduno:mysql)/coduno")
 }
 
+type Handler func(http.ResponseWriter, *http.Request)
+
+func setupHandler(handler Handler) Handler {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Scheme != "https" {
+			location := r.URL
+			location.Scheme = "https"
+			http.Redirect(w, r, location.String(), 301)
+			return
+		}
+
+		// https://developer.mozilla.org/docs/Web/Security/HTTP_strict_transport_security
+		invalidity := time.Date(2016, time.January, 3, 0, 59, 59, 0, time.UTC)
+		maxAge := int(invalidity.Sub(time.Now()).Seconds())
+		w.Header().Set("Strict-Transport-Security", "max-age=" + string(maxAge))
+
+		handler(w, r)
+	}
+}
+
 func init() {
-	http.HandleFunc("/api/token", token)
-	http.HandleFunc("/push", push)
+	http.HandleFunc("/api/token", setupHandler(token))
+	http.HandleFunc("/push", setupHandler(push))
 }
 
 func push(w http.ResponseWriter, req *http.Request) {
