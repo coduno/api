@@ -1,3 +1,4 @@
+application: coduno
 version: master
 runtime: go
 api_version: go1
@@ -9,5 +10,14 @@ handlers:
 - url: /push
   script: _go_app
 
-- url: /app
-  static_dir: app
+- url: /(.+)
+  static_files: app/\1
+  upload: app/(.+)
+  http_headers:
+    Strict-Transport-Security: max-age=86400
+
+- url: /
+  static_files: app/index.html
+  upload: app/index.html
+  http_headers:
+    Strict-Transport-Security: max-age=86400
