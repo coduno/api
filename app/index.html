@@ -1,1 +1,129 @@
-Nothing to see here ...
+
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8' />
+  <title>Coduno</title>
+  <meta name='layout' content='main'/>
+  <style type='text/css'>
+  @font-face {
+    font-family: 'Raleway';
+    font-style: normal;
+    font-weight: 400;
+    src: local('Raleway'), url(https://fonts.gstatic.com/s/raleway/v9/bIcY3_3JNqUVRAQQRNVteQ.ttf) format('truetype');
+  }
+  @font-face {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 400;
+    src: local('Open Sans'), local('OpenSans'), url(https://fonts.gstatic.com/s/opensans/v10/cJZKeOuBrn4kERxqtaUH3aCWcynf_cDxXwCLxiixG1c.ttf) format('truetype');
+  }
+
+  #logo {
+    font-family: 'Raleway';
+    color: transparent;
+    -webkit-background-clip: text;
+    font-size: 200px;
+    width: 100%;
+    height: 250px;
+    text-align: center;
+    padding: 10px;
+    padding-top: 30px;
+  }
+  header {
+    font-family: 'Raleway';
+    color: #555;
+    font-size: 100px;
+    width: 100%;
+    height: auto;
+    text-align: center;
+    padding: 10px;
+  }
+  #logo img {
+    max-height: 250px;
+  }
+  @-webkit-keyframes fadein {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @-moz-keyframes fadein {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  #people {
+    color: #aaa;
+  }
+  p {
+    text-align: center;
+  }
+  * {
+    margin: 0;
+    padding: 0;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+  }
+  html, body {
+    height: 100%;
+    width: 100%;
+    -webkit-animation: fadein 0.5s ease-in;
+    -moz-animation: fadein 0.5s ease-in;
+  }
+  text {
+    font-size: 130px;
+    font-family: 'Raleway';
+    fill: white;
+  }
+  #people a,
+  #people a:link,
+  #people a:visited {
+    color: #aaa;
+    text-decoration: none;
+    transition: color 1s;
+  }
+  #people a:hover,
+  #people a:active {
+    text-decoration: none;
+    color: black;
+  }
+  input:required:valid {
+    border: 1px solid green;
+  }
+  input:required:invalid {
+    box-shadow: none;
+  }
+  input {
+    border: 1px solid transparent;
+    padding: 5px;
+    border-radius: 3px;
+    width: 25%;
+    text-align: center;
+    font-size: 150%;
+  }
+  *:focus {outline: none;}
+  #system {
+    position: fixed;
+    bottom: 20px;
+    width: 100%;
+    font-family: monospace;
+    color: #ccc;
+    transition: color 1s;
+  }
+  #system:hover {
+    color: #000;
+    cursor: pointer;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+  <div id='logo'>
+    <img src='coduno.png' />
+  </div>
+  <header>Coduno</header>
+  <!--<form method='post'><p><input type='email' placeholder='Your email address for updates...' value='' required /></p></form>
+  <br />
+  <br />-->
+  <p id='people'><a href='mailto:julia.duer@cod.uno'>Julia D&uuml;r</a> &middot; <a href='mailto:lorenz.leutgeb@cod.uno'>Lorenz Leutgeb</a> &middot; <a href='mailto:alexandra.porenta@cod.uno'>Alexandra Porenta</a> &middot; <a href='mailto:angelo.ziwna@cod.uno'>Angelo Ziwna</a></p>
+  <div id='system'><p></p></div>
+</body>
+</html>
