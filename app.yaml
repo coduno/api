@@ -3,6 +3,9 @@ version: master
 runtime: go
 api_version: go1
 
+error_handlers:
+- file: app/error.html
+
 handlers:
 - url: /api/.*
   script: _go_app
