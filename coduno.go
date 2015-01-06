@@ -69,7 +69,18 @@ func push(w http.ResponseWriter, req *http.Request) {
 		} else {
 			commit := push.Commits[0]
 
-			docker, _ := http.NewRequest("POST", "http://docker.cod.uno:2375/v1.15/containers/create", strings.NewReader("{\"Image\": \"ubuntu\", \"Cmd\": [\"date\"]}"))
+			docker, _ := http.NewRequest("POST", "http://docker.cod.uno:2375/v1.15/containers/create", strings.NewReader(`
+				{
+					"Image": "coduno/git:experimental",
+					"Cmd": ["/start.sh"],
+					"Env": [
+						"CODUNO_REPOSITORY_NAME=`+push.Repository.Name+`",
+						"CODUNO_REPOSITORY_URL=`+push.Repository.URL+`",
+						"CODUNO_REPOSITORY_HOMEPAGE=`+push.Repository.Homepage+`",
+						"CODUNO_REF=`+push.Ref+`"
+					]
+				}
+			`))
 
 			docker.Header = map[string][]string{
 				"Content-Type": {"application/json"},
