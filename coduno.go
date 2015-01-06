@@ -41,8 +41,8 @@ func setupHandler(handler Handler) Handler {
 
 		// https://developer.mozilla.org/docs/Web/Security/HTTP_strict_transport_security
 		invalidity := time.Date(2016, time.January, 3, 0, 59, 59, 0, time.UTC)
-		maxAge := int(invalidity.Sub(time.Now()).Seconds())
-		w.Header().Set("Strict-Transport-Security", "max-age=" + string(maxAge))
+		maxAge := invalidity.Sub(time.Now()).Seconds()
+		w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d", int(maxAge)))
 
 		handler(w, r)
 	}
