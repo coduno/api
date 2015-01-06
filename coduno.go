@@ -32,13 +32,19 @@ type Handler func(http.ResponseWriter, *http.Request)
 
 func setupHandler(handler Handler) Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Redirect all HTTP requests to their HTTPS version.
+		// This uses a permanent redirect to make clients adjust their bookmarks.
 		if r.URL.Scheme != "https" {
 			location := r.URL
 			location.Scheme = "https"
-			http.Redirect(w, r, location.String(), 301)
+			http.Redirect(w, r, location.String(), http.StatusMovedPermanently)
 			return
 		}
 
+		// Protect against HTTP downgrade attacks by explicitly telling
+		// clients to use HTTPS.
+		// max-age is computed to match the expiration date of our TLS
+		// certificate (minus approx. one day buffer).
 		// https://developer.mozilla.org/docs/Web/Security/HTTP_strict_transport_security
 		invalidity := time.Date(2016, time.January, 3, 0, 59, 59, 0, time.UTC)
 		maxAge := invalidity.Sub(time.Now()).Seconds()
