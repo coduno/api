@@ -2,31 +2,37 @@ application: coduno
 version: master
 runtime: go
 api_version: go1
-
-error_handlers:
-- file: app/error.html
+default_expiration: 4d
 
 handlers:
 - url: /api/.*
   script: _go_app
+  secure: always
 
 - url: /push
   script: _go_app
-
-- url: /(.+)
-  static_files: app/\1
-  upload: app/(.+)
-  http_headers:
-    Strict-Transport-Security: max-age=86400
-
-- url: /
-  static_files: app/index.html
-  upload: app/index.html
-  http_headers:
-    Strict-Transport-Security: max-age=86400
+  secure: always
 
 - url: /legals
   static_files: app/legals.html
   upload: app/legals.html
+  secure: always
+  expiration: 14d
   http_headers:
-    Strict-Transport-Security: max-age=86400
+    Strict-Transport-Security: max-age=15552000
+
+- url: /(.+)
+  static_files: app/\1
+  upload: app/(.+)
+  secure: always
+  expiration: 4d
+  http_headers:
+    Strict-Transport-Security: max-age=15552000
+
+- url: /
+  static_files: app/index.html
+  upload: app/index.html
+  secure: always
+  expiration: 1d
+  http_headers:
+    Strict-Transport-Security: max-age=15552000
