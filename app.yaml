@@ -24,3 +24,9 @@ handlers:
   upload: app/index.html
   http_headers:
     Strict-Transport-Security: max-age=86400
+
+- url: /legals
+  static_files: app/legals.html
+  upload: app/legals.html
+  http_headers:
+    Strict-Transport-Security: max-age=86400
