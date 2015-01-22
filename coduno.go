@@ -56,7 +56,7 @@ func setupHandler(handler Handler) Handler {
 
 func init() {
 	http.HandleFunc("/api/token", setupHandler(token))
-	http.HandleFunc("/push", setupHandler(push))
+	http.HandleFunc("/api/push", setupHandler(push))
 }
 
 func push(w http.ResponseWriter, req *http.Request) {
