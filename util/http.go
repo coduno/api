@@ -36,3 +36,9 @@ func parseBasicAuth(auth string) (username, password string, ok bool) {
 	}
 	return cs[:s], cs[s+1:], true
 }
+
+// A simple wrapper around http.SetCookie that enforces HttpOnly and Secure flags.
+func SetCookie(w http.ResponseWriter, cookie *http.Cookie) {
+	cookie.Secure, cookie.HttpOnly = true, true
+	http.SetCookie(w, cookie)
+}
