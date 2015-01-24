@@ -1,14 +1,14 @@
 package coduno
 
 import (
-	"appengine"
-	"appengine/urlfetch"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gitlab"
+	"github.com/coduno/app/gitlab"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/urlfetch"
 	"io/ioutil"
 	"net/http"
 	"net/url"

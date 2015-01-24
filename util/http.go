@@ -1,10 +1,16 @@
 package util
 
+import (
+	"encoding/base64"
+	"net/http"
+	"strings"
+)
+
 // BasicAuth returns the username and password provided in the request's
 // Authorization header, if the request uses HTTP Basic Authentication.
 // See RFC 2617, Section 2.
 // This will be obsoleted by go1.4
-func basicAuth(r *http.Request) (username, password string, ok bool) {
+func BasicAuth(r *http.Request) (username, password string, ok bool) {
 	auth := r.Header.Get("Authorization")
 	if auth == "" {
 		return
