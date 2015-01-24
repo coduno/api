@@ -4,12 +4,10 @@ import (
 	"appengine"
 	"appengine/urlfetch"
 	"crypto/rand"
-	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"gitlab"
 	"io/ioutil"
 	"net/http"
@@ -22,10 +20,6 @@ var gitlabToken = "YHQiqMx3qUfj8_FxpFe4"
 
 type ContainerCreation struct {
 	Id string `json:"Id"`
-}
-
-func connectDatabase() (*sql.DB, error) {
-	return sql.Open("mysql", "root@cloudsql(coduno:mysql)/coduno")
 }
 
 type Handler func(http.ResponseWriter, *http.Request)
@@ -215,34 +209,6 @@ func authenticate(req *http.Request) (error, string) {
 		return errors.New("No Authorization header present"), ""
 	}
 	return check(username, password), username
-}
-
-func check(username, password string) error {
-	db, err := connectDatabase()
-
-	if err != nil {
-		return err
-	}
-
-	defer db.Close()
-
-	rows, err := db.Query("select count(*) from users where username = ? and password = sha2(concat(?, salt), 512)", username, password)
-
-	if err != nil {
-		return err
-	}
-
-	defer rows.Close()
-
-	var result string
-	rows.Next()
-	rows.Scan(&result)
-
-	if result != "1" {
-		return errors.New("Failed to validate credentials.")
-	}
-
-	return nil
 }
 
 // BasicAuth returns the username and password provided in the request's
