@@ -7,7 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/coduno/app/gitlab"
+	"github.com/coduno/app/util"
+	"golang.org/x/net/context"
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/urlfetch"
 	"io/ioutil"
 	"net/http"
@@ -24,7 +27,10 @@ type ContainerCreation struct {
 
 type Handler func(http.ResponseWriter, *http.Request)
 
-func setupHandler(handler Handler) Handler {
+// A basic wrapper that is extremely general and takes care of baseline features, such
+// as tightly timed HSTS for all requests and automatic upgrades from HTTP to HTTPS.
+// All outbound flows SHOULD be wrapped.
+func setupHandler(handler func(http.ResponseWriter, *http.Request, context.Context)) Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Redirect all HTTP requests to their HTTPS version.
 		// This uses a permanent redirect to make clients adjust their bookmarks.
@@ -44,7 +50,12 @@ func setupHandler(handler Handler) Handler {
 		maxAge := invalidity.Sub(time.Now()).Seconds()
 		w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d", int(maxAge)))
 
-		handler(w, r)
+		// appengine.NewContext is cheap, and context is needed in many
+		// handlers, so create one here.
+		c := appengine.NewContext(r)
+
+		// All wrapping is done, call the original handler.
+		handler(w, r, c)
 	}
 }
 
@@ -53,19 +64,18 @@ func init() {
 	http.HandleFunc("/api/push", setupHandler(push))
 }
 
-func push(w http.ResponseWriter, req *http.Request) {
-	context := appengine.NewContext(req)
+func push(w http.ResponseWriter, req *http.Request, c context.Context) {
 	body, err := ioutil.ReadAll(req.Body)
 
 	if err != nil {
-		context.Warningf(err.Error())
+		log.Warningf(c, err.Error())
 	} else if len(body) < 1 {
-		context.Warningf("Received empty body.")
+		log.Warningf(c, "Received empty body.")
 	} else {
 		push, err := gitlab.NewPush(body)
 
 		if err != nil {
-			context.Warningf(err.Error())
+			log.Warningf(c, err.Error())
 		} else {
 			commit := push.Commits[0]
 
@@ -87,11 +97,11 @@ func push(w http.ResponseWriter, req *http.Request) {
 				"Accept":       {"application/json"},
 			}
 
-			client := urlfetch.Client(context)
+			client := urlfetch.Client(c)
 			res, err := client.Do(docker)
 
 			if err != nil {
-				context.Debugf("Docker API response:", err.Error())
+				log.Debugf(c, "Docker API response:", err.Error())
 				return
 			}
 
@@ -100,8 +110,8 @@ func push(w http.ResponseWriter, req *http.Request) {
 			err = json.Unmarshal(body, &result)
 
 			if err != nil {
-				context.Debugf("Received body %d: %s", res.StatusCode, string(body))
-				context.Debugf("Unmarshalling API response: %s", err.Error())
+				log.Debugf(c, "Received body %d: %s", res.StatusCode, string(body))
+				log.Debugf(c, "Unmarshalling API response: %s", err.Error())
 				return
 			}
 
@@ -115,18 +125,18 @@ func push(w http.ResponseWriter, req *http.Request) {
 			res, err = client.Do(docker)
 
 			if err != nil {
-				context.Debugf("Docker API response 2: %s", err.Error())
+				log.Debugf(c, "Docker API response 2: %s", err.Error())
 			} else {
 				result, err := ioutil.ReadAll(res.Body)
 				if err != nil {
-					context.Debugf(err.Error())
+					log.Debugf(c, err.Error())
 				} else {
-					context.Debugf(string(result))
+					log.Debugf(c, string(result))
 				}
 			}
 			defer res.Body.Close()
 
-			context.Infof("Received push from %s", commit.Author.Email)
+			log.Infof(c, "Received push from %s", commit.Author.Email)
 		}
 	}
 }
@@ -141,9 +151,7 @@ func generateToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(token), nil
 }
 
-func token(w http.ResponseWriter, req *http.Request) {
-	context := appengine.NewContext(req)
-
+func token(w http.ResponseWriter, req *http.Request, c context.Context) {
 	if req.Method != "POST" {
 		w.Header().Set("Allow", "POST")
 		http.Error(w, "Invalid method.", http.StatusMethodNotAllowed)
@@ -178,35 +186,35 @@ func token(w http.ResponseWriter, req *http.Request) {
 				"Accept":        {"application/json"},
 			}
 
-			client := urlfetch.Client(context)
+			client := urlfetch.Client(c)
 			res, err := client.Do(gitlabReq)
 			if err != nil {
-				context.Debugf(err.Error())
+				log.Debugf(c, err.Error())
 			} else {
 				result, err := ioutil.ReadAll(res.Body)
 				if err != nil {
-					context.Debugf(err.Error())
+					log.Debugf(c, err.Error())
 				} else {
-					context.Debugf(string(result))
+					log.Debugf(c, string(result))
 				}
 			}
 			defer res.Body.Close()
 
-			context.Infof("Generated token for '%s'", username)
+			log.Infof(c, "Generated token for '%s'", username)
 			fmt.Fprintf(w, token)
 		}
 	} else {
 		// This could be either invalid/missing credentials or
 		// the database failing, so let's issue a warning.
-		context.Warningf(err.Error())
+		log.Warningf(c, err.Error())
 		http.Error(w, "Invalid credentials.", http.StatusForbidden)
 	}
 }
 
 func authenticate(req *http.Request) (error, string) {
-	username, password, ok := basicAuth(req)
+	username, _, ok := util.BasicAuth(req)
 	if !ok {
-		return errors.New("No Authorization header present"), ""
+		return errors.New("No Authorization header present."), ""
 	}
-	return check(username, password), username
+	return errors.New("No authorization backend present."), username
 }
