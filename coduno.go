@@ -6,17 +6,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/coduno/app/gitlab"
-	"github.com/coduno/app/util"
-	"golang.org/x/net/context"
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/log"
-	"google.golang.org/appengine/urlfetch"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/urlfetch"
+
+	"github.com/coduno/app/gitlab"
+	"github.com/coduno/app/util"
 )
 
 var gitlabToken = "YHQiqMx3qUfj8_FxpFe4"
