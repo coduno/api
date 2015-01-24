@@ -60,7 +60,13 @@ func setupHandler(handler func(http.ResponseWriter, *http.Request, context.Conte
 func init() {
 	http.HandleFunc("/api/token", setupHandler(token))
 	http.HandleFunc("/api/push", setupHandler(controllers.Push))
+	http.HandleFunc("/_ah/health", health)
 }
+
+func health(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprint(w, "OK")
+}
+
 
 func generateToken() (string, error) {
 	token := make([]byte, 64)

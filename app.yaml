@@ -1,12 +1,37 @@
-application: coduno
 version: master
 runtime: go
 api_version: go1
+vm: true
+
+automatic_scaling:
+  min_num_instances: 2
+  max_num_instances: 5
+  cool_down_period_sec: 60
+  cpu_utilization:
+    target_utilization: 0.8
+
+health_check:
+  enable_health_check: True
+  check_interval_sec: 5
+  timeout_sec: 4
+  unhealthy_threshold: 2
+  healthy_threshold: 2
+  restart_threshold: 60
+
+network:
+  instance_tag: "mvm"
+
+resources:
+  cpu: .5
+  memory_gb: 1.3
 
 handlers:
   - url: /api/.+
     script: _go_app
     secure: always
+
+  - url: /_ah/.+
+    script: _go_app
 
   - url: /(.+)
     static_files: web/\1
