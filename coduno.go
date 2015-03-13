@@ -1,4 +1,4 @@
-package coduno
+package main
 
 import (
 	"crypto/rand"
@@ -57,16 +57,26 @@ func setupHandler(handler func(http.ResponseWriter, *http.Request, context.Conte
 	}
 }
 
-func init() {
+func main() {
 	http.HandleFunc("/api/token", setupHandler(token))
 	http.HandleFunc("/api/push", setupHandler(controllers.Push))
 	http.HandleFunc("/_ah/health", health)
+	http.HandleFunc("/_ah/start", start)
+	http.HandleFunc("/_ah/stop", stop)
+	http.ListenAndServe(":8080", nil)
 }
 
 func health(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(w, "OK")
 }
 
+func start(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprint(w, "OK")
+}
+
+func stop(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprint(w, "Stopping...")
+}
 
 func generateToken() (string, error) {
 	token := make([]byte, 64)

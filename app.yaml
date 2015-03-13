@@ -1,6 +1,7 @@
 version: master
 runtime: custom
 vm: true
+api_version: go1
 
 automatic_scaling:
   min_num_instances: 1
