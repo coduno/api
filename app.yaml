@@ -1,11 +1,15 @@
 application: coduno
-version: master
+version: mail
 runtime: go
 api_version: go1
 default_expiration: 4d
 
 handlers:
 - url: /api/.*
+  script: _go_app
+  secure: always
+
+- url: /subscriptions
   script: _go_app
   secure: always
 
