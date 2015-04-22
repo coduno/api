@@ -12,11 +12,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"gitlab"
 	"io/ioutil"
+	"mail"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-	"mail"
 )
 
 var gitlabToken = "YHQiqMx3qUfj8_FxpFe4"

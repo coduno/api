@@ -4,15 +4,15 @@ import (
 	"appengine"
 	"appengine/datastore"
 	appmail "appengine/mail"
+	"bytes"
 	"crypto/rand"
-	"net/http"
-	"net/mail"
 	"encoding/hex"
 	"fmt"
-	"bytes"
-	"time"
 	"io/ioutil"
+	"net/http"
+	"net/mail"
 	"text/template"
+	"time"
 )
 
 type Subscription struct {
@@ -22,14 +22,14 @@ type Subscription struct {
 	VerificationTime time.Time
 }
 
-var verify = template.New("verify");
+var verify = template.New("verify")
 
 func init() {
 	// Add function map to template engine
 	m := make(template.FuncMap)
 	m["encode"] = hex.EncodeToString
-	verify.Funcs(m);
-	
+	verify.Funcs(m)
+
 	// Prepare verify mail template
 	dat, err := ioutil.ReadFile("./mail/mail.verify")
 	if err != nil {
@@ -220,9 +220,9 @@ func (sub Subscription) RequestConfirmation(c appengine.Context) error {
 	var message bytes.Buffer
 	err := verify.Execute(&message, sub)
 	if err != nil {
-		return err;
+		return err
 	}
-	
+
 	return appmail.Send(c, &appmail.Message{
 		Sender:  "Lorenz Leutgeb <lorenz.leutgeb@cod.uno>",
 		To:      []string{sub.Address},
