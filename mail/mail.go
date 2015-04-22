@@ -7,21 +7,39 @@ import (
 	"crypto/rand"
 	"net/http"
 	"net/mail"
-	"net/url"
 	"encoding/hex"
 	"fmt"
 	"bytes"
 	"time"
-	"strings"
 	"io/ioutil"
+	"text/template"
 )
-
 
 type Subscription struct {
 	Address          string
 	EntryTime        time.Time
 	Token            []byte
 	VerificationTime time.Time
+}
+
+var verify = template.New("verify");
+
+func init() {
+	// Add function map to template engine
+	m := make(template.FuncMap)
+	m["encode"] = hex.EncodeToString
+	verify.Funcs(m);
+	
+	// Prepare verify mail template
+	dat, err := ioutil.ReadFile("./mail/mail.verify")
+	if err != nil {
+		panic(err)
+	}
+	message := string(dat[:])
+	verify, err = verify.Parse(message)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func Subscriptions(w http.ResponseWriter, r *http.Request) {
@@ -198,20 +216,17 @@ func subscribe(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("A message to confirm your subscription was sent."))
 }
 
-func getMessage(token []byte, address string) string { 
-	dat, err := ioutil.ReadFile("mail.verify")
-	if err != nil {
-		return ""
-	}
-	message := string(dat[:])
-	return strings.Replace(strings.Replace(message, "[[TOKEN]]", hex.EncodeToString(token), -1), "[[ADDRESS]]", url.QueryEscape(address), -1)
-}
-
 func (sub Subscription) RequestConfirmation(c appengine.Context) error {
+	var message bytes.Buffer
+	err := verify.Execute(&message, sub)
+	if err != nil {
+		return err;
+	}
+	
 	return appmail.Send(c, &appmail.Message{
 		Sender:  "Lorenz Leutgeb <lorenz.leutgeb@cod.uno>",
 		To:      []string{sub.Address},
 		Subject: "Hello from Coduno",
-		Body:    getMessage(sub.Token, sub.Address),
+		Body:    message.String(),
 	})
 }
