@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"mail"
 	"net/http"
 	"net/url"
 	"strings"
@@ -59,11 +60,12 @@ func setupHandler(handler func(http.ResponseWriter, *http.Request, context.Conte
 
 func main() {
 	http.HandleFunc("/api/token", setupHandler(token))
-	http.HandleFunc("/api/push", setupHandler(controllers.Push))
 	http.HandleFunc("/_ah/health", health)
 	http.HandleFunc("/_ah/start", start)
 	http.HandleFunc("/_ah/stop", stop)
 	http.ListenAndServe(":8080", nil)
+	http.HandleFunc("/push", setupHandler(controllers.Push))
+	http.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
 }
 
 func health(w http.ResponseWriter, req *http.Request) {

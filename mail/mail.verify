@@ -1,0 +1,5 @@
+Hey there,
+
+click this Link to make it happen: https://www.cod.uno/subscriptions?action=confirm&email={{urlquery .Address}}&token={{encode .Token}}
+
+In case you want to undo all previous actions, please click here: https://www.cod.uno/subscriptions?action=delete&email={{urlquery .Address}}&token={{encode .Token}}
