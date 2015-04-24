@@ -48,6 +48,11 @@ func setupHandler(handler func(http.ResponseWriter, *http.Request, context.Conte
 		maxAge := invalidity.Sub(time.Now()).Seconds()
 		w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d", int(maxAge)))
 
+		// Pin our keys. Always make sure to pin the current key and an independent backup
+		// key to be used in case of a breach.
+		pins := []string{}
+		w.Header().Set("Public-Key-Pins", strings.Join(pins, "
+
 		// appengine.NewContext is cheap, and context is needed in many
 		// handlers, so create one here.
 		c := appengine.NewContext(r)
