@@ -1,37 +1,35 @@
-package coduno
+package main
 
 import (
-	"appengine"
-	"appengine/urlfetch"
 	"crypto/rand"
-	"database/sql"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	"gitlab"
 	"io/ioutil"
 	"mail"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/urlfetch"
+
+	"github.com/coduno/app/controllers"
+	"github.com/coduno/app/util"
 )
 
 var gitlabToken = "YHQiqMx3qUfj8_FxpFe4"
 
-type ContainerCreation struct {
-	Id string `json:"Id"`
-}
-
-func connectDatabase() (*sql.DB, error) {
-	return sql.Open("mysql", "root@cloudsql(coduno:mysql)/coduno")
-}
-
 type Handler func(http.ResponseWriter, *http.Request)
 
-func setupHandler(handler Handler) Handler {
+// A basic wrapper that is extremely general and takes care of baseline features, such
+// as tightly timed HSTS for all requests and automatic upgrades from HTTP to HTTPS.
+// All outbound flows SHOULD be wrapped.
+func setupHandler(handler func(http.ResponseWriter, *http.Request, context.Context)) Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Redirect all HTTP requests to their HTTPS version.
 		// This uses a permanent redirect to make clients adjust their bookmarks.
@@ -51,92 +49,35 @@ func setupHandler(handler Handler) Handler {
 		maxAge := invalidity.Sub(time.Now()).Seconds()
 		w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d", int(maxAge)))
 
-		handler(w, r)
+		// appengine.NewContext is cheap, and context is needed in many
+		// handlers, so create one here.
+		c := appengine.NewContext(r)
+
+		// All wrapping is done, call the original handler.
+		handler(w, r, c)
 	}
 }
 
-func init() {
+func main() {
 	http.HandleFunc("/api/token", setupHandler(token))
-	http.HandleFunc("/push", setupHandler(push))
 	http.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
+	http.HandleFunc("/api/push", setupHandler(controllers.Push))
+	http.HandleFunc("/_ah/health", health)
+	http.HandleFunc("/_ah/start", start)
+	http.HandleFunc("/_ah/stop", stop)
+	http.ListenAndServe(":8080", nil)
 }
 
-func push(w http.ResponseWriter, req *http.Request) {
-	context := appengine.NewContext(req)
-	body, err := ioutil.ReadAll(req.Body)
+func health(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprint(w, "OK")
+}
 
-	if err != nil {
-		context.Warningf(err.Error())
-	} else if len(body) < 1 {
-		context.Warningf("Received empty body.")
-	} else {
-		push, err := gitlab.NewPush(body)
+func start(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprint(w, "OK")
+}
 
-		if err != nil {
-			context.Warningf(err.Error())
-		} else {
-			commit := push.Commits[0]
-
-			docker, _ := http.NewRequest("POST", "http://docker.cod.uno:2375/v1.15/containers/create", strings.NewReader(`
-				{
-					"Image": "coduno/git:experimental",
-					"Cmd": ["/start.sh"],
-					"Env": [
-						"CODUNO_REPOSITORY_NAME=`+push.Repository.Name+`",
-						"CODUNO_REPOSITORY_URL=`+push.Repository.URL+`",
-						"CODUNO_REPOSITORY_HOMEPAGE=`+push.Repository.Homepage+`",
-						"CODUNO_REF=`+push.Ref+`"
-					]
-				}
-			`))
-
-			docker.Header = map[string][]string{
-				"Content-Type": {"application/json"},
-				"Accept":       {"application/json"},
-			}
-
-			client := urlfetch.Client(context)
-			res, err := client.Do(docker)
-
-			if err != nil {
-				context.Debugf("Docker API response:", err.Error())
-				return
-			}
-
-			var result ContainerCreation
-			body, err := ioutil.ReadAll(res.Body)
-			err = json.Unmarshal(body, &result)
-
-			if err != nil {
-				context.Debugf("Received body %d: %s", res.StatusCode, string(body))
-				context.Debugf("Unmarshalling API response: %s", err.Error())
-				return
-			}
-
-			docker, _ = http.NewRequest("POST", "http://docker.cod.uno:2375/v1.15/containers/"+result.Id+"/start", nil)
-
-			docker.Header = map[string][]string{
-				"Content-Type": {"application/json"},
-				"Accept":       {"application/json"},
-			}
-
-			res, err = client.Do(docker)
-
-			if err != nil {
-				context.Debugf("Docker API response 2: %s", err.Error())
-			} else {
-				result, err := ioutil.ReadAll(res.Body)
-				if err != nil {
-					context.Debugf(err.Error())
-				} else {
-					context.Debugf(string(result))
-				}
-			}
-			defer res.Body.Close()
-
-			context.Infof("Received push from %s", commit.Author.Email)
-		}
-	}
+func stop(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprint(w, "Stopping...")
 }
 
 func generateToken() (string, error) {
@@ -149,9 +90,7 @@ func generateToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(token), nil
 }
 
-func token(w http.ResponseWriter, req *http.Request) {
-	context := appengine.NewContext(req)
-
+func token(w http.ResponseWriter, req *http.Request, c context.Context) {
 	if req.Method != "POST" {
 		w.Header().Set("Allow", "POST")
 		http.Error(w, "Invalid method.", http.StatusMethodNotAllowed)
@@ -186,94 +125,35 @@ func token(w http.ResponseWriter, req *http.Request) {
 				"Accept":        {"application/json"},
 			}
 
-			client := urlfetch.Client(context)
+			client := urlfetch.Client(c)
 			res, err := client.Do(gitlabReq)
 			if err != nil {
-				context.Debugf(err.Error())
+				log.Debugf(c, err.Error())
 			} else {
 				result, err := ioutil.ReadAll(res.Body)
 				if err != nil {
-					context.Debugf(err.Error())
+					log.Debugf(c, err.Error())
 				} else {
-					context.Debugf(string(result))
+					log.Debugf(c, string(result))
 				}
 			}
 			defer res.Body.Close()
 
-			context.Infof("Generated token for '%s'", username)
+			log.Infof(c, "Generated token for '%s'", username)
 			fmt.Fprintf(w, token)
 		}
 	} else {
 		// This could be either invalid/missing credentials or
 		// the database failing, so let's issue a warning.
-		context.Warningf(err.Error())
+		log.Warningf(c, err.Error())
 		http.Error(w, "Invalid credentials.", http.StatusForbidden)
 	}
 }
 
 func authenticate(req *http.Request) (error, string) {
-	username, password, ok := basicAuth(req)
+	username, _, ok := util.BasicAuth(req)
 	if !ok {
-		return errors.New("No Authorization header present"), ""
+		return errors.New("No Authorization header present."), ""
 	}
-	return check(username, password), username
-}
-
-func check(username, password string) error {
-	db, err := connectDatabase()
-
-	if err != nil {
-		return err
-	}
-
-	defer db.Close()
-
-	rows, err := db.Query("select count(*) from users where username = ? and password = sha2(concat(?, salt), 512)", username, password)
-
-	if err != nil {
-		return err
-	}
-
-	defer rows.Close()
-
-	var result string
-	rows.Next()
-	rows.Scan(&result)
-
-	if result != "1" {
-		return errors.New("Failed to validate credentials.")
-	}
-
-	return nil
-}
-
-// BasicAuth returns the username and password provided in the request's
-// Authorization header, if the request uses HTTP Basic Authentication.
-// See RFC 2617, Section 2.
-// This will be obsoleted by go1.4
-func basicAuth(r *http.Request) (username, password string, ok bool) {
-	auth := r.Header.Get("Authorization")
-	if auth == "" {
-		return
-	}
-	return parseBasicAuth(auth)
-}
-
-// parseBasicAuth parses an HTTP Basic Authentication string.
-// "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==" returns ("Aladdin", "open sesame", true).
-// This will be obsoleted by go1.4
-func parseBasicAuth(auth string) (username, password string, ok bool) {
-	if !strings.HasPrefix(auth, "Basic ") {
-		return
-	}
-	c, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(auth, "Basic "))
-	if err != nil {
-		return
-	}
-	cs := string(c)
-	s := strings.IndexByte(cs, ':')
-	if s < 0 {
-		return
-	}
-	return cs[:s], cs[s+1:], true
+	return errors.New("No authorization backend present."), username
 }
