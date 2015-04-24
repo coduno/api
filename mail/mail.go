@@ -1,9 +1,6 @@
 package mail
 
 import (
-	"appengine"
-	"appengine/datastore"
-	appmail "appengine/mail"
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
@@ -13,6 +10,12 @@ import (
 	"net/mail"
 	"text/template"
 	"time"
+
+	"golang.org/x/net/context"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
+	appmail "google.golang.org/appengine/mail"
 )
 
 type Subscription struct {
@@ -42,7 +45,7 @@ func init() {
 	}
 }
 
-func Subscriptions(w http.ResponseWriter, r *http.Request) {
+func Subscriptions(w http.ResponseWriter, r *http.Request, c context.Context) {
 	if r.Method == "POST" {
 		subscribe(w, r)
 	} else if r.Method == "GET" {
@@ -53,7 +56,7 @@ func Subscriptions(w http.ResponseWriter, r *http.Request) {
 			delete(w, r)
 		} else {
 			c := appengine.NewContext(r)
-			c.Infof("What happend?")
+			log.Infof(c, "What happend?")
 			http.Error(w, "Unknown action.", http.StatusBadRequest)
 		}
 	} else {
@@ -216,7 +219,7 @@ func subscribe(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("A message to confirm your subscription was sent."))
 }
 
-func (sub Subscription) RequestConfirmation(c appengine.Context) error {
+func (sub Subscription) RequestConfirmation(c context.Context) error {
 	var message bytes.Buffer
 	err := verify.Execute(&message, sub)
 	if err != nil {

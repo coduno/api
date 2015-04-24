@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"mail"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"google.golang.org/appengine/urlfetch"
 
 	"github.com/coduno/app/controllers"
+	"github.com/coduno/app/mail"
 	"github.com/coduno/app/util"
 )
 
