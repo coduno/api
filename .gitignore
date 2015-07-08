@@ -1,2 +1,13 @@
-/web/
+# static web files
+/web
+
+# temporary files
 *~
+*.save*
+*.swp
+
+# backup files
+*.bak
+
+# generated binary
+coduno
