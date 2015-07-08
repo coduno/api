@@ -1,3 +1,3 @@
 #!/bin/bash
-go build -work -x -v -o coduno
-gcloud preview app run app.yaml
+export GAE_LOCAL_VM_RUNTIME=1
+gcloud --verbosity debug preview app run app.yaml --enable-mvm-logs
