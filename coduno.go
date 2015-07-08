@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/coduno/app/controllers"
+	"github.com/coduno/app/mail"
 
 	"golang.org/x/net/context"
 
@@ -27,6 +28,7 @@ var gitlabToken = "YHQiqMx3qUfj8_FxpFe4"
 type Handler func(http.ResponseWriter, *http.Request, context.Context)
 
 func main() {
+	http.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
 	http.HandleFunc("/api/token", setupHandler(token))
 	http.HandleFunc("/api/push", setupHandler(controllers.Push))
 	appengine.Main()
