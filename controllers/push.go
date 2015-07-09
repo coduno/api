@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 
@@ -9,7 +10,7 @@ import (
 
 	"google.golang.org/appengine/log"
 
-	"github.com/coduno/app/models"
+	"models"
 )
 
 func Push(w http.ResponseWriter, r *http.Request, c context.Context) {
@@ -38,4 +39,8 @@ func Push(w http.ResponseWriter, r *http.Request, c context.Context) {
 	//err = build.Start()
 
 	log.Infof(c, "Received push for %s at %s.", build.Hash, build.Repository)
+}
+
+func Lol(w http.ResponseWriter, r *http.Request, c context.Context) {
+	io.WriteString(w, "lol")
 }
