@@ -13,6 +13,7 @@ import (
 
 	"github.com/coduno/app/controllers"
 	"github.com/coduno/app/mail"
+	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
 
@@ -28,9 +29,13 @@ var gitlabToken = "YHQiqMx3qUfj8_FxpFe4"
 type Handler func(http.ResponseWriter, *http.Request, context.Context)
 
 func main() {
-	http.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
-	http.HandleFunc("/api/token", setupHandler(token))
-	http.HandleFunc("/api/push", setupHandler(controllers.Push))
+	r := mux.NewRouter()
+	r.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
+	r.HandleFunc("/api/token", setupHandler(token))
+	r.HandleFunc("/api/push", setupHandler(controllers.Push))
+	r.HandleFunc("/api/code/upload", controllers.UploadCode)
+	r.HandleFunc("/api/code/download", controllers.DownloadTemplate)
+	http.Handle("/", r)
 	appengine.Main()
 }
 
