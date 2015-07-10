@@ -1,4 +1,3 @@
-version: master
 runtime: go
 vm: true
 api_version: go1
