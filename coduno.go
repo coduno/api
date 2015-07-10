@@ -47,14 +47,22 @@ func setupHandler(handler Handler) http.HandlerFunc {
 		ctx := appengine.NewContext(r)
 
 		if !appengine.IsDevAppServer() {
-
 			// Redirect all HTTP requests to their HTTPS version.
 			// This uses a permanent redirect to make clients adjust their bookmarks.
 			// This is only done on production.
 			if r.URL.Scheme != "https" {
-				location := r.URL
-				location.Scheme = "https"
-				http.Redirect(w, r, location.String(), http.StatusMovedPermanently)
+				version := appengine.VersionID(ctx)
+				version = version[0:strings.Index(version, ".")]
+
+				// Using www here, because cod.uno will redirect to www
+				// anyway.
+				host := "www.cod.uno"
+				if version != "master" {
+					host = version + "-dot-coduno.appspot.com"
+				}
+
+				location := "https://" + host + r.URL.Path
+				http.Redirect(w, r, location, http.StatusMovedPermanently)
 				return
 			}
 
