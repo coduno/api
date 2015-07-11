@@ -37,6 +37,7 @@ func main() {
 	r.HandleFunc("/api/push", setupHandler(controllers.Push))
 	r.HandleFunc("/api/code/upload", controllers.UploadCode)
 	r.HandleFunc("/api/code/download", controllers.DownloadTemplate)
+	r.HandleFunc("/api/token/check/{token}", setupHandler(controllers.CheckToken))
 	r.HandleFunc("/api/mock", mockData)
 	http.Handle("/", r)
 	appengine.Main()
@@ -57,7 +58,7 @@ func mockData(w http.ResponseWriter, req *http.Request) {
 	coder := models.Coder{Email: "victor.balan@cod.uno", FirstName: "Victor", LastName: "Balan"}
 	coderKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "coders", nil), &coder)
 
-	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challengeKey, Token: []byte("ag1812378asgvasvasdnkcasr23vva=")}
+	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challengeKey, Token: "ag1812378asgvasvasdnkcasr23vva="}
 	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "fingerprints", nil), &fingerprint)
 }
 

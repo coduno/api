@@ -7,5 +7,5 @@ type Fingerprint struct {
 	EntityID  string         `json:"id"`
 	Coder     *datastore.Key `json:"coder"`
 	Challenge *datastore.Key `json:"challenge"`
-	Token     []byte         `json:"token"`
+	Token     string         `json:"token"`
 }
