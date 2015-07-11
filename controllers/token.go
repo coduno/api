@@ -22,7 +22,7 @@ func CheckToken(w http.ResponseWriter, r *http.Request, c context.Context) {
 	token := mux.Vars(r)["token"]
 	q := datastore.NewQuery("fingerprints").Filter("Token = ", token).Limit(1)
 	var fingerprints []models.Fingerprint
-	keys, err := q.GetAll(c, &fingerprints)
+	_, err := q.GetAll(c, &fingerprints)
 	if err != nil {
 		http.Error(w, "Datastore error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -32,10 +32,16 @@ func CheckToken(w http.ResponseWriter, r *http.Request, c context.Context) {
 		http.Error(w, "You are unauthorized to login!", http.StatusUnauthorized)
 		return
 	}
-	toSend := fingerprints[0]
-	toSend.EntityID = keys[0].StringID()
+	var challenge models.Challenge
+	err = datastore.Get(c, fingerprints[0].Challenge, &challenge)
+	if err != nil {
+		http.Error(w, "Datastore error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// TODO(victorbalan): Map the correct id
+	challenge.EntityID = fingerprints[0].Challenge.StringID()
 
-	json, err := json.Marshal(toSend)
+	json, err := json.Marshal(challenge)
 	if err != nil {
 		http.Error(w, "Json marshal error: "+err.Error(), http.StatusInternalServerError)
 		return
