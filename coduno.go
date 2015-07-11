@@ -13,11 +13,13 @@ import (
 
 	"github.com/coduno/app/controllers"
 	"github.com/coduno/app/mail"
+	"github.com/coduno/app/models"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/urlfetch"
 )
@@ -35,8 +37,29 @@ func main() {
 	r.HandleFunc("/api/push", setupHandler(controllers.Push))
 	r.HandleFunc("/api/code/upload", controllers.UploadCode)
 	r.HandleFunc("/api/code/download", controllers.DownloadTemplate)
+	r.HandleFunc("/api/token/check/{token}", setupHandler(controllers.CheckToken))
+	r.HandleFunc("/api/mock", mockData)
 	http.Handle("/", r)
 	appengine.Main()
+}
+
+func mockData(w http.ResponseWriter, req *http.Request) {
+	ctx := appengine.NewContext(req)
+
+	company := models.Company{Name: "Catalysts"}
+	companyKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "companies", nil), &company)
+
+	challenge := models.Challenge{Name: "Tic-Tac-Toe", Instructions: "Implenet tic tac toe input and output blah blah", Company: companyKey}
+	challengeKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "challenges", nil), &challenge)
+
+	template := models.Template{Language: "Java", Path: "/templates/TicTacToeTemplate.java", Challenge: challengeKey}
+	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "templates", nil), &template)
+
+	coder := models.Coder{Email: "victor.balan@cod.uno", FirstName: "Victor", LastName: "Balan"}
+	coderKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "coders", nil), &coder)
+
+	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challengeKey, Token: "ag1812378asgvasvasdnkcasr23vva="}
+	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "fingerprints", nil), &fingerprint)
 }
 
 // setupHandler is a basic wrapper that is extremely general and takes care of baseline
