@@ -11,11 +11,13 @@ import (
 	"github.com/coduno/app/models"
 	"github.com/coduno/app/util"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
+	"github.com/m4rw3r/uuid"
 )
 
 // CheckToken checks the token from the client and if there exists a fingerprint
 // with that token in the database send the data.
-func CheckToken(w http.ResponseWriter, r *http.Request, c context.Context) {
+func CheckToken(w http.ResponseWriter, r *http.Request, c context.Context, store sessions.Store) {
 	if !util.CheckMethod(w, r, "GET") {
 		return
 	}
@@ -46,5 +48,17 @@ func CheckToken(w http.ResponseWriter, r *http.Request, c context.Context) {
 		http.Error(w, "Json marshal error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	initSession(w, r, store)
 	w.Write([]byte(json))
+}
+
+func initSession(w http.ResponseWriter, r *http.Request, store sessions.Store) {
+	id, _ := uuid.V4()
+	sessionID := id.String()
+
+	session, _ := store.Get(r, sessionID)
+	session.Options.Path = "/"
+	session.Options.MaxAge = 12 * 3600
+	session.Save(r, w)
+	w.Header().Set("Cookie", sessionID)
 }
