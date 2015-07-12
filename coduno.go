@@ -13,65 +13,113 @@ import (
 
 	"github.com/coduno/app/controllers"
 	"github.com/coduno/app/mail"
+	"github.com/coduno/app/models"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
+	"github.com/m4rw3r/uuid"
 
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/urlfetch"
 )
 
 var gitlabToken = "YHQiqMx3qUfj8_FxpFe4"
+var store = sessions.NewCookieStore([]byte("c6fe0cba-5a74-478d-8389-a5d852c7ae2b"))
 
 // Handler is similar to a HandlerFunc, but also gets passed
 // the current context.
 type Handler func(http.ResponseWriter, *http.Request, context.Context)
+
+// HandlerWithSession is similar to Handler, but also gets passed
+// the session store
+type HandlerWithSession func(http.ResponseWriter, *http.Request, context.Context, sessions.Store)
 
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
 	r.HandleFunc("/api/token", setupHandler(token))
 	r.HandleFunc("/api/push", setupHandler(controllers.Push))
-	r.HandleFunc("/api/code/upload", controllers.UploadCode)
-	r.HandleFunc("/api/code/download", controllers.DownloadTemplate)
+	r.HandleFunc("/api/code/upload", setupHandler(controllers.UploadCode))
+	r.HandleFunc("/api/code/download", setupHandler(controllers.DownloadTemplate))
+	r.HandleFunc("/api/token/check/{token}", setupHandlerWithSessionStore(controllers.CheckToken))
+	r.HandleFunc("/api/mock", mockData)
 	http.Handle("/", r)
 	appengine.Main()
 }
 
-// setupHandler is a basic wrapper that is extremely general and takes care of baseline
-// features, such as tightly timed HSTS for all requests and automatic upgrades from
-// HTTP to HTTPS. All outbound flows SHOULD be wrapped.
+func mockData(w http.ResponseWriter, req *http.Request) {
+	ctx := appengine.NewContext(req)
+
+	company := models.Company{Name: "Catalysts"}
+	companyKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "companies", nil), &company)
+
+	challenge := models.Challenge{Name: "Tic-Tac-Toe", Instructions: "Implenet tic tac toe input and output blah blah", Company: companyKey}
+	challengeKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "challenges", nil), &challenge)
+
+	template := models.Template{Language: "Java", Path: "/templates/TicTacToeTemplate.java", Challenge: challengeKey}
+	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "templates", nil), &template)
+
+	coder := models.Coder{Email: "victor.balan@cod.uno", FirstName: "Victor", LastName: "Balan"}
+	coderKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "coders", nil), &coder)
+
+	id, _ := uuid.V4()
+	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challengeKey, Token: id.String()}
+	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "fingerprints", nil), &fingerprint)
+}
+
+func setupHandlerWithSessionStore(handler HandlerWithSession) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := setupBaseHandler(w, r)
+		handler(w, r, ctx, store)
+	}
+}
+
 func setupHandler(handler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := appengine.NewContext(r)
-
-		if !appengine.IsDevAppServer() {
-
-			// Redirect all HTTP requests to their HTTPS version.
-			// This uses a permanent redirect to make clients adjust their bookmarks.
-			// This is only done on production.
-			if r.URL.Scheme != "https" {
-				location := r.URL
-				location.Scheme = "https"
-				http.Redirect(w, r, location.String(), http.StatusMovedPermanently)
-				return
-			}
-
-			// Protect against HTTP downgrade attacks by explicitly telling
-			// clients to use HTTPS.
-			// max-age is computed to match the expiration date of our TLS
-			// certificate (minus approx. one day buffer).
-			// https://developer.mozilla.org/docs/Web/Security/HTTP_strict_transport_security
-			// This is only set on production.
-			invalidity := time.Date(2016, time.January, 3, 0, 59, 59, 0, time.UTC)
-			maxAge := invalidity.Sub(time.Now()).Seconds()
-			w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d", int(maxAge)))
+		cookie := r.Header.Get("set-cookie")
+		session, _ := store.Get(r, cookie)
+		if session.IsNew {
+			http.Error(w, "Unauthorized session.", http.StatusUnauthorized)
 		}
-
-		cors(w, r)
+		ctx := setupBaseHandler(w, r)
 		handler(w, r, ctx)
 	}
+}
+
+// setupBaseHandler is a basic wrapper that is extremely general and takes care of baseline
+// features, such as tightly timed HSTS for all requests and automatic upgrades from
+// HTTP to HTTPS. All outbound flows SHOULD be wrapped.
+func setupBaseHandler(w http.ResponseWriter, r *http.Request) context.Context {
+	ctx := appengine.NewContext(r)
+
+	if !appengine.IsDevAppServer() {
+
+		// Redirect all HTTP requests to their HTTPS version.
+		// This uses a permanent redirect to make clients adjust their bookmarks.
+		// This is only done on production.
+		if r.URL.Scheme != "https" {
+			location := r.URL
+			location.Scheme = "https"
+			http.Redirect(w, r, location.String(), http.StatusMovedPermanently)
+			return ctx
+		}
+
+		// Protect against HTTP downgrade attacks by explicitly telling
+		// clients to use HTTPS.
+		// max-age is computed to match the expiration date of our TLS
+		// certificate (minus approx. one day buffer).
+		// https://developer.mozilla.org/docs/Web/Security/HTTP_strict_transport_security
+		// This is only set on production.
+		invalidity := time.Date(2016, time.January, 3, 0, 59, 59, 0, time.UTC)
+		maxAge := invalidity.Sub(time.Now()).Seconds()
+		w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d", int(maxAge)))
+	}
+
+	cors(w, r)
+	return ctx
 }
 
 // Rudimentary CORS checking. See

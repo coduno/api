@@ -5,11 +5,13 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"golang.org/x/net/context"
+
 	"github.com/coduno/app/models"
 	"github.com/coduno/app/util"
 )
 
-func UploadCode(w http.ResponseWriter, r *http.Request) {
+func UploadCode(w http.ResponseWriter, r *http.Request, c context.Context) {
 	if !util.CheckMethod(w, r, "POST") {
 		return
 	}
@@ -33,7 +35,7 @@ func UploadCode(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Success"))
 }
 
-func DownloadTemplate(w http.ResponseWriter, r *http.Request) {
+func DownloadTemplate(w http.ResponseWriter, r *http.Request, c context.Context) {
 	if !util.CheckMethod(w, r, "GET") {
 		return
 	}
