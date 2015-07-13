@@ -129,7 +129,12 @@ func cors(w http.ResponseWriter, req *http.Request) {
 
 	// only allow CORS on localhost for development
 	if strings.HasPrefix(origin, "http://localhost") {
+		if req.Method == "OPTIONS" {
+			w.WriteHeader(200)
+			w.Write([]byte("OK"))
+		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Expose-Headers", "cookie")
 	}
 }
 
