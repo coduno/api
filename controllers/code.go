@@ -1,17 +1,17 @@
 package controllers
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"golang.org/x/net/context"
 
-	"github.com/coduno/app/models"
 	"github.com/coduno/app/util"
 )
 
-func UploadCode(w http.ResponseWriter, r *http.Request, c context.Context) {
+// StartRun starts a run for the received CodeData
+func StartRun(w http.ResponseWriter, r *http.Request, c context.Context) {
 	if !util.CheckMethod(w, r, "POST") {
 		return
 	}
@@ -23,16 +23,20 @@ func UploadCode(w http.ResponseWriter, r *http.Request, c context.Context) {
 		return
 	}
 
-	var codeData models.CodeData
-	err = json.Unmarshal(body, &codeData)
+	res, err := http.Post("http://localhost:8081/api/run/start/simple", "raw", strings.NewReader(string(body)))
 
 	if err != nil {
-		http.Error(w, "Cannot unmarshal: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error sending code: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO(victorbalan): Pass the code to the engine
 
-	w.Write([]byte("Success"))
+	body, err = ioutil.ReadAll(res.Body)
+
+	if err != nil {
+		http.Error(w, "Error reading: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(body)
 }
 
 func DownloadTemplate(w http.ResponseWriter, r *http.Request, c context.Context) {
