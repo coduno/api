@@ -33,6 +33,11 @@ handlers:
     script: _go_app
     login: admin
 
+  - url: /status
+    script: _go_app
+    login: admin
+    secure: always
+
   - url: /dashboard/bower_components/(.+)
     static_files: dashboard/bower_components/\1
     upload: dashboard/bower_components

@@ -53,6 +53,7 @@ func main() {
 	r.HandleFunc("/api/fingerprint/company/{companyId}", setupHandler(controllers.LoadFingerprintsByCompanyID))
 	r.HandleFunc("/api/mock", mockData)
 	r.HandleFunc("/_ah/mail/{from}", receiveMail)
+	r.HandleFunc("/status", status)
 	http.Handle("/", r)
 	appengine.Main()
 }
