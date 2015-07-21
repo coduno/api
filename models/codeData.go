@@ -5,4 +5,5 @@ type CodeData struct {
 	EntityID string `json:"id"`
 	CodeBase string `json:"codeBase"`
 	Token    string `json:"token"`
+	Language string `json:"language"`
 }
