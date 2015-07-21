@@ -46,7 +46,7 @@ func main() {
 	r.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
 	r.HandleFunc("/api/token", setupHandler(token))
 	r.HandleFunc("/api/push", setupHandler(controllers.Push))
-	r.HandleFunc("/api/code/upload", setupHandler(controllers.UploadCode))
+	r.HandleFunc("/api/run/start/simple", setupHandler(controllers.StartRun))
 	r.HandleFunc("/api/code/download", setupHandler(controllers.DownloadTemplate))
 	r.HandleFunc("/api/token/check/{token}", setupHandlerWithSessionStore(controllers.CheckToken))
 	r.HandleFunc("/api/company/login", setupHandlerWithSessionStore(controllers.CompanyLogin))
@@ -146,7 +146,7 @@ func setupBaseHandler(w http.ResponseWriter, r *http.Request) context.Context {
 // API_TOKEN required for api calls
 func initSession(w http.ResponseWriter, r *http.Request) {
 	session, _ := cs.New(r, sessionID)
-	session.Options.MaxAge = 12 * 3600
+	session.Options.MaxAge = 12 * 3600 * 1000
 	session.Save(r, w)
 }
 
