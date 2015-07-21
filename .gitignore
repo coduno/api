@@ -1,5 +1,7 @@
 # static web files
 /web
+/dashboard
+/codeground
 
 # temporary files
 *~
