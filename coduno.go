@@ -14,6 +14,7 @@ import (
 	"github.com/coduno/app/controllers"
 	"github.com/coduno/app/mail"
 	"github.com/coduno/app/models"
+	"github.com/coduno/app/status"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
@@ -53,7 +54,7 @@ func main() {
 	r.HandleFunc("/api/fingerprint/company/{companyId}", setupHandler(controllers.LoadFingerprintsByCompanyID))
 	r.HandleFunc("/api/mock", mockData)
 	r.HandleFunc("/_ah/mail/{from}", receiveMail)
-	r.HandleFunc("/status", status)
+	r.HandleFunc("/status", status.Handler)
 	http.Handle("/", r)
 	appengine.Main()
 }
