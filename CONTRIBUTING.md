@@ -3,7 +3,7 @@
 ## Commit messages
 
   1. First line should be a tagged headline, maximum 50 chars.
-    * Tags of what you changed (all lowercase, separated by `" ,"`)
+    * Tags of what you changed (all lowercase, separated by `", "`)
     * `": "`
     * Headline
   2. Second line is empty.
