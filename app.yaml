@@ -32,6 +32,54 @@ handlers:
   - url: /_ah/.+
     script: _go_app
 
+  - url: /dashboard/bower_components/(.+)
+    static_files: dashboard/bower_components/\1
+    upload: dashboard/bower_components
+    secure: always
+    expiration: 4d
+    http_headers:
+      strict-transport-security: max-age=15552000
+
+  - url: /dashboard/(.+)
+    static_files: dashboard/app/\1
+    upload: dashboard/app
+    secure: always
+    expiration: 4d
+    http_headers:
+      strict-transport-security: max-age=15552000
+
+  - url: /dashboard(/|$)
+    static_files: dashboard/app/index.html
+    upload: dashboard/app/index.html
+    secure: always
+    expiration: 4d
+    http_headers:
+      strict-transport-security: max-age=15552000
+
+  - url: /codeground/bower_components/(.+)
+    static_files: codeground/bower_components/\1
+    upload: codeground/bower_components
+    secure: always
+    expiration: 4d
+    http_headers:
+      strict-transport-security: max-age=15552000
+
+  - url: /codeground/(.+)
+    static_files: codeground/app/\1
+    upload: codeground/app
+    secure: always
+    expiration: 4d
+    http_headers:
+      strict-transport-security: max-age=15552000
+
+  - url: /codeground(/|$)
+    static_files: codeground/app/index.html
+    upload: codeground/app/index.html
+    secure: always
+    expiration: 4d
+    http_headers:
+      strict-transport-security: max-age=15552000
+
   - url: /(.+)
     static_files: web/\1
     upload: web
