@@ -46,7 +46,6 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
 	r.HandleFunc("/api/token", setupHandler(token))
-	r.HandleFunc("/api/push", setupHandler(controllers.Push))
 	r.HandleFunc("/api/code/upload", setupHandler(controllers.UploadCode))
 	r.HandleFunc("/api/code/download", setupHandler(controllers.DownloadTemplate))
 	r.HandleFunc("/api/token/check/{token}", setupHandlerWithSessionStore(controllers.CheckToken))
