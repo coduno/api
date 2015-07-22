@@ -43,17 +43,17 @@ type Handler func(http.ResponseWriter, *http.Request, context.Context)
 type HandlerWithSession func(http.ResponseWriter, *http.Request, context.Context) bool
 
 func main() {
+	http.HandleFunc("/status", status.Handler)
+	http.HandleFunc("/_ah/mail/", receiveMail)
+
 	r := mux.NewRouter()
 	r.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
 	r.HandleFunc("/api/token", setupHandler(token))
-	r.HandleFunc("/api/code/upload", setupHandler(controllers.UploadCode))
 	r.HandleFunc("/api/code/download", setupHandler(controllers.DownloadTemplate))
 	r.HandleFunc("/api/token/check/{token}", setupHandlerWithSessionStore(controllers.CheckToken))
 	r.HandleFunc("/api/company/login", setupHandlerWithSessionStore(controllers.CompanyLogin))
 	r.HandleFunc("/api/fingerprint/company/{companyId}", setupHandler(controllers.LoadFingerprintsByCompanyID))
 	r.HandleFunc("/api/mock", mockData)
-	r.HandleFunc("/_ah/mail/{from}", receiveMail)
-	r.HandleFunc("/status", status.Handler)
 	http.Handle("/", r)
 	appengine.Main()
 }

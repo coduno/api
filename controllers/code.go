@@ -1,39 +1,12 @@
 package controllers
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
 
 	"golang.org/x/net/context"
 
-	"github.com/coduno/app/models"
 	"github.com/coduno/app/util"
 )
-
-func UploadCode(w http.ResponseWriter, r *http.Request, c context.Context) {
-	if !util.CheckMethod(w, r, "POST") {
-		return
-	}
-
-	body, err := ioutil.ReadAll(r.Body)
-
-	if err != nil {
-		http.Error(w, "Error reading: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var codeData models.CodeData
-	err = json.Unmarshal(body, &codeData)
-
-	if err != nil {
-		http.Error(w, "Cannot unmarshal: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	// TODO(victorbalan): Pass the code to the engine
-
-	w.Write([]byte("Success"))
-}
 
 func DownloadTemplate(w http.ResponseWriter, r *http.Request, c context.Context) {
 	if !util.CheckMethod(w, r, "GET") {
