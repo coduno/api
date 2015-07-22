@@ -9,14 +9,13 @@ import (
 const passwordLength = 16
 const hashCost = 12
 
-func RandomPassword() string{
+func GenerateRandomPassword() string{
   pw := make([]byte, passwordLength)
 	rand.Read(pw)
 	return string(pw)
 }
 
-func GeneratePassword(pwd string) string{
-  password := []byte(pwd)
+func EncryptPassword(password string) string{
   hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), hashCost)
   if err != nil {
     panic(err)

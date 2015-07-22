@@ -62,8 +62,7 @@ func CompanyLogin(w http.ResponseWriter, r *http.Request, c context.Context) (cr
 	company.EntityID = keys[0].Encode()
 
 	toSend := make(map[string]interface{})
-	toSend["name"] = company.Name
-	toSend["email"] = company.Email
+	toSend["company"] = models.Company{Name: company.Name, Email: company.Email, EntityID: company.EntityID}
 	json, err := json.Marshal(toSend)
 	if err != nil {
 		http.Error(w, "Json marshal error: "+err.Error(), http.StatusInternalServerError)
@@ -109,7 +108,7 @@ func CreateCompany(w http.ResponseWriter, r *http.Request, c context.Context){
 		return
 	}
 
-	company = models.SaveCompany(company, c)
+	company = company.SaveCompany(c)
 
 	json, err := json.Marshal(company)
 	w.Write([]byte(json))

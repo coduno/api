@@ -14,10 +14,10 @@ type Company struct {
 	Password string `json:"password"`
 }
 
-func SaveCompany(company Company, ctx context.Context) Company {
-	  password := util.RandomPassword()
+func (company Company) SaveCompany(ctx context.Context) Company {
+	  password := util.GenerateRandomPassword()
 		//this random password will be mailed to the company at company.Email
-		company.Password = util.GeneratePassword(password)
+		company.Password = util.EncryptPassword(password)
 		datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "companies", nil), &company)
 		return company
 }
