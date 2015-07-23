@@ -11,56 +11,130 @@ import (
 
 	"github.com/coduno/app/models"
 	"github.com/coduno/app/util"
+	"github.com/coduno/app/util/password"
 )
 
 // CompanyLoginInfo is the login info for a company
 type CompanyLoginInfo struct {
-	Company string `json:"company"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // CompanyLogin starts a session for a company
 func CompanyLogin(w http.ResponseWriter, r *http.Request, c context.Context) (createSession bool) {
-	createSession = false
 	if !util.CheckMethod(w, r, "POST") {
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	var err error
 
-	if err != nil {
-		http.Error(w, "Error reading: "+err.Error(), http.StatusInternalServerError)
+	var body []byte
+	if body, err = ioutil.ReadAll(r.Body); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	var companyLogin CompanyLoginInfo
-	err = json.Unmarshal(body, &companyLogin)
-
-	if err != nil {
-		http.Error(w, "Cannot unmarshal: "+err.Error(), http.StatusInternalServerError)
+	if err = json.Unmarshal(body, &companyLogin); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	q := datastore.NewQuery("companies").Filter("Name = ", "Catalysts").Limit(1)
+
+	q := datastore.NewQuery(models.CompanyKind).
+		Filter("Email = ", companyLogin.Email).
+		Limit(1)
+
 	var companies []models.Company
 	keys, err := q.GetAll(c, &companies)
 	if err != nil {
-		http.Error(w, "Datastore error: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if len(companies) != 1 {
-		http.Error(w, "You are unauthorized to login!", http.StatusUnauthorized)
+		// NOTE: Do not leak len(companies) here.
+		http.Error(w, "permission denied", http.StatusUnauthorized)
 		return
 	}
+
 	company := companies[0]
+	if err = password.Check([]byte(companyLogin.Password), company.HashedPassword); err != nil {
+		// NOTE: Do not leak err here.
+		http.Error(w, "permission denied", http.StatusUnauthorized)
+		return
+	}
+
 	company.EntityID = keys[0].Encode()
 
-	toSend := make(map[string]interface{})
-	toSend["company"] = company
-	json, err := json.Marshal(toSend)
-	if err != nil {
-		http.Error(w, "Json marshal error: "+err.Error(), http.StatusInternalServerError)
+	if body, err = json.Marshal(company); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte(json))
+
+	w.Write(body)
 	return true
+}
+
+func CreateCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+	if !util.CheckMethod(w, r, "POST") {
+		return
+	}
+
+	var err error
+
+	var body []byte
+	if body, err = ioutil.ReadAll(r.Body); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var company models.Company
+	if err = json.Unmarshal(body, &company); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	q := datastore.NewQuery(models.CompanyKind).
+		Filter("Email = ", company.Email).
+		Limit(1)
+
+	var companies []models.Company
+	if _, err = q.GetAll(ctx, &companies); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(companies) > 0 {
+		body, _ := json.Marshal(map[string]string{
+			"error": "email already exists",
+		})
+		w.Write(body)
+		return
+	}
+
+	var pw []byte
+	if pw, err = password.Generate(0); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var hpw []byte
+	if hpw, err = password.Hash(pw); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	company.HashedPassword = hpw
+
+	if err = company.Save(ctx); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO(flowlo): Respond with HTTP 201 and include a
+	// location header and caching information.
+
+	body, _ = json.Marshal(company)
+	w.Write(body)
+	return
 }
