@@ -1,23 +1,24 @@
 package models
 
-import(
+import (
 	"golang.org/x/net/context"
-	"github.com/coduno/app/util"
 	"google.golang.org/appengine/datastore"
 )
 
-// Company contains the data related to a company
+// CompanyKind is the kind used to store companies in
+// Datastore.
+const CompanyKind = "companies"
+
+// Company contains the data related to a company.
 type Company struct {
-	EntityID string `datastore:"-" json:"id"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	EntityID       string `datastore:"-" json:"id"`
+	Name           string `json:"name"`
+	Email          string `json:"email"`
+	HashedPassword []byte `json:"-"`
 }
 
-func (company Company) SaveCompany(ctx context.Context) Company {
-	  password := util.GenerateRandomPassword()
-		//this random password will be mailed to the company at company.Email
-		company.Password = util.EncryptPassword(password)
-		datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "companies", nil), &company)
-		return company
+// Save puts this company in the Datastore.
+func (c *Company) Save(ctx context.Context) (err error) {
+	_, err = datastore.Put(ctx, datastore.NewIncompleteKey(ctx, CompanyKind, nil), c)
+	return
 }
