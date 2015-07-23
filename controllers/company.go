@@ -75,6 +75,7 @@ func CompanyLogin(w http.ResponseWriter, r *http.Request, c context.Context) (cr
 	return true
 }
 
+//CreateCompany create a new company
 func CreateCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 	if !util.CheckMethod(w, r, "POST") {
 		return
