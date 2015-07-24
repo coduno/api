@@ -14,5 +14,8 @@ all: test
 test: get
 	go test -v
 
-get:
+get: format
 	go get -v
+
+format:
+	gofmt -d -e -l -s .
