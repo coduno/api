@@ -146,7 +146,7 @@ func setupBaseHandler(w http.ResponseWriter, r *http.Request) context.Context {
 		// certificate (minus approx. one day buffer).
 		// https://developer.mozilla.org/docs/Web/Security/HTTP_strict_transport_security
 		// This is only set on production.
-		invalidity := time.Date(2016, time.January, 3, 0, 59, 59, 0, time.UTC)
+		invalidity := time.Date(2017, time.July, 15, 8, 30, 21, 0, time.UTC)
 		maxAge := invalidity.Sub(time.Now()).Seconds()
 		w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d", int(maxAge)))
 	}
