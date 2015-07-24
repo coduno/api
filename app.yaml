@@ -38,6 +38,11 @@ handlers:
     login: admin
     secure: always
 
+  - url: /subscriptions
+    script: _go_app
+    login: admin
+    secure: always
+
   - url: /dashboard/bower_components/(.+)
     static_files: dashboard/bower_components/\1
     upload: dashboard/bower_components
