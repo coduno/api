@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 
 	"golang.org/x/net/context"
@@ -14,6 +15,14 @@ import (
 	"github.com/m4rw3r/uuid"
 )
 
+//FingerprintData  is used to map data from the client.
+type FingerprintData struct {
+	FirstName   string `json:"firstName"`
+	LastName    string `json:"lastName"`
+	Email       string `json:"email"`
+	ChallangeID string `json:"challangeId"`
+}
+
 //CreateFingerprint from the request body
 func CreateFingerprint(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 
@@ -23,12 +32,23 @@ func CreateFingerprint(w http.ResponseWriter, r *http.Request, ctx context.Conte
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	body, err := ioutil.ReadAll(r.Body)
 
-	firstName := mux.Vars(r)["firstName"]
-	lastName := mux.Vars(r)["lastName"]
-	email := mux.Vars(r)["email"]
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	coder := models.Coder{FirstName: firstName, LastName: lastName, Email: email}
+	var fingerprintData FingerprintData
+	if err = json.Unmarshal(body, &fingerprintData); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	coder := models.Coder{
+		FirstName: fingerprintData.FirstName,
+		LastName:  fingerprintData.LastName,
+		Email:     fingerprintData.Email}
 
 	coderKey, err := coder.Save(ctx)
 
@@ -37,9 +57,6 @@ func CreateFingerprint(w http.ResponseWriter, r *http.Request, ctx context.Conte
 		return
 	}
 
-	challangeID := mux.Vars(r)["challangeId"]
-	challangeKey := datastore.NewKey(ctx, models.ChallangeKind, challangeID, 0, nil)
-
 	token, err := uuid.V4()
 
 	if err != nil {
@@ -47,7 +64,15 @@ func CreateFingerprint(w http.ResponseWriter, r *http.Request, ctx context.Conte
 		return
 	}
 
+	challangeKey, err := datastore.DecodeKey(fingerprintData.ChallangeID)
+
+	if err != nil {
+		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challangeKey, Token: token.String()}
+
 	_, err = fingerprint.Save(ctx)
 
 	if err != nil {

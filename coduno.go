@@ -15,6 +15,7 @@ import (
 	"github.com/coduno/app/mail"
 	"github.com/coduno/app/models"
 	"github.com/coduno/app/status"
+	"github.com/coduno/app/util/password"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
@@ -55,12 +56,19 @@ func main() {
 	r.HandleFunc("/api/fingerprint/company/{companyId}", setupHandler(controllers.LoadFingerprintsByCompanyID))
 	r.HandleFunc("/api/company", setupHandler(controllers.CreateCompany))
 	r.HandleFunc("/api/fingerprint", setupHandler(controllers.CreateFingerprint))
-
+	r.HandleFunc("/api/challenge/company/{companyId}", setupHandler(controllers.GetChallangesForCompany))
 	r.HandleFunc("/api/mock", mockData)
+	r.HandleFunc("/api/mockCompany", mockCompany)
 	http.Handle("/", r)
 	appengine.Main()
 }
-
+func mockCompany(w http.ResponseWriter, req *http.Request) {
+	ctx := appengine.NewContext(req)
+	pw, _ := password.Hash([]byte("123123123123"))
+	cmp := models.Company{Name: "cat", Email: "paul@cod.uno", HashedPassword: pw}
+	cmp.Save(ctx)
+	w.Write([]byte("Its all fine"))
+}
 func mockData(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 
@@ -96,11 +104,11 @@ func setupHandler(handler Handler) http.HandlerFunc {
 			cors(w, r)
 			return
 		}
-		session, _ := cs.Get(r, sessionID)
-		if session.IsNew {
-			http.Error(w, "Unauthorized session.", http.StatusUnauthorized)
-			return
-		}
+		// session, _ := cs.Get(r, sessionID)
+		// if session.IsNew {
+		// 	http.Error(w, "Unauthorized session.", http.StatusUnauthorized)
+		// 	return
+		// }
 		ctx := setupBaseHandler(w, r)
 		handler(w, r, ctx)
 	}

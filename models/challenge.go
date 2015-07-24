@@ -6,7 +6,7 @@ import (
 )
 
 //ChallangeKind name of the collection in datastore
-const ChallangeKind = "challange"
+const ChallengeKind = "challenges"
 
 // Challenge contains the data of a challenge with the company that created it
 type Challenge struct {
@@ -17,8 +17,8 @@ type Challenge struct {
 }
 
 //Save a new challagne to the datastore
-func (challange Challenge) Save(ctx context.Context) (*datastore.Key, error) {
-	key, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, ChallangeKind, nil), &challange)
+func (challenge Challenge) Save(ctx context.Context) (*datastore.Key, error) {
+	key, err := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, ChallengeKind, nil), &challenge)
 	if err != nil {
 		return nil, err
 	}
