@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	mailUtils "github.com/coduno/app/mail"
+
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
@@ -20,6 +22,15 @@ type FingerprintData struct {
 	LastName    string `json:"lastName"`
 	Email       string `json:"email"`
 	ChallengeID string `json:"challangeId"`
+	CompanyID   string `json:"companyId"`
+}
+
+type MailResponse struct {
+	FirstName string
+	LastName  string
+	Email     string
+	Company   string
+	Token     string
 }
 
 func randomToken() (token string, err error) {
@@ -94,8 +105,28 @@ func create(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 		Token:     token,
 	}
 
+	companyKey, err := datastore.DecodeKey(fingerprintData.CompanyID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	// TODO(pbochis): This is where we will send an e-mail to the candidate with
 	// somthing like "cod.uno/fingerprint/:token".
+
+	var company models.Company
+	err = datastore.Get(ctx, companyKey, &company)
+
+	mailResponse := MailResponse{
+		FirstName: fingerprintData.FirstName,
+		LastName:  fingerprintData.LastName,
+		Email:     fingerprintData.Email,
+		Company:   company.Name,
+		Token:     token}
+	err = sendMailToCoder(ctx, mailResponse)
+	if err != nil {
+		http.Error(w, "Could not send email: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	key, err := fingerprint.Save(ctx)
 	if err != nil {
@@ -135,4 +166,12 @@ func byCompany(companyKey string, w http.ResponseWriter, r *http.Request, ctx co
 		values[i] = fingerprint
 	}
 	util.WriteEntities(w, keys, values)
+}
+
+func sendMailToCoder(c context.Context, mailResponse MailResponse) error {
+	body, err := mailUtils.PrepareMailTemplate(mailUtils.CandidateInvitationTemplate, mailResponse)
+	if err != nil {
+		return err
+	}
+	return mailUtils.SendMail(c, []string{mailResponse.Email}, "Your coding challenge", body)
 }

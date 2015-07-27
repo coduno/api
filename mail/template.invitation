@@ -1,0 +1,8 @@
+Hello {{.FirstName}} {{.LastName}},
+
+As part of the application process of {{.Company}}, you're invited to do a quick coding Challenge.
+
+You can access it via this link https://www.cod.uno/codeground/{{encode .Token}} and there you will find all the needed information.
+
+Good luck!
+The Coduno team.
