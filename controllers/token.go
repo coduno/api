@@ -40,8 +40,6 @@ func CheckToken(w http.ResponseWriter, r *http.Request, c context.Context) (crea
 		return
 	}
 
-	challenge.EntityID = fingerprints[0].Challenge.Encode()
-
 	json, err := json.Marshal(challenge)
 	if err != nil {
 		http.Error(w, "Json marshal error: "+err.Error(), http.StatusInternalServerError)

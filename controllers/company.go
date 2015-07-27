@@ -58,24 +58,18 @@ func CompanyLogin(w http.ResponseWriter, r *http.Request, c context.Context) (cr
 	}
 
 	company := companies[0]
+	key := keys[0]
+
 	if err = password.Check([]byte(companyLogin.Password), company.HashedPassword); err != nil {
 		// NOTE: Do not leak err here.
 		http.Error(w, "permission denied", http.StatusUnauthorized)
 		return
 	}
 
-	company.EntityID = keys[0].Encode()
-
-	if body, err = json.Marshal(company); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(body)
+	util.WriteEntity(w, key, company)
 	return true
 }
 
-//CreateCompany create a new company
 func CreateCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 	if !util.CheckMethod(w, r, "POST") {
 		return
@@ -127,7 +121,8 @@ func CreateCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) 
 
 	company.HashedPassword = hpw
 
-	if err = company.Save(ctx); err != nil {
+	var key *datastore.Key
+	if key, err = company.Save(ctx); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -135,7 +130,6 @@ func CreateCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) 
 	// TODO(flowlo): Respond with HTTP 201 and include a
 	// location header and caching information.
 
-	body, _ = json.Marshal(company)
-	w.Write(body)
+	util.WriteEntity(w, key, company)
 	return
 }

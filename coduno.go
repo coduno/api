@@ -19,7 +19,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
-	"github.com/m4rw3r/uuid"
 
 	"golang.org/x/net/context"
 
@@ -48,17 +47,16 @@ func main() {
 	http.HandleFunc("/_ah/mail/", receiveMail)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
-	r.HandleFunc("/api/token", setupHandler(token))
+	r.HandleFunc("/api/challenges", setupHandler(controllers.GetChallengesForCompany))
 	r.HandleFunc("/api/code/download", setupHandler(controllers.DownloadTemplate))
-	r.HandleFunc("/api/token/check/{token}", setupHandlerWithSessionStore(controllers.CheckToken))
+	r.HandleFunc("/api/companies", setupHandler(controllers.CreateCompany))
 	r.HandleFunc("/api/company/login", setupHandlerWithSessionStore(controllers.CompanyLogin))
-	r.HandleFunc("/api/fingerprint/company/{companyId}", setupHandler(controllers.LoadFingerprintsByCompanyID))
-	r.HandleFunc("/api/company", setupHandler(controllers.CreateCompany))
-	r.HandleFunc("/api/fingerprint", setupHandler(controllers.CreateFingerprint))
-	r.HandleFunc("/api/challenge/company/{companyId}", setupHandler(controllers.GetChallangesForCompany))
+	r.HandleFunc("/api/fingerprints", setupHandler(controllers.HandleFingerprints))
+	r.HandleFunc("/api/token", setupHandler(token))
+	r.HandleFunc("/api/token/check/{token}", setupHandlerWithSessionStore(controllers.CheckToken))
 	r.HandleFunc("/api/mock", mockData)
 	r.HandleFunc("/api/mockCompany", mockCompany)
+	r.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
 	http.Handle("/", r)
 	appengine.Main()
 }
@@ -84,8 +82,7 @@ func mockData(w http.ResponseWriter, req *http.Request) {
 	coder := models.Coder{Email: "victor.balan@cod.uno", FirstName: "Victor", LastName: "Balan"}
 	coderKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "coders", nil), &coder)
 
-	id, _ := uuid.V4()
-	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challengeKey, Token: id.String()}
+	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challengeKey, Token: "deadbeefcafebabe"}
 	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "fingerprints", nil), &fingerprint)
 }
 

@@ -10,13 +10,11 @@ const CoderKind = "coders"
 
 // Coder contains the data related to a coder
 type Coder struct {
-	EntityID  int64  `datastore:"-" json:"id"`
 	Email     string `json:"email"`
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 }
 
-//Save a new coder
-func (coder Coder) Save(ctx context.Context) (*datastore.Key, error) {
+func (coder Coder) Save(ctx context.Context) (key *datastore.Key, err error) {
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, CoderKind, nil), &coder)
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -11,21 +12,39 @@ import (
 
 	"github.com/coduno/app/models"
 	"github.com/coduno/app/util"
-	"github.com/gorilla/mux"
-	"github.com/m4rw3r/uuid"
 )
 
-//FingerprintData  is used to map data from the client.
+// FingerprintData is used to map data from the client.
 type FingerprintData struct {
 	FirstName   string `json:"firstName"`
 	LastName    string `json:"lastName"`
 	Email       string `json:"email"`
-	ChallangeID string `json:"challangeId"`
+	ChallengeID string `json:"challangeId"`
 }
 
-//CreateFingerprint from the request body
-func CreateFingerprint(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+func randomToken() (token string, err error) {
+	b := make([]byte, 16)
+	_, err = rand.Read(b)
+	token = string(b)
+	return
+}
 
+func HandleFingerprints(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+	query := r.URL.Query()
+	if len(query) == 0 {
+		create(w, r, ctx)
+		return
+	}
+
+	if query["company"][0] == "" {
+		http.Error(w, "missing parameter 'company'", http.StatusBadRequest)
+		return
+	}
+
+	byCompany(query["company"][0], w, r, ctx)
+}
+
+func create(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 	var err error
 
 	if !util.CheckMethod(w, r, "POST") {
@@ -48,82 +67,73 @@ func CreateFingerprint(w http.ResponseWriter, r *http.Request, ctx context.Conte
 	coder := models.Coder{
 		FirstName: fingerprintData.FirstName,
 		LastName:  fingerprintData.LastName,
-		Email:     fingerprintData.Email}
+		Email:     fingerprintData.Email,
+	}
 
 	coderKey, err := coder.Save(ctx)
-
 	if err != nil {
-		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	token, err := uuid.V4()
-
+	token, err := randomToken()
 	if err != nil {
-		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	challangeKey, err := datastore.DecodeKey(fingerprintData.ChallangeID)
-
+	challengeKey, err := datastore.DecodeKey(fingerprintData.ChallengeID)
 	if err != nil {
-		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challangeKey, Token: token.String()}
-
-	_, err = fingerprint.Save(ctx)
-
-	if err != nil {
-		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
-	}
-
-	response, err := json.Marshal(fingerprint)
-
-	if err != nil {
-		http.Error(w, "Json marshal error: "+err.Error(), http.StatusInternalServerError)
-		return
+	fingerprint := models.Fingerprint{
+		Coder:     coderKey,
+		Challenge: challengeKey,
+		Token:     token,
 	}
 
 	// TODO(pbochis): This is where we will send an e-mail to the candidate with
 	// somthing like "cod.uno/fingerprint/:token".
 
-	w.Write([]byte(response))
+	key, err := fingerprint.Save(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	util.WriteEntity(w, key, fingerprint)
 	return
 }
 
-// LoadFingerprintsByCompanyID -
-func LoadFingerprintsByCompanyID(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+func byCompany(companyKey string, w http.ResponseWriter, r *http.Request, ctx context.Context) {
 	if !util.CheckMethod(w, r, "GET") {
 		return
 	}
 
-	companyID := mux.Vars(r)["companyId"]
-	key, _ := datastore.DecodeKey(companyID)
-	q := datastore.NewQuery("challenges").Filter("Company = ", key).KeysOnly()
+	key, _ := datastore.DecodeKey(companyKey)
+	q := datastore.NewQuery(models.ChallengeKind).Filter("Company = ", key).KeysOnly()
 	keys, err := q.GetAll(ctx, nil)
 	if err != nil {
-		http.Error(w, "Datastore error: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	q = datastore.NewQuery("fingerprints")
+
+	q = datastore.NewQuery(models.FingerprintKind)
 	for _, val := range keys {
 		q.Filter("Challenge = ", val)
 	}
 	var fingerprints []models.Fingerprint
 	keys, err = q.GetAll(ctx, &fingerprints)
 	if err != nil {
-		http.Error(w, "Datastore error: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	for i := 0; i < len(keys); i++ {
-		fingerprints[i].EntityID = keys[i].Encode()
+
+	values := make([]interface{}, len(fingerprints))
+	for i, fingerprint := range fingerprints {
+		values[i] = fingerprint
 	}
-	json, err := json.Marshal(fingerprints)
-	if err != nil {
-		http.Error(w, "Json marshal error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write([]byte(json))
+	util.WriteEntities(w, keys, values)
 }

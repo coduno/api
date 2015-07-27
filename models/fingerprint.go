@@ -10,7 +10,6 @@ const FingerprintKind = "fingerprints"
 
 // Fingerprint contains data that links a coder to a challenge
 type Fingerprint struct {
-	EntityID  string         `json:"id"`
 	Coder     *datastore.Key `json:"coder"`
 	Challenge *datastore.Key `json:"challenge"`
 	Token     string         `json:"token"`

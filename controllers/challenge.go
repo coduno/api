@@ -1,29 +1,25 @@
 package controllers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/coduno/app/models"
 	"github.com/coduno/app/util"
-	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
 )
 
-// GetChallangesForCompany -
-func GetChallangesForCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) {
-
+func GetChallengesForCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 	var err error
 
 	if !util.CheckMethod(w, r, "GET") {
 		return
 	}
 
-	companyKey := mux.Vars(r)["companyId"]
+	companyKey := r.URL.Query()["company"][0]
 
 	if companyKey == "" {
-		http.Error(w, "You need to provide a company id", http.StatusInternalServerError)
+		http.Error(w, "missing parameter 'company'", http.StatusInternalServerError)
 		return
 	}
 
@@ -45,19 +41,9 @@ func GetChallangesForCompany(w http.ResponseWriter, r *http.Request, ctx context
 		return
 	}
 
-	for i := 0; i < len(keys); i++ {
-		challenges[i].EntityID = keys[i].Encode()
+	values := make([]interface{}, len(challenges))
+	for i := range challenges {
+		values[i] = challenges[i]
 	}
-
-	response := make(map[string]interface{})
-	response["challanges"] = challenges
-	body, err := json.Marshal(response)
-
-	if err != nil {
-		http.Error(w, "Internal Server error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(body)
-	return
+	util.WriteEntities(w, keys, values)
 }
