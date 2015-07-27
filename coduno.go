@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -48,6 +49,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/challenges", setupHandler(controllers.GetChallengesForCompany))
+	r.HandleFunc("/api/challenges/{id}", setupHandler(controllers.GetChallengeByID))
 	r.HandleFunc("/api/code/download", setupHandler(controllers.DownloadTemplate))
 	r.HandleFunc("/api/companies", setupHandler(controllers.CreateCompany))
 	r.HandleFunc("/api/company/login", setupHandlerWithSessionStore(controllers.CompanyLogin))
@@ -56,10 +58,20 @@ func main() {
 	r.HandleFunc("/api/token/check/{token}", setupHandlerWithSessionStore(controllers.CheckToken))
 	r.HandleFunc("/api/mock", mockData)
 	r.HandleFunc("/api/mockCompany", mockCompany)
+	r.HandleFunc("/api/engineurl", setupHandler(getEngineURL))
 	r.HandleFunc("/subscriptions", setupHandler(mail.Subscriptions))
 	http.Handle("/", r)
 	appengine.Main()
 }
+
+func getEngineURL(w http.ResponseWriter, req *http.Request, ctx context.Context) {
+	if appengine.IsDevAppServer() {
+		io.WriteString(w, "http://localhost:8081")
+	} else {
+		io.WriteString(w, "https://engine.cod.uno")
+	}
+}
+
 func mockCompany(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 	pw, _ := password.Hash([]byte("123123123123"))
@@ -69,21 +81,24 @@ func mockCompany(w http.ResponseWriter, req *http.Request) {
 }
 func mockData(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
+	pw, _ := password.Hash([]byte("victor"))
+	companyKey, _ := models.Company{Name: "Coduno", Email: "victor@cod.uno", HashedPassword: pw}.Save(ctx)
 
-	company := models.Company{Name: "Catalysts"}
-	companyKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "companies", nil), &company)
+	simpleChallengeKey, _ := models.Challenge{Name: "Hello world!", Instructions: "Implement a program that outputs 'Hello World!'", Company: companyKey,
+		WebInterface: "simple-console", Runner: "simple", Flags: "-image simple"}.Save(ctx)
+	utChallengeKey, _ := models.Challenge{Name: "Unit testing!", Instructions: `Implement a program that has an ok() method that returns "ok",
+																												an hello() method that returns "hello"
+																												and an "long add(long a, long b)" method`, Company: companyKey,
+		WebInterface: "javaut-console", Runner: "javaut", Flags: "-image javaut"}.Save(ctx)
 
-	challenge := models.Challenge{Name: "Tic-Tac-Toe", Instructions: "Implenet tic tac toe input and output blah blah", Company: companyKey}
-	challengeKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "challenges", nil), &challenge)
-
-	template := models.Template{Language: "Java", Path: "/templates/TicTacToeTemplate.java", Challenge: challengeKey}
+	template := models.Template{Language: "Java", Path: "/templates/TicTacToeTemplate.java", Challenge: simpleChallengeKey}
 	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "templates", nil), &template)
 
-	coder := models.Coder{Email: "victor.balan@cod.uno", FirstName: "Victor", LastName: "Balan"}
-	coderKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "coders", nil), &coder)
+	coderKey, _ := models.Coder{Email: "victor.balan@cod.uno", FirstName: "Victor", LastName: "Balan"}.Save(ctx)
 
-	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challengeKey, Token: "deadbeefcafebabe"}
-	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "fingerprints", nil), &fingerprint)
+	models.Fingerprint{Coder: coderKey, Challenge: simpleChallengeKey, Token: "deadbeefcafebabe"}.Save(ctx)
+
+	models.Fingerprint{Coder: coderKey, Challenge: utChallengeKey, Token: "asdfbsdfbvsd13"}.Save(ctx)
 }
 
 func setupHandlerWithSessionStore(handler HandlerWithSession) http.HandlerFunc {

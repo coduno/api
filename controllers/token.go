@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"golang.org/x/net/context"
@@ -40,11 +39,6 @@ func CheckToken(w http.ResponseWriter, r *http.Request, c context.Context) (crea
 		return
 	}
 
-	json, err := json.Marshal(challenge)
-	if err != nil {
-		http.Error(w, "Json marshal error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write([]byte(json))
+	util.WriteEntity(w, fingerprints[0].Challenge, challenge)
 	return true
 }

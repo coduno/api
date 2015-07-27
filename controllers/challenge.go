@@ -5,11 +5,35 @@ import (
 
 	"github.com/coduno/app/models"
 	"github.com/coduno/app/util"
+	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
 )
 
+// GetChallengeByID loads a challenge by id
+func GetChallengeByID(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+	if !util.CheckMethod(w, r, "GET") {
+		return
+	}
+
+	key, err := datastore.DecodeKey(mux.Vars(r)["id"])
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var challenge models.Challenge
+	err = datastore.Get(ctx, key, &challenge)
+	if err != nil {
+		http.Error(w, "Datastore err"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	util.WriteEntity(w, key, challenge)
+}
+
 func GetChallengesForCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+
 	var err error
 
 	if !util.CheckMethod(w, r, "GET") {

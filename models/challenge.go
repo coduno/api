@@ -15,6 +15,10 @@ type Challenge struct {
 	Name         string         `json:"name"`
 	Instructions string         `json:"instructions"`
 	Company      *datastore.Key `json:"company"`
+	WebInterface string         `json:"webInterface"`
+	Runner       string         `json:"-"`
+	Flags        string         `json:"-"`
+	Languages    []string       `json:"languages"`
 }
 
 // Save a new challange to Datastore.
