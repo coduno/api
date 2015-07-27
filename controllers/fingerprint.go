@@ -12,8 +12,8 @@ import (
 
 	"google.golang.org/appengine/datastore"
 
-	"github.com/coduno/app/models"
-	"github.com/coduno/app/util"
+	"github.com/coduno/engine/appengine/model"
+	"github.com/coduno/engine/util"
 )
 
 // FingerprintData is used to map data from the client.
@@ -75,7 +75,7 @@ func create(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 		return
 	}
 
-	coder := models.Coder{
+	coder := model.Coder{
 		FirstName: fingerprintData.FirstName,
 		LastName:  fingerprintData.LastName,
 		Email:     fingerprintData.Email,
@@ -99,7 +99,7 @@ func create(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 		return
 	}
 
-	fingerprint := models.Fingerprint{
+	fingerprint := model.Fingerprint{
 		Coder:     coderKey,
 		Challenge: challengeKey,
 		Token:     token,
@@ -113,7 +113,7 @@ func create(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 	// TODO(pbochis): This is where we will send an e-mail to the candidate with
 	// somthing like "cod.uno/fingerprint/:token".
 
-	var company models.Company
+	var company model.Company
 	err = datastore.Get(ctx, companyKey, &company)
 
 	mailResponse := MailResponse{
@@ -134,7 +134,7 @@ func create(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 		return
 	}
 
-	util.WriteEntity(w, key, fingerprint)
+	fingerprint.Write(w, key)
 }
 
 func byCompany(companyKey string, w http.ResponseWriter, r *http.Request, ctx context.Context) {
@@ -143,29 +143,28 @@ func byCompany(companyKey string, w http.ResponseWriter, r *http.Request, ctx co
 	}
 
 	key, _ := datastore.DecodeKey(companyKey)
-	q := datastore.NewQuery(models.ChallengeKind).Filter("Company = ", key).KeysOnly()
+	q := model.NewQueryForChallenge().
+		Filter("Company = ", key).
+		KeysOnly()
+
 	keys, err := q.GetAll(ctx, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	q = datastore.NewQuery(models.FingerprintKind)
+	q = model.NewQueryForFingerprint()
 	for _, val := range keys {
 		q.Filter("Challenge = ", val)
 	}
-	var fingerprints []models.Fingerprint
+	var fingerprints model.Fingerprints
 	keys, err = q.GetAll(ctx, &fingerprints)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	values := make([]interface{}, len(fingerprints))
-	for i, fingerprint := range fingerprints {
-		values[i] = fingerprint
-	}
-	util.WriteEntities(w, keys, values)
+	fingerprints.Write(w, keys)
 }
 
 func sendMailToCoder(c context.Context, mailResponse MailResponse) error {

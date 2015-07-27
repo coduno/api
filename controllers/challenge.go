@@ -3,8 +3,8 @@ package controllers
 import (
 	"net/http"
 
-	"github.com/coduno/app/models"
-	"github.com/coduno/app/util"
+	"github.com/coduno/engine/appengine/model"
+	"github.com/coduno/engine/util"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
@@ -23,13 +23,13 @@ func GetChallengeByID(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var challenge models.Challenge
+	var challenge model.Challenge
 	err = datastore.Get(ctx, key, &challenge)
 	if err != nil {
 		http.Error(w, "Datastore err"+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	util.WriteEntity(w, key, challenge)
+	challenge.Write(w, key)
 }
 
 func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -53,9 +53,9 @@ func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http
 		return
 	}
 
-	q := datastore.NewQuery(models.ChallengeKind).Filter("Company=", key)
+	q := model.NewQueryForChallenge().Filter("Company=", key)
 
-	var challenges []models.Challenge
+	var challenges model.Challenges
 
 	keys, err := q.GetAll(ctx, &challenges)
 
@@ -68,5 +68,5 @@ func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http
 	for i := range challenges {
 		values[i] = challenges[i]
 	}
-	util.WriteEntities(w, keys, values)
+	challenges.Write(w, keys)
 }

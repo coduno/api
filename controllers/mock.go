@@ -3,16 +3,15 @@ package controllers
 import (
 	"net/http"
 
-	"github.com/coduno/app/models"
-	"github.com/coduno/app/util/password"
+	"github.com/coduno/engine/appengine/model"
+	"github.com/coduno/engine/util/password"
 	"google.golang.org/appengine"
-	"google.golang.org/appengine/datastore"
 )
 
 func MockCompany(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 	pw, _ := password.Hash([]byte("123123123123"))
-	cmp := models.Company{Name: "cat", Email: "paul@cod.uno", HashedPassword: pw}
+	cmp := model.Company{Name: "cat", Email: "paul@cod.uno", HashedPassword: pw}
 	cmp.Save(ctx)
 	w.Write([]byte("Its all fine"))
 }
@@ -20,18 +19,18 @@ func MockCompany(w http.ResponseWriter, req *http.Request) {
 func MockData(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 
-	company := models.Company{Name: "Catalysts"}
-	companyKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "companies", nil), &company)
+	company := model.Company{Name: "Catalysts"}
+	companyKey, _ := company.Save(ctx)
 
-	challenge := models.Challenge{Name: "Tic-Tac-Toe", Instructions: "Implenet tic tac toe input and output blah blah", Company: companyKey}
-	challengeKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "challenges", nil), &challenge)
+	challenge := model.Challenge{Name: "Tic-Tac-Toe", Instructions: "Implenet tic tac toe input and output blah blah", Company: companyKey}
+	challengeKey, _ := challenge.Save(ctx)
 
-	template := models.Template{Language: "Java", Path: "/templates/TicTacToeTemplate.java", Challenge: challengeKey}
-	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "templates", nil), &template)
+	template := model.Template{Language: "Java", Path: "/templates/TicTacToeTemplate.java", Challenge: challengeKey}
+	template.Save(ctx)
 
-	coder := models.Coder{Email: "victor.balan@cod.uno", FirstName: "Victor", LastName: "Balan"}
-	coderKey, _ := datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "coders", nil), &coder)
+	coder := model.Coder{Email: "victor.balan@cod.uno", FirstName: "Victor", LastName: "Balan"}
+	coderKey, _ := coder.Save(ctx)
 
-	fingerprint := models.Fingerprint{Coder: coderKey, Challenge: challengeKey, Token: "deadbeefcafebabe"}
-	datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "fingerprints", nil), &fingerprint)
+	fingerprint := model.Fingerprint{Coder: coderKey, Challenge: challengeKey, Token: "deadbeefcafebabe"}
+	fingerprint.Save(ctx)
 }

@@ -9,9 +9,9 @@ import (
 
 	"google.golang.org/appengine/datastore"
 
-	"github.com/coduno/app/models"
-	"github.com/coduno/app/util"
-	"github.com/coduno/app/util/password"
+	"github.com/coduno/engine/appengine/model"
+	"github.com/coduno/engine/util"
+	"github.com/coduno/engine/util/password"
 )
 
 // CompanyLoginInfo is the login info for a company
@@ -40,11 +40,11 @@ func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q := datastore.NewQuery(models.CompanyKind).
+	q := model.NewQueryForCompany().
 		Filter("Email = ", companyLogin.Email).
 		Limit(1)
 
-	var companies []models.Company
+	var companies model.Companys
 	keys, err := q.GetAll(c, &companies)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -66,7 +66,7 @@ func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	util.WriteEntity(w, key, company)
+	company.Write(w, key)
 }
 
 func CreateCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -82,17 +82,17 @@ func CreateCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var company models.Company
+	var company model.Company
 	if err = json.Unmarshal(body, &company); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	q := datastore.NewQuery(models.CompanyKind).
+	q := model.NewQueryForCompany().
 		Filter("Email = ", company.Email).
 		Limit(1)
 
-	var companies []models.Company
+	var companies model.Companys
 	if _, err = q.GetAll(ctx, &companies); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -129,5 +129,5 @@ func CreateCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 	// TODO(flowlo): Respond with HTTP 201 and include a
 	// location header and caching information.
 
-	util.WriteEntity(w, key, company)
+	company.Write(w, key)
 }
