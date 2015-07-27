@@ -45,18 +45,19 @@ func WriteEntities(w http.ResponseWriter, keys []*datastore.Key, values []interf
 		tmp[keys[i].String()] = values[i]
 	}
 
-	writeMap(w, tmp)
+	WriteMap(w, tmp)
 }
 
 // WriteEntity takes a key and the corresponding entity and writes
 // it out to w after marshaling to JSON.
 func WriteEntity(w http.ResponseWriter, key *datastore.Key, value interface{}) {
-	writeMap(w, map[string]interface{}{
+	WriteMap(w, map[string]interface{}{
 		key.Encode(): value,
 	})
 }
 
-func writeMap(w http.ResponseWriter, data map[string]interface{}) {
+// WriteMap marshals a map into json and writes it to the client
+func WriteMap(w http.ResponseWriter, data map[string]interface{}) {
 	body, err := json.Marshal(data)
 
 	if err != nil {
