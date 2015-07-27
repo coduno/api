@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/coduno/app/controllers"
-	"github.com/coduno/app/mail"
 	"github.com/coduno/app/passenger"
+	"github.com/coduno/app/subscription"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
@@ -39,7 +39,7 @@ func main() {
 	r.HandleFunc("/api/fingerprints", setup(controllers.HandleFingerprints))
 	r.HandleFunc("/api/mock", controllers.MockData)
 	r.HandleFunc("/api/mockCompany", controllers.MockCompany)
-	r.HandleFunc("/subscriptions", secure(mail.Subscriptions))
+	r.HandleFunc("/subscriptions", secure(subscription.Subscriptions))
 	http.Handle("/", r)
 	appengine.Main()
 }
