@@ -29,7 +29,7 @@ func randomToken() (token string, err error) {
 	return
 }
 
-func HandleFingerprints(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+func HandleFingerprints(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	if len(query) == 0 {
 		create(w, r, ctx)
@@ -104,7 +104,6 @@ func create(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 	}
 
 	util.WriteEntity(w, key, fingerprint)
-	return
 }
 
 func byCompany(companyKey string, w http.ResponseWriter, r *http.Request, ctx context.Context) {

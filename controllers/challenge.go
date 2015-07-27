@@ -11,7 +11,7 @@ import (
 )
 
 // GetChallengeByID loads a challenge by id
-func GetChallengeByID(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+func GetChallengeByID(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if !util.CheckMethod(w, r, "GET") {
 		return
 	}
@@ -32,8 +32,7 @@ func GetChallengeByID(w http.ResponseWriter, r *http.Request, ctx context.Contex
 	util.WriteEntity(w, key, challenge)
 }
 
-func GetChallengesForCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) {
-
+func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if !util.CheckMethod(w, r, "GET") {

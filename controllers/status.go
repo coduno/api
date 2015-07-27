@@ -1,4 +1,4 @@
-package status
+package controllers
 
 import (
 	"encoding/json"
@@ -7,19 +7,19 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/coduno/app/util"
-
 	"google.golang.org/appengine"
+
+	"github.com/coduno/app/util"
 )
 
-type Status struct {
+type status struct {
 	Init      time.Time
-	Appengine Appengine
-	Runtime   Runtime
+	Appengine appengineStatus
+	Runtime   runtimeStatus
 	Environ   []string
 }
 
-type Appengine struct {
+type appengineStatus struct {
 	InstanceID,
 	AppID,
 	Datacenter,
@@ -28,7 +28,7 @@ type Appengine struct {
 	IsDevAppServer bool
 }
 
-type Runtime struct {
+type runtimeStatus struct {
 	GOMAXPROCS int
 	GOARCH,
 	GOOS,
@@ -45,7 +45,9 @@ func init() {
 	initTime = time.Now()
 }
 
-func Handler(w http.ResponseWriter, r *http.Request) {
+// Status gathers a quick overview of the system state
+// and dumps it in JSON format.
+func Status(w http.ResponseWriter, r *http.Request) {
 	if !util.CheckMethod(w, r, "GET") {
 		return
 	}
@@ -55,9 +57,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	m := new(runtime.MemStats)
 	runtime.ReadMemStats(m)
 
-	s := &Status{
+	s := &status{
 		initTime,
-		Appengine{
+		appengineStatus{
 			appengine.InstanceID(),
 			appengine.AppID(ctx),
 			appengine.Datacenter(ctx),
@@ -65,7 +67,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			appengine.ModuleName(ctx),
 			appengine.IsDevAppServer(),
 		},
-		Runtime{
+		runtimeStatus{
 			runtime.GOMAXPROCS(0),
 			runtime.GOARCH,
 			runtime.GOOS,
@@ -85,6 +87,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; encoding=utf-8")
 	w.Write(b)
 }

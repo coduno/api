@@ -15,7 +15,7 @@ type Fingerprint struct {
 	Token     string         `json:"token"`
 }
 
-//Save a new fingerprint
+// Save a new fingerprint
 func (fingerprint Fingerprint) Save(ctx context.Context) (*datastore.Key, error) {
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, FingerprintKind, nil), &fingerprint)
 }

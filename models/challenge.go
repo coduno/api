@@ -5,7 +5,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// ChallangeKind is the kind used to
+// ChallengeKind is the kind used to
 // store challenges in Datastore.
 const ChallengeKind = "challenges"
 

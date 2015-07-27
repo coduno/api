@@ -8,7 +8,7 @@ import (
 	"github.com/coduno/app/util"
 )
 
-func DownloadTemplate(w http.ResponseWriter, r *http.Request, c context.Context) {
+func DownloadTemplate(c context.Context, w http.ResponseWriter, r *http.Request) {
 	if !util.CheckMethod(w, r, "GET") {
 		return
 	}
@@ -22,5 +22,4 @@ func DownloadTemplate(w http.ResponseWriter, r *http.Request, c context.Context)
 	w.Header().Set("Content-Disposition", "attachment; filename='template.java'")
 
 	http.ServeFile(w, r, "challenges/template.java")
-	return
 }

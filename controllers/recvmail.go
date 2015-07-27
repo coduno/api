@@ -1,4 +1,4 @@
-package main
+package controllers
 
 import (
 	"io"
@@ -38,7 +38,8 @@ func echoMail(ctx context.Context, m mail.Message) {
 	}
 }
 
-func receiveMail(w http.ResponseWriter, r *http.Request) {
+// ReceiveMail will receive an e-mail and echo it back to the sender.
+func ReceiveMail(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
 	m, err := mail.ReadMessage(r.Body)

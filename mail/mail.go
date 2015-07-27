@@ -45,7 +45,7 @@ func init() {
 	}
 }
 
-func Subscriptions(w http.ResponseWriter, r *http.Request, c context.Context) {
+func Subscriptions(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		subscribe(w, r)
 	} else if r.Method == "GET" {

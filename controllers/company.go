@@ -21,7 +21,7 @@ type CompanyLoginInfo struct {
 }
 
 // CompanyLogin starts a session for a company
-func CompanyLogin(w http.ResponseWriter, r *http.Request, c context.Context) (createSession bool) {
+func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) {
 	if !util.CheckMethod(w, r, "POST") {
 		return
 	}
@@ -67,10 +67,9 @@ func CompanyLogin(w http.ResponseWriter, r *http.Request, c context.Context) (cr
 	}
 
 	util.WriteEntity(w, key, company)
-	return true
 }
 
-func CreateCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+func CreateCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if !util.CheckMethod(w, r, "POST") {
 		return
 	}
@@ -131,5 +130,4 @@ func CreateCompany(w http.ResponseWriter, r *http.Request, ctx context.Context) 
 	// location header and caching information.
 
 	util.WriteEntity(w, key, company)
-	return
 }
