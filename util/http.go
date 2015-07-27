@@ -34,7 +34,7 @@ func CheckMethod(w http.ResponseWriter, r *http.Request, methods ...string) (ok 
 // from them and writes JSON to w.
 // len(keys) != len(values) or an error during marshaling
 // will result in an internal server error.
-func WriteEntities(w http.ResponseWriter, keys []*datastore.Key, values ...interface{}) {
+func WriteEntities(w http.ResponseWriter, keys []*datastore.Key, values []interface{}) {
 	if len(keys) != len(values) {
 		http.Error(w, "length mismatch while writing entities", http.StatusInternalServerError)
 		return
@@ -52,7 +52,7 @@ func WriteEntities(w http.ResponseWriter, keys []*datastore.Key, values ...inter
 // it out to w after marshaling to JSON.
 func WriteEntity(w http.ResponseWriter, key *datastore.Key, value interface{}) {
 	writeMap(w, map[string]interface{}{
-		key.String(): value,
+		key.Encode(): value,
 	})
 }
 

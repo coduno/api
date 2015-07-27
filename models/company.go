@@ -17,6 +17,6 @@ type Company struct {
 }
 
 // Save puts this company in the Datastore.
-func (c *Company) Save(ctx context.Context) (key *datastore.Key, err error) {
-	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, CompanyKind, nil), c)
+func (c Company) Save(ctx context.Context) (key *datastore.Key, err error) {
+	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, CompanyKind, nil), &c)
 }
