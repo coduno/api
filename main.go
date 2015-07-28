@@ -91,6 +91,11 @@ func cors(h HandleFunc) HandleFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
+		if origin == "" {
+			h(w, r)
+			return
+		}
+
 		// only allow CORS on localhost for development
 		if !strings.HasPrefix(origin, "http://localhost") {
 			// TODO(flowlo): We are probably not answering this request.
