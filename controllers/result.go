@@ -5,31 +5,81 @@ import (
 	"net/http"
 
 	"github.com/coduno/app/model"
+	"github.com/coduno/engine/passenger"
+	"github.com/coduno/engine/util"
+	"github.com/gorilla/mux"
 	"google.golang.org/appengine/datastore"
 
 	"golang.org/x/net/context"
 )
 
-func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+// CreateResult saves a new result when a coder starts a challenge.
+func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
+	if err := util.CheckMethod(r, "POST"); err != nil {
+		return http.StatusMethodNotAllowed, err
+	}
+
 	var body = struct {
-		ChallengeID string
+		ChallengeKey string
 	}{}
 
-	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
+	p, ok := passenger.FromContext(ctx)
+
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	var profiles model.Profiles
+	keys, err := model.NewQueryForProfile().
+		Ancestor(p.UserKey).
+		GetAll(ctx, &profiles)
+
+	if len(keys) != 1 {
 		return http.StatusInternalServerError, err
 	}
 
-	key, err := datastore.DecodeKey(body.ChallengeID)
+	err = json.NewDecoder(r.Body).Decode(&body)
+
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
 
+	key, err := datastore.DecodeKey(body.ChallengeKey)
+
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
 	result := model.Result{Challenge: key}
-	key, err = result.Save(ctx)
+	key, err = result.SaveWithParent(ctx, keys[0])
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
 	json.NewEncoder(w).Encode(result.Key(key))
+	return http.StatusOK, nil
+}
+
+// GetResultsByChallenge queries the results for a certain challenge to be reviewed by a company.
+func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
+	if err := util.CheckMethod(r, "POST"); err != nil {
+		return http.StatusMethodNotAllowed, err
+	}
+
+	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
+
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	var results model.Results
+	keys, err := model.NewQueryForResult().
+		Filter("Challenge=", key).
+		GetAll(ctx, &results)
+
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	json.NewEncoder(w).Encode(results.Key(keys))
 	return http.StatusOK, nil
 }

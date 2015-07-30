@@ -16,15 +16,15 @@ import (
 
 type Profiles []Profile
 
-type KeyedProfile struct{
+type KeyedProfile struct {
 	Profile *Profile
-	Key      *datastore.Key
+	Key     *datastore.Key
 }
 
-func (ƨ *Profile) Key(key *datastore.Key) (*KeyedProfile) {
+func (ƨ *Profile) Key(key *datastore.Key) *KeyedProfile {
 	return &KeyedProfile{
 		Profile: ƨ,
-		Key:      key,
+		Key:     key,
 	}
 }
 
@@ -37,7 +37,7 @@ func (ƨ Profiles) Key(keys []*datastore.Key) (keyed []KeyedProfile) {
 	for i := range keyed {
 		keyed = append(keyed, KeyedProfile{
 			Profile: &ƨ[i],
-			Key:      keys[i],
+			Key:     keys[i],
 		})
 	}
 	return

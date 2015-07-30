@@ -16,12 +16,12 @@ import (
 
 type Templates []Template
 
-type KeyedTemplate struct{
+type KeyedTemplate struct {
 	Template *Template
 	Key      *datastore.Key
 }
 
-func (ƨ *Template) Key(key *datastore.Key) (*KeyedTemplate) {
+func (ƨ *Template) Key(key *datastore.Key) *KeyedTemplate {
 	return &KeyedTemplate{
 		Template: ƨ,
 		Key:      key,

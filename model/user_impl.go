@@ -16,15 +16,15 @@ import (
 
 type Users []User
 
-type KeyedUser struct{
+type KeyedUser struct {
 	User *User
-	Key      *datastore.Key
+	Key  *datastore.Key
 }
 
-func (ƨ *User) Key(key *datastore.Key) (*KeyedUser) {
+func (ƨ *User) Key(key *datastore.Key) *KeyedUser {
 	return &KeyedUser{
 		User: ƨ,
-		Key:      key,
+		Key:  key,
 	}
 }
 
@@ -37,7 +37,7 @@ func (ƨ Users) Key(keys []*datastore.Key) (keyed []KeyedUser) {
 	for i := range keyed {
 		keyed = append(keyed, KeyedUser{
 			User: &ƨ[i],
-			Key:      keys[i],
+			Key:  keys[i],
 		})
 	}
 	return

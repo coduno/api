@@ -16,15 +16,15 @@ import (
 
 type Submissions []Submission
 
-type KeyedSubmission struct{
+type KeyedSubmission struct {
 	Submission *Submission
-	Key      *datastore.Key
+	Key        *datastore.Key
 }
 
-func (ƨ *Submission) Key(key *datastore.Key) (*KeyedSubmission) {
+func (ƨ *Submission) Key(key *datastore.Key) *KeyedSubmission {
 	return &KeyedSubmission{
 		Submission: ƨ,
-		Key:      key,
+		Key:        key,
 	}
 }
 
@@ -37,7 +37,7 @@ func (ƨ Submissions) Key(keys []*datastore.Key) (keyed []KeyedSubmission) {
 	for i := range keyed {
 		keyed = append(keyed, KeyedSubmission{
 			Submission: &ƨ[i],
-			Key:      keys[i],
+			Key:        keys[i],
 		})
 	}
 	return

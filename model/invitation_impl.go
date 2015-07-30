@@ -16,15 +16,15 @@ import (
 
 type Invitations []Invitation
 
-type KeyedInvitation struct{
+type KeyedInvitation struct {
 	Invitation *Invitation
-	Key      *datastore.Key
+	Key        *datastore.Key
 }
 
-func (ƨ *Invitation) Key(key *datastore.Key) (*KeyedInvitation) {
+func (ƨ *Invitation) Key(key *datastore.Key) *KeyedInvitation {
 	return &KeyedInvitation{
 		Invitation: ƨ,
-		Key:      key,
+		Key:        key,
 	}
 }
 
@@ -37,7 +37,7 @@ func (ƨ Invitations) Key(keys []*datastore.Key) (keyed []KeyedInvitation) {
 	for i := range keyed {
 		keyed = append(keyed, KeyedInvitation{
 			Invitation: &ƨ[i],
-			Key:      keys[i],
+			Key:        keys[i],
 		})
 	}
 	return
