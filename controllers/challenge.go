@@ -3,7 +3,7 @@ package controllers
 import (
 	"net/http"
 
-	"github.com/coduno/engine/appengine/model"
+	"github.com/coduno/engine/model"
 	"github.com/coduno/engine/util"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"

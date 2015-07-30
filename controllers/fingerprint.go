@@ -12,7 +12,7 @@ import (
 
 	"google.golang.org/appengine/datastore"
 
-	"github.com/coduno/engine/appengine/model"
+	"github.com/coduno/engine/model"
 	"github.com/coduno/engine/util"
 )
 
