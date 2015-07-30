@@ -30,20 +30,24 @@ func main() {
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/api/companies/{id}/challenges", setup(controllers.GetChallengesForCompany))
-	r.HandleFunc("/api/challenges/{id}", setup(controllers.GetChallengeByID))
-	r.HandleFunc("/api/results", setup(controllers.CreateResult))
-	r.HandleFunc("/api/code/download", setup(controllers.DownloadTemplate))
-	r.HandleFunc("/api/companies", setup(controllers.CreateCompany))
-	r.HandleFunc("/api/company/login", setup(controllers.CompanyLogin))
-	r.HandleFunc("/api/engineurl", secure(controllers.Engine))
-	r.HandleFunc("/api/fingerprints", setup(controllers.HandleFingerprints))
-	r.HandleFunc("/api/invitations", setup(controllers.Invitation))
-	r.HandleFunc("/api/mock", controllers.MockData)
-	r.HandleFunc("/api/mockCompany", controllers.MockCompany)
 	r.HandleFunc("/subscriptions", secure(subscription.Subscriptions))
+
+	r.HandleFunc("/api/code/download", setup(controllers.DownloadTemplate))
+	r.HandleFunc("/api/invitations", setup(controllers.Invitation))
+	r.HandleFunc("/api/engineurl", secure(controllers.Engine))
+
+	r.HandleFunc("/api/challenges/{id}", setup(controllers.GetChallengeByID))
+
+	r.HandleFunc("/api/companies", setup(controllers.PostCompany))
+	r.HandleFunc("/api/companies/login", setup(controllers.CompanyLogin))
+	r.HandleFunc("/api/companies/{id}/challenges", setup(controllers.GetChallengesForCompany))
+
 	r.HandleFunc("/api/task/{id}", setup(controllers.GetTaskByKey))
+
+	r.HandleFunc("/api/results", setup(controllers.CreateResult))
 	r.HandleFunc("/api/results/{id}/submission", setup(controllers.PostSubmission))
+
+	r.HandleFunc("/api/mock", controllers.MockData)
 	http.Handle("/", r)
 	appengine.Main()
 }

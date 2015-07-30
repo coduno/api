@@ -20,7 +20,7 @@ func GetChallengeByID(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	p, ok := passenger.FromContext(ctx)
 
 	if !ok {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
 	}
 
@@ -50,8 +50,6 @@ func GetChallengeByID(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 // GetChallengesForCompany queries all the challenges defined  by a company.
 func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	var err error
-
 	if !util.CheckMethod(w, r, "GET") {
 		return
 	}
@@ -63,7 +61,7 @@ func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http
 		return
 	}
 
-	q := model.NewQueryForChallenge().Filter("Company=", key)
+	q := model.NewQueryForChallenge().Ancestor(key)
 
 	var challenges model.Challenges
 

@@ -14,8 +14,8 @@ import (
 	"github.com/coduno/engine/util/password"
 )
 
-// CompanyLoginInfo is the login info for a company
-type CompanyLoginInfo struct {
+// LoginInfo is the login info for a company
+type LoginInfo struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -34,62 +34,55 @@ func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var companyLogin CompanyLoginInfo
-	if err = json.Unmarshal(body, &companyLogin); err != nil {
+	var loginInfo LoginInfo
+	if err = json.Unmarshal(body, &loginInfo); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	q := model.NewQueryForCompany().
-		Filter("Email = ", companyLogin.Email).
+	q := model.NewQueryForUser().
+		Filter("Address = ", loginInfo.Email).
 		Limit(1)
 
-	var companies model.Companys
-	keys, err := q.GetAll(c, &companies)
+	var users model.Users
+	keys, err := q.GetAll(c, &users)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if len(companies) != 1 {
-		// NOTE: Do not leak len(companies) here.
+	if len(users) != 1 {
+		// NOTE: Do not leak len(users) here.
 		http.Error(w, "permission denied", http.StatusUnauthorized)
 		return
 	}
 
-	company := companies[0]
+	user := users[0]
 	key := keys[0]
 
-	if err = password.Check([]byte(companyLogin.Password), company.HashedPassword); err != nil {
+	if err = password.Check([]byte(loginInfo.Password), user.HashedPassword); err != nil {
 		// NOTE: Do not leak err here.
 		http.Error(w, "permission denied", http.StatusUnauthorized)
 		return
 	}
 
-	company.Write(w, key)
+	user.Write(w, key)
 }
 
-func CreateCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if !util.CheckMethod(w, r, "POST") {
 		return
 	}
-
 	var err error
 
-	var body []byte
-	if body, err = ioutil.ReadAll(r.Body); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	var company model.Company
-	if err = json.Unmarshal(body, &company); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&company); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	q := model.NewQueryForCompany().
-		Filter("Email = ", company.Email).
+		Filter("Address = ", company.Address.Address).
 		Limit(1)
 
 	var companies model.Companys
@@ -100,25 +93,11 @@ func CreateCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	if len(companies) > 0 {
 		body, _ := json.Marshal(map[string]string{
-			"error": "email already exists",
+			"error": "Company already exists",
 		})
 		w.Write(body)
 		return
 	}
-
-	var pw []byte
-	if pw, err = password.Generate(0); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var hpw []byte
-	if hpw, err = password.Hash(pw); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	company.HashedPassword = hpw
 
 	var key *datastore.Key
 	if key, err = company.Save(ctx); err != nil {
