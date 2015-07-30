@@ -48,7 +48,7 @@ func init() {
 // Status gathers a quick overview of the system state
 // and dumps it in JSON format.
 func Status(w http.ResponseWriter, r *http.Request) {
-	if !util.CheckMethod(w, r, "GET") {
+	if err := util.CheckMethod(r, "GET"); err != nil {
 		return
 	}
 

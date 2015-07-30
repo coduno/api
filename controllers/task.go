@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -13,43 +14,34 @@ import (
 )
 
 // GetTaskByKey loads a task by key
-func GetTaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func GetTaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
+		return http.StatusUnauthorized, errors.New("Unauthorized request")
 	}
-	if !util.CheckMethod(w, r, "GET") {
-		return
+	if err = util.CheckMethod(r, "GET"); err != nil {
+		return http.StatusMethodNotAllowed, err
 	}
 	taskKey, err := datastore.DecodeKey(mux.Vars(r)["id"])
-
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 	// User is a coder
 	if p.UserKey.Parent() == nil {
 		rk, err := datastore.DecodeKey(r.URL.Query()["result"][0])
 		if err != nil {
-			http.Error(w, "Key decoding err "+err.Error(), http.StatusInternalServerError)
-			return
+			return http.StatusInternalServerError, err
 		}
 		if !util.HasParent(p.UserKey, rk) {
-			http.Error(w, "Unauthorized to see the task", http.StatusUnauthorized)
-			return
+			return http.StatusUnauthorized, errors.New("Unauthorized")
 		}
 		var result model.Result
-		err = datastore.Get(ctx, rk, &result)
-		if err != nil {
-			http.Error(w, "Datastore err "+err.Error(), http.StatusInternalServerError)
-			return
+		if err = datastore.Get(ctx, rk, &result); err != nil {
+			return http.StatusInternalServerError, err
 		}
 		var challenge model.Challenge
-		err = datastore.Get(ctx, result.Challenge, &challenge)
-		if err != nil {
-			http.Error(w, "Datastore err "+err.Error(), http.StatusInternalServerError)
-			return
+		if err = datastore.Get(ctx, result.Challenge, &challenge); err != nil {
+			return http.StatusInternalServerError, err
 		}
 
 		emptyTime := time.Unix(0, 0)
@@ -62,20 +54,16 @@ func GetTaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if updateResult {
-			_, err = result.Save(ctx, rk)
-			if err != nil {
-				http.Error(w, "Datastore err "+err.Error(), http.StatusInternalServerError)
-				return
+			if _, err = result.Save(ctx, rk); err != nil {
+				return http.StatusInternalServerError, err
 			}
 		}
-
 	}
 
 	var task model.Task
-	err = datastore.Get(ctx, taskKey, &task)
-	if err != nil {
-		http.Error(w, "Datastore err"+err.Error(), http.StatusInternalServerError)
-		return
+	if err = datastore.Get(ctx, taskKey, &task); err != nil {
+		return http.StatusInternalServerError, err
 	}
 	task.Write(w, taskKey)
+	return http.StatusOK, nil
 }

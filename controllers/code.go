@@ -8,9 +8,9 @@ import (
 	"github.com/coduno/engine/util"
 )
 
-func DownloadTemplate(c context.Context, w http.ResponseWriter, r *http.Request) {
-	if !util.CheckMethod(w, r, "GET") {
-		return
+func DownloadTemplate(c context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
+	if err := util.CheckMethod(r, "GET"); err != nil {
+		return http.StatusMethodNotAllowed, err
 	}
 	// TODO(victorbalan): Serve correct template using the username and fingerprint id
 	// urlParams := mux.Vars(r)
@@ -22,4 +22,5 @@ func DownloadTemplate(c context.Context, w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Disposition", "attachment; filename='template.java'")
 
 	http.ServeFile(w, r, "challenges/template.java")
+	return http.StatusOK, nil
 }
