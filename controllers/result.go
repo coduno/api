@@ -4,41 +4,33 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/coduno/engine/model"
+	"github.com/coduno/app/model"
 	"google.golang.org/appengine/datastore"
 
 	"golang.org/x/net/context"
 )
 
-type ResultData struct {
-	ChallengeId string
-}
+func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 
-func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var resultData ResultData
+	var body = struct {
+		ChallengeID string
+	}{}
 
-	err := decoder.Decode(&resultData)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return http.StatusInternalServerError, err
 	}
 
-	key, err := datastore.DecodeKey(resultData.ChallengeId)
-
+	key, err := datastore.DecodeKey(body.ChallengeID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusBadRequest, err
 	}
 
 	result := model.Result{Challenge: key}
-
 	key, err = result.Save(ctx)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	result.Write(w, key)
+	return http.StatusOK, nil
 }

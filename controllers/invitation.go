@@ -10,9 +10,9 @@ import (
 	"time"
 
 	ourmail "github.com/coduno/app/mail"
-	"github.com/coduno/engine/model"
+	"github.com/coduno/app/model"
+	"github.com/coduno/app/util"
 	"github.com/coduno/engine/passenger"
-	"github.com/coduno/engine/util"
 	"github.com/coduno/engine/util/password"
 	"google.golang.org/appengine/datastore"
 

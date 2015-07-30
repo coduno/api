@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/appengine"
 
-	"github.com/coduno/engine/util"
+	"github.com/coduno/app/util"
 )
 
 type status struct {
