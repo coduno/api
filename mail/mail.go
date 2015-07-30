@@ -8,7 +8,13 @@ import (
 	appmail "google.golang.org/appengine/mail"
 )
 
-var Subscription, Invitation *template.Template
+var (
+	// Subscription is a default template to send emails
+	Subscription *template.Template
+
+	// Invitation is a default template to send emails
+	Invitation *template.Template
+)
 
 func init() {
 	var err error
@@ -22,6 +28,8 @@ func init() {
 	}
 }
 
+// Send is a wrapper for appengine/mail.Send that hardcodes the sender
+// TODO(flowlo): Don`t hardcode Sender
 func Send(c context.Context, to mail.Address, subject, body string) error {
 	return appmail.Send(c, &appmail.Message{
 		Sender:  "Lorenz Leutgeb <lorenz.leutgeb@cod.uno>",

@@ -18,6 +18,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// CodeData is a hack
 // TODO(victorbalan): Remove hack when we refactor the engine
 type CodeData struct {
 	Flags    string
@@ -26,6 +27,7 @@ type CodeData struct {
 	Language string
 }
 
+// SubmissionData is a hack
 // TODO(victorbalan): Remove hack when we refactor the engine
 type SubmissionData struct {
 	Task *datastore.Key
@@ -61,9 +63,8 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 		runOnDocker(w, codeTask, submissionData)
 		// TODO(victorbalan): Process the engine response and create a submission.
-		return http.StatusOK, nil
+		fallthrough
 	case "question":
-
 		return http.StatusOK, nil
 	default:
 		return http.StatusBadRequest, errors.New("Unknown submission kind.")
@@ -89,12 +90,11 @@ func runOnDocker(w http.ResponseWriter, task model.CodeTask, sd SubmissionData) 
 		Code:     sd.Code,
 		Language: sd.Language,
 	}
-	var engine string
+	engine := "https://engine.cod.uno"
 	if appengine.IsDevAppServer() {
 		engine = "http://localhost:8081"
-	} else {
-		engine = "https://engine.cod.uno"
 	}
+
 	buf := new(bytes.Buffer)
 	err := json.NewEncoder(buf).Encode(data)
 	if err != nil {
