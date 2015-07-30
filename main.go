@@ -30,8 +30,9 @@ func main() {
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/api/challenges", setup(controllers.GetChallengesForCompany))
+	r.HandleFunc("/api/companies/{id}/challenges", setup(controllers.GetChallengesForCompany))
 	r.HandleFunc("/api/challenges/{id}", setup(controllers.GetChallengeByID))
+	r.HandleFunc("/api/results", setup(controllers.CreateResult))
 	r.HandleFunc("/api/code/download", setup(controllers.DownloadTemplate))
 	r.HandleFunc("/api/companies", setup(controllers.CreateCompany))
 	r.HandleFunc("/api/company/login", setup(controllers.CompanyLogin))

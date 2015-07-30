@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/coduno/engine/model"
+	"github.com/coduno/engine/passenger"
 	"github.com/coduno/engine/util"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
@@ -16,6 +17,13 @@ func GetChallengeByID(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	p, ok := passenger.FromContext(ctx)
+
+	if !ok {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	key, err := datastore.DecodeKey(mux.Vars(r)["id"])
 
 	if err != nil {
@@ -24,14 +32,23 @@ func GetChallengeByID(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	var challenge model.Challenge
+
 	err = datastore.Get(ctx, key, &challenge)
 	if err != nil {
 		http.Error(w, "Datastore err"+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	challenge.Write(w, key)
+
+	if parent := p.UserKey.Parent(); parent == nil {
+		// The current user is a coder so we must also create a result.
+		challenge.Write(w, key)
+	} else {
+		// TODO(pbochis) : If a company representative user makes the request we also include Tasks in the response.
+		challenge.Write(w, key)
+	}
 }
 
+// GetChallengesForCompany queries all the challenges defined  by a company.
 func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -39,17 +56,10 @@ func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http
 		return
 	}
 
-	companyKey := r.URL.Query()["company"][0]
-
-	if companyKey == "" {
-		http.Error(w, "missing parameter 'company'", http.StatusInternalServerError)
-		return
-	}
-
-	key, err := datastore.DecodeKey(companyKey)
+	key, err := datastore.DecodeKey(mux.Vars(r)["id"])
 
 	if err != nil {
-		http.Error(w, "Invalid company", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
