@@ -18,7 +18,7 @@ import (
 )
 
 type Subscription struct {
-	Address          string
+	Address          mail.Address
 	EntryTime        time.Time
 	Token            []byte
 	VerificationTime time.Time
@@ -176,7 +176,7 @@ func subscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sub := Subscription{
-		Address:   address.Address,
+		Address:   *address,
 		EntryTime: time.Now(),
 		Token:     revocationBytes,
 	}
@@ -198,10 +198,10 @@ func subscribe(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("A message to confirm your subscription was sent."))
 }
 
-func (sub Subscription) RequestConfirmation(c context.Context) error {
-	body, err := mailUtils.PrepareMailTemplate(mailUtils.SubscriptionTemplate, sub)
-	if err != nil {
+func (sub Subscription) RequestConfirmation(ctx context.Context) error {
+	buf := new(bytes.Buffer)
+	if err := mailUtils.Subscription.Execute(buf, sub); err != nil {
 		return err
 	}
-	return mailUtils.SendMail(c, []string{sub.Address}, "Hello from Coduno", body)
+	return mailUtils.Send(ctx, sub.Address, "Hello from Coduno", buf.String())
 }
