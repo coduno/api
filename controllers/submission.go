@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"google.golang.org/appengine/datastore"
@@ -15,35 +16,31 @@ import (
 )
 
 // PostSubmission creates a new submission
-func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
+		return http.StatusUnauthorized, errors.New("Unauthorized request")
 	}
-	if !util.CheckMethod(w, r, "POST") {
-		return
+	if err = util.CheckMethod(r, "GET"); err != nil {
+		return http.StatusMethodNotAllowed, err
 	}
 	var submission model.Submission
 	if err := json.NewDecoder(r.Body).Decode(&submission); err != nil {
-		http.Error(w, "Unmarshal error:"+err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 	resultKey, err := datastore.DecodeKey(mux.Vars(r)["id"])
 
 	if !util.HasParent(p.UserKey, resultKey) {
-		http.Error(w, "Cannot submit answer for other users", http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, errors.New("Cannot submit answer for other users")
 	}
 
 	if err != nil {
-		http.Error(w, "Key decoding: "+err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 	key, err := submission.SaveWithParent(ctx, resultKey)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 	submission.Write(w, key)
+	return http.StatusCreated, nil
 }

@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"errors"
 	"net/http"
 
 	"golang.org/x/net/context"
@@ -21,23 +21,13 @@ type LoginInfo struct {
 }
 
 // CompanyLogin starts a session for a company
-func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) {
-	if !util.CheckMethod(w, r, "POST") {
-		return
+func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if err = util.CheckMethod(r, "GET"); err != nil {
+		return http.StatusMethodNotAllowed, err
 	}
-
-	var err error
-
-	var body []byte
-	if body, err = ioutil.ReadAll(r.Body); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	var loginInfo LoginInfo
-	if err = json.Unmarshal(body, &loginInfo); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	if err = json.NewDecoder(r.Body).Decode(&loginInfo); err != nil {
+		return http.StatusBadRequest, err
 	}
 
 	q := model.NewQueryForUser().
@@ -47,14 +37,12 @@ func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) {
 	var users model.Users
 	keys, err := q.GetAll(c, &users)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	if len(users) != 1 {
 		// NOTE: Do not leak len(users) here.
-		http.Error(w, "permission denied", http.StatusUnauthorized)
-		return
+		return http.StatusUnauthorized, errors.New("Unauthorized")
 	}
 
 	user := users[0]
@@ -62,23 +50,21 @@ func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err = password.Check([]byte(loginInfo.Password), user.HashedPassword); err != nil {
 		// NOTE: Do not leak err here.
-		http.Error(w, "permission denied", http.StatusUnauthorized)
-		return
+		return http.StatusUnauthorized, errors.New("Unauthorized")
 	}
 
 	user.Write(w, key)
+	return http.StatusOK, nil
 }
 
-func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	if !util.CheckMethod(w, r, "POST") {
-		return
+func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if err = util.CheckMethod(r, "GET"); err != nil {
+		return http.StatusMethodNotAllowed, err
 	}
-	var err error
 
 	var company model.Company
 	if err = json.NewDecoder(r.Body).Decode(&company); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, err
 	}
 
 	q := model.NewQueryForCompany().
@@ -87,26 +73,21 @@ func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	var companies model.Companys
 	if _, err = q.GetAll(ctx, &companies); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	if len(companies) > 0 {
-		body, _ := json.Marshal(map[string]string{
-			"error": "Company already exists",
-		})
-		w.Write(body)
-		return
+		return http.StatusConflict, errors.New("Already registered.")
 	}
 
 	var key *datastore.Key
 	if key, err = company.Save(ctx); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	// TODO(flowlo): Respond with HTTP 201 and include a
 	// location header and caching information.
 
 	company.Write(w, key)
+	return http.StatusOK, nil
 }

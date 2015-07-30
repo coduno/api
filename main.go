@@ -19,7 +19,7 @@ import (
 
 // ContextHandleFunc is similar to a HandleFunc, but also gets passed
 // the current context.
-type ContextHandleFunc func(context.Context, http.ResponseWriter, *http.Request)
+type ContextHandleFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
 
 // HandleFunc describes a function that can handle HTTP requests and respond
 // to them correctly.
@@ -140,8 +140,17 @@ func auth(h ContextHandleFunc) HandleFunc {
 	}
 }
 
+func guard(h ContextHandleFunc) ContextHandleFunc {
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+		if status, err = h(ctx, w, r); err != nil {
+			http.Error(w, err.Error(), status)
+		}
+		return
+	}
+}
+
 // setup is the default wrapper for any HandleFunc that talks to
 // the outside. It will wrap h in scure, cors and auth.
 func setup(h ContextHandleFunc) HandleFunc {
-	return secure(cors(auth(h)))
+	return secure(cors(auth(guard(h))))
 }

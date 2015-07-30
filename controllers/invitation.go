@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/mail"
 	"time"
@@ -20,15 +21,14 @@ import (
 
 // Invitation handles the creation of a new invitation and sends an e-mail to
 // the user.
-func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
-		http.Error(w, "permission denied", http.StatusUnauthorized)
-		return
+		return http.StatusUnauthorized, errors.New("permission denied")
 	}
 	cKey := p.UserKey.Parent()
 	if cKey == nil {
-		http.Error(w, "permission denied", http.StatusUnauthorized)
+		return http.StatusUnauthorized, errors.New("permission denied")
 	}
 	var company model.Company
 	datastore.Get(ctx, cKey, &company)
@@ -36,8 +36,8 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	// TODO(flowlo): Also check whether the parent of the current user is the
 	// parent of the challenge (if any).
 
-	if !util.CheckMethod(w, r, "POST") {
-		return
+	if err = util.CheckMethod(r, "GET"); err != nil {
+		return http.StatusMethodNotAllowed, err
 	}
 
 	var params = struct {
@@ -46,13 +46,13 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	}{}
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, err
 	}
 
 	address, err := mail.ParseAddress(params.Address)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, err
 	}
 
 	var users model.Users
@@ -64,7 +64,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	var key *datastore.Key
@@ -76,16 +76,14 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		user = model.User{Address: *address}
 		key, err = datastore.Put(ctx, key, &user)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return http.StatusInternalServerError, err
 		}
 	}
 
 	// TODO(flowlo): Generate token with its own util.
 	tokenValue, err := password.Generate(0)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 	now := time.Now()
 	accessToken := model.AccessToken{
@@ -111,21 +109,19 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		company.Address,
 		token,
 	}); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	err = ourmail.Send(ctx, user.Address, "We challenge you!", buf.String())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	key, err = invitation.Save(ctx)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	invitation.Write(w, key)
+	return http.StatusOK, nil
 }
