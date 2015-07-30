@@ -8,7 +8,7 @@ import (
 
 	"github.com/coduno/app/controllers"
 	"github.com/coduno/app/subscription"
-	"github.com/coduno/engine/appengine/passenger"
+	"github.com/coduno/engine/passenger"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
@@ -40,6 +40,8 @@ func main() {
 	r.HandleFunc("/api/mock", controllers.MockData)
 	r.HandleFunc("/api/mockCompany", controllers.MockCompany)
 	r.HandleFunc("/subscriptions", secure(subscription.Subscriptions))
+	r.HandleFunc("/api/task/{id}", setup(controllers.GetTaskByKey))
+	r.HandleFunc("/api/results/{id}/submission", setup(controllers.PostSubmission))
 	http.Handle("/", r)
 	appengine.Main()
 }
@@ -88,6 +90,9 @@ func secure(h HandleFunc) HandleFunc {
 // Rudimentary CORS checking. See
 // https://developer.mozilla.org/docs/Web/HTTP/Access_control_CORS
 func cors(h HandleFunc) HandleFunc {
+	if appengine.IsDevAppServer() {
+		return h
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
