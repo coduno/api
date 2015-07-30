@@ -45,7 +45,7 @@ func main() {
 	r.HandleFunc("/api/task/{id}", setup(controllers.GetTaskByKey))
 
 	r.HandleFunc("/api/results", setup(controllers.CreateResult))
-	r.HandleFunc("/api/results/{id}/submission", setup(controllers.PostSubmission))
+	r.HandleFunc("/api/results/{id}/submissions", setup(controllers.PostSubmission))
 
 	r.HandleFunc("/api/mock", controllers.MockData)
 	http.Handle("/", r)
