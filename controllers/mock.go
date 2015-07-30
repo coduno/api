@@ -99,17 +99,20 @@ func MockData(w http.ResponseWriter, req *http.Request) {
 		SkillWeights: model.SkillWeights{1, 2, 3},
 	}.Save(ctx)
 
-	taskThree, _ := model.Task{
-		Assignment: model.Assignment{
-			Name:         "Task three",
-			Description:  "Description of task three",
-			Instructions: "Instructions of task three",
-			Duration:     time.Hour,
-			Endpoints: model.Endpoints{
-				WebInterface: "multiple-select-task",
+	taskThree, _ := model.CodeTask{
+		Task: model.Task{
+			Assignment: model.Assignment{
+				Name:         "Task three",
+				Description:  "Description of task three",
+				Instructions: "Instructions of task three",
+				Duration:     time.Hour,
+				Endpoints: model.Endpoints{
+					WebInterface: "multiple-select-task",
+				},
 			},
+			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		SkillWeights: model.SkillWeights{1, 2, 3},
+		Runner: "simple",
 	}.Save(ctx)
 
 	model.Challenge{
