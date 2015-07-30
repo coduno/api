@@ -38,6 +38,7 @@ func main() {
 	r.HandleFunc("/api/company/login", setup(controllers.CompanyLogin))
 	r.HandleFunc("/api/engineurl", secure(controllers.Engine))
 	r.HandleFunc("/api/fingerprints", setup(controllers.HandleFingerprints))
+	r.HandleFunc("/api/invitations", setup(controllers.Invitation))
 	r.HandleFunc("/api/mock", controllers.MockData)
 	r.HandleFunc("/api/mockCompany", controllers.MockCompany)
 	r.HandleFunc("/subscriptions", secure(subscription.Subscriptions))
