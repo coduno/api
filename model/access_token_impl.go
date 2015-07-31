@@ -17,8 +17,8 @@ import (
 type AccessTokens []AccessToken
 
 type KeyedAccessToken struct {
-	AccessToken *AccessToken
-	Key         *datastore.Key
+	*AccessToken
+	Key *datastore.Key
 }
 
 func (ƨ *AccessToken) Key(key *datastore.Key) *KeyedAccessToken {

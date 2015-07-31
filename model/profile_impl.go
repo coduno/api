@@ -17,8 +17,8 @@ import (
 type Profiles []Profile
 
 type KeyedProfile struct {
-	Profile *Profile
-	Key     *datastore.Key
+	*Profile
+	Key *datastore.Key
 }
 
 func (ƨ *Profile) Key(key *datastore.Key) *KeyedProfile {

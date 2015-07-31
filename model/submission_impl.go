@@ -17,8 +17,8 @@ import (
 type Submissions []Submission
 
 type KeyedSubmission struct {
-	Submission *Submission
-	Key        *datastore.Key
+	*Submission
+	Key *datastore.Key
 }
 
 func (ƨ *Submission) Key(key *datastore.Key) *KeyedSubmission {

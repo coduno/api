@@ -7,7 +7,7 @@ import (
 type {{slice}} []{{type}}
 
 type Keyed{{type}} struct{
-	{{type}} *{{type}}
+	*{{type}}
 	Key      *datastore.Key
 }
 

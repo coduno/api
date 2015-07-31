@@ -17,8 +17,8 @@ import (
 type Results []Result
 
 type KeyedResult struct {
-	Result *Result
-	Key    *datastore.Key
+	*Result
+	Key *datastore.Key
 }
 
 func (ƨ *Result) Key(key *datastore.Key) *KeyedResult {

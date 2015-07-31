@@ -17,8 +17,8 @@ import (
 type Challenges []Challenge
 
 type KeyedChallenge struct {
-	Challenge *Challenge
-	Key       *datastore.Key
+	*Challenge
+	Key *datastore.Key
 }
 
 func (ƨ *Challenge) Key(key *datastore.Key) *KeyedChallenge {

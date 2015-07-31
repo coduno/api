@@ -17,8 +17,8 @@ import (
 type Users []User
 
 type KeyedUser struct {
-	User *User
-	Key  *datastore.Key
+	*User
+	Key *datastore.Key
 }
 
 func (ƨ *User) Key(key *datastore.Key) *KeyedUser {

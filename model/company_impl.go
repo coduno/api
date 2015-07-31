@@ -17,8 +17,8 @@ import (
 type Companys []Company
 
 type KeyedCompany struct {
-	Company *Company
-	Key     *datastore.Key
+	*Company
+	Key *datastore.Key
 }
 
 func (ƨ *Company) Key(key *datastore.Key) *KeyedCompany {

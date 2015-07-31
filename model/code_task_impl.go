@@ -17,8 +17,8 @@ import (
 type CodeTasks []CodeTask
 
 type KeyedCodeTask struct {
-	CodeTask *CodeTask
-	Key      *datastore.Key
+	*CodeTask
+	Key *datastore.Key
 }
 
 func (ƨ *CodeTask) Key(key *datastore.Key) *KeyedCodeTask {

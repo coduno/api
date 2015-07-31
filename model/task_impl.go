@@ -17,8 +17,8 @@ import (
 type Tasks []Task
 
 type KeyedTask struct {
-	Task *Task
-	Key  *datastore.Key
+	*Task
+	Key *datastore.Key
 }
 
 func (ƨ *Task) Key(key *datastore.Key) *KeyedTask {

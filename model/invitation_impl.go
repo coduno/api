@@ -17,8 +17,8 @@ import (
 type Invitations []Invitation
 
 type KeyedInvitation struct {
-	Invitation *Invitation
-	Key        *datastore.Key
+	*Invitation
+	Key *datastore.Key
 }
 
 func (ƨ *Invitation) Key(key *datastore.Key) *KeyedInvitation {

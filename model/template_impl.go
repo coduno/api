@@ -17,8 +17,8 @@ import (
 type Templates []Template
 
 type KeyedTemplate struct {
-	Template *Template
-	Key      *datastore.Key
+	*Template
+	Key *datastore.Key
 }
 
 func (ƨ *Template) Key(key *datastore.Key) *KeyedTemplate {
