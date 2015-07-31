@@ -6,8 +6,6 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-//go:generate generator
-
 // Submission is a form of result for some
 // Task.
 //
@@ -20,13 +18,6 @@ import (
 //
 //		CorrectAnswers,
 //		TotalAnswers int
-//	}
-//
-//	type CodeSubmission struct {
-//		Submission
-//
-//		Code,
-//		Language string
 //	}
 //
 // TODO(flowlo): Switching parent key from Task to Result
@@ -43,5 +34,3 @@ type Submission struct {
 	Time time.Time
 	Task *datastore.Key
 }
-
-// /api/users/bfsdlf/profiles/jkadfgsdfg/results/sldfng/codeSubmissions/lasdbfd/
