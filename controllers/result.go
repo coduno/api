@@ -30,6 +30,6 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 		return http.StatusInternalServerError, err
 	}
 
-	result.Write(w, key)
+	json.NewEncoder(w).Encode(result.Key(key))
 	return http.StatusOK, nil
 }

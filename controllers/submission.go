@@ -71,7 +71,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
-	submission.Write(w, key)
+	json.NewEncoder(w).Encode(submission.Key(key))
 	return http.StatusCreated, nil
 }
 

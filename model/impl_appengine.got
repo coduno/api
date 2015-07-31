@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"encoding/json"
 	"net/http"
 
 	"golang.org/x/net/context"
@@ -46,14 +47,14 @@ func ({{t}} {{type}}Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "" {
 		var results {{slice}}
 		keys, _ := NewQueryFor{{type}}().GetAll(ctx, &results)
-		results.Write(w, keys)
+		json.NewEncoder(w).Encode(results.Key(keys))
 		return
 	}
 
 	k, _ := datastore.DecodeKey(r.URL.Path)
-	var {{t}}_ {{type}}
-	datastore.Get(ctx, k, &{{t}}_)
-	{{t}}_.Write(w, k)
+	var entity {{type}}
+	datastore.Get(ctx, k, &entity)
+	json.NewEncoder(w).Encode(entity)
 }
 
 func Serve{{type}}(prefix string, muxes ...*http.ServeMux) {

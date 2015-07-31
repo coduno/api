@@ -133,6 +133,6 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		return http.StatusInternalServerError, err
 	}
 
-	i.Write(w, key)
+	json.NewEncoder(w).Encode(i.Key(key))
 	return http.StatusOK, nil
 }

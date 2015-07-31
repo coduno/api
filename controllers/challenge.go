@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/coduno/app/model"
@@ -33,14 +34,16 @@ func ChallengeByKey(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusInternalServerError, err
 	}
 
+	e := json.NewEncoder(w)
 	if parent := p.UserKey.Parent(); parent == nil {
 		// The current user is a coder so we must also create a result.
-		challenge.Write(w, key)
+		e.Encode(challenge.Key(key))
 	} else {
 		// TODO(pbochis): If a company representativemakes the request
 		// we also include Tasks in the response.
-		challenge.Write(w, key)
+		e.Encode(challenge.Key(key))
 	}
+
 	return http.StatusOK, nil
 }
 
@@ -70,6 +73,6 @@ func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http
 		return http.StatusInternalServerError, err
 	}
 
-	challenges.Write(w, keys)
+	json.NewEncoder(w).Encode(challenges.Key(keys))
 	return http.StatusOK, nil
 }

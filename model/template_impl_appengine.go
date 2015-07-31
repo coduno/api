@@ -6,16 +6,13 @@
 //
 //	generator
 //
-// at
-//
-//	2015-07-30T17:21:42+03:00
-//
-// Do not edit it!
+// DO NOT EDIT
 
 package model
 
 import (
 	"errors"
+	"encoding/json"
 	"net/http"
 
 	"golang.org/x/net/context"
@@ -60,14 +57,14 @@ func (ƨ TemplateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "" {
 		var results Templates
 		keys, _ := NewQueryForTemplate().GetAll(ctx, &results)
-		results.Write(w, keys)
+		json.NewEncoder(w).Encode(results.Key(keys))
 		return
 	}
 
 	k, _ := datastore.DecodeKey(r.URL.Path)
-	var ƨ_ Template
-	datastore.Get(ctx, k, &ƨ_)
-	ƨ_.Write(w, k)
+	var entity Template
+	datastore.Get(ctx, k, &entity)
+	json.NewEncoder(w).Encode(entity)
 }
 
 func ServeTemplate(prefix string, muxes ...*http.ServeMux) {

@@ -45,6 +45,6 @@ func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (s
 	// TODO(flowlo): Respond with HTTP 201 and include a
 	// location header and caching information.
 
-	company.Write(w, key)
+	json.NewEncoder(w).Encode(company.Key(key))
 	return http.StatusOK, nil
 }

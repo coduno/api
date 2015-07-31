@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -70,6 +71,6 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 	if err = datastore.Get(ctx, taskKey, &task); err != nil {
 		return http.StatusInternalServerError, err
 	}
-	task.Write(w, taskKey)
+	json.NewEncoder(w).Encode(task.Key(taskKey))
 	return http.StatusOK, nil
 }
