@@ -77,14 +77,14 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 func runOnDocker(w http.ResponseWriter, task model.CodeTask, language, code string) (r *http.Response, err error) {
 	var data = struct {
-		Flags, Code, Runner, Language string
+		Flags, Code, Language string
 	}{
-		task.Flags, task.Runner, code, language,
+		task.Flags, code, language,
 	}
 
-	location := "https://engine.cod.uno"
+	location := "https://engine.cod.uno/"
 	if appengine.IsDevAppServer() {
-		location = "http://localhost:8081"
+		location = "http://localhost:8081/"
 	}
 
 	buf := new(bytes.Buffer)
@@ -92,5 +92,5 @@ func runOnDocker(w http.ResponseWriter, task model.CodeTask, language, code stri
 		return
 	}
 
-	return http.Post(location, "application/json", buf)
+	return http.Post(location+task.Runner, "application/json", buf)
 }
