@@ -85,6 +85,10 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
+		profile := model.Profile{}
+		if _, err = profile.SaveWithParent(ctx, key); err != nil {
+			return http.StatusInternalServerError, err
+		}
 	}
 
 	// TODO(flowlo): Generate token with its own util.
