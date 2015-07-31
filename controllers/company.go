@@ -57,8 +57,9 @@ func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) (st
 	return http.StatusOK, nil
 }
 
+// PostCompany creates a new company after validating by id
 func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if err = util.CheckMethod(r, "GET"); err != nil {
+	if err = util.CheckMethod(r, "POST"); err != nil {
 		return http.StatusMethodNotAllowed, err
 	}
 

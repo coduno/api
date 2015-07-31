@@ -8,6 +8,8 @@ import (
 	"github.com/coduno/app/util"
 )
 
+// DownloadTemplate servers a static file to a client.
+// TODO(flowlo, victorbalan): decide where the templates will lay
 func DownloadTemplate(c context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
 	if err := util.CheckMethod(r, "GET"); err != nil {
 		return http.StatusMethodNotAllowed, err
