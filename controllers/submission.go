@@ -27,15 +27,10 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	if r.Method != "POST" {
 		return http.StatusMethodNotAllowed, nil
 	}
-	var submission model.Submission
-	if err := json.NewDecoder(r.Body).Decode(&submission); err != nil {
-		return http.StatusInternalServerError, err
-	}
 
 	submissionKind := r.URL.Query()["kind"][0]
 	switch submissionKind {
 	case "code":
-		// TODO(victorbalan): Load body in separate struct and not in submission
 		var body = struct {
 			Task *datastore.Key
 			Code,
@@ -61,6 +56,13 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	default:
 		return http.StatusBadRequest, errors.New("Unknown submission kind.")
 	}
+
+	// TODO(victorbalan, flowlo): Create real submission from docker response.
+	var submission model.Submission
+	if err := json.NewDecoder(r.Body).Decode(&submission); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
 	resultKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
 
 	if !util.HasParent(p.UserKey, resultKey) {

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/coduno/app/model"
@@ -35,7 +36,7 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 		GetAll(ctx, &profiles)
 
 	if len(keys) != 1 {
-		return http.StatusInternalServerError, err
+		return http.StatusInternalServerError, errors.New("Profile not found")
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&body)

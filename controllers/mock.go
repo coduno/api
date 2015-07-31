@@ -54,6 +54,8 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		LastUpdate: time.Now(),
 	}.SaveWithParent(ctx, victor)
 
+	model.AccessToken{Value: "random_string"}.SaveWithParent(ctx, victor)
+
 	model.Profile{
 		Skills:     model.Skills{11, 1234, 14},
 		LastUpdate: time.Now(),
@@ -73,30 +75,36 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		HashedPassword: pw,
 	}.SaveWithParent(ctx, coduno)
 
-	taskOne, _ := model.Task{
-		Assignment: model.Assignment{
-			Name:         "Task one",
-			Description:  "Description of task one",
-			Instructions: "Instructions of task one",
-			Duration:     time.Hour,
-			Endpoints: model.Endpoints{
-				WebInterface: "coding-task",
+	taskOne, _ := model.CodeTask{
+		Task: model.Task{
+			Assignment: model.Assignment{
+				Name:         "Task one",
+				Description:  "Description of task one",
+				Instructions: "Instructions of task one",
+				Duration:     time.Hour,
+				Endpoints: model.Endpoints{
+					WebInterface: "coding-task",
+				},
 			},
+			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		SkillWeights: model.SkillWeights{1, 2, 3},
+		Runner: "simple",
 	}.Save(ctx)
 
-	taskTwo, _ := model.Task{
-		Assignment: model.Assignment{
-			Name:         "Task two",
-			Description:  "Description of task two",
-			Instructions: "Instructions of task two",
-			Duration:     time.Hour,
-			Endpoints: model.Endpoints{
-				WebInterface: "boolean-task",
+	taskTwo, _ := model.CodeTask{
+		Task: model.Task{
+			Assignment: model.Assignment{
+				Name:         "Task two",
+				Description:  "Description of task two",
+				Instructions: "Instructions of task two",
+				Duration:     time.Hour,
+				Endpoints: model.Endpoints{
+					WebInterface: "simple-code-task",
+				},
 			},
+			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		SkillWeights: model.SkillWeights{1, 2, 3},
+		Runner: "simple",
 	}.Save(ctx)
 
 	taskThree, _ := model.CodeTask{
@@ -107,7 +115,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 				Instructions: "Instructions of task three",
 				Duration:     time.Hour,
 				Endpoints: model.Endpoints{
-					WebInterface: "multiple-select-task",
+					WebInterface: "simple-code-task",
 				},
 			},
 			SkillWeights: model.SkillWeights{1, 2, 3},
@@ -125,7 +133,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 				WebInterface: "sequential-challenge",
 			},
 		},
-		Tasks: []*datastore.Key{taskOne},
+		Tasks: []*datastore.Key{taskThree},
 	}.SaveWithParent(ctx, coduno)
 
 	model.Challenge{

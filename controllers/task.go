@@ -67,10 +67,15 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 		}
 	}
 
-	var task model.Task
-	if err = datastore.Get(ctx, taskKey, &task); err != nil {
-		return http.StatusInternalServerError, err
+	switch taskKey.Kind() {
+	case "codeTasks":
+		var task model.CodeTask
+		if err = datastore.Get(ctx, taskKey, &task); err != nil {
+			return http.StatusInternalServerError, err
+		}
+		json.NewEncoder(w).Encode(task.Key(taskKey))
+		return http.StatusOK, nil
+	default:
+		return http.StatusInternalServerError, errors.New("Not yet impl")
 	}
-	json.NewEncoder(w).Encode(task.Key(taskKey))
-	return http.StatusOK, nil
 }
