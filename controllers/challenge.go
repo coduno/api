@@ -1,30 +1,27 @@
 package controllers
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/coduno/app/model"
-	"github.com/coduno/app/util"
 	"github.com/coduno/engine/passenger"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
 )
 
-// GetChallengeByID loads a challenge by id
-func GetChallengeByID(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if err = util.CheckMethod(r, "GET"); err != nil {
-		return http.StatusMethodNotAllowed, err
+// ChallengeByKey loads a challenge by key.
+func ChallengeByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
 	}
 
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
-		return http.StatusUnauthorized, errors.New("Unauthorized request")
+		return http.StatusUnauthorized, nil
 	}
 
-	key, err := datastore.DecodeKey(mux.Vars(r)["id"])
-
+	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -40,7 +37,8 @@ func GetChallengeByID(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		// The current user is a coder so we must also create a result.
 		challenge.Write(w, key)
 	} else {
-		// TODO(pbochis) : If a company representative user makes the request we also include Tasks in the response.
+		// TODO(pbochis): If a company representativemakes the request
+		// we also include Tasks in the response.
 		challenge.Write(w, key)
 	}
 	return http.StatusOK, nil
@@ -48,33 +46,30 @@ func GetChallengeByID(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 // GetChallengesForCompany queries all the challenges defined  by a company.
 func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if err = util.CheckMethod(r, "GET"); err != nil {
-		return http.StatusMethodNotAllowed, err
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
 	}
+
 	_, ok := passenger.FromContext(ctx)
 	if !ok {
-		return http.StatusUnauthorized, errors.New("Unauthorized request")
+		return http.StatusUnauthorized, nil
 	}
-	key, err := datastore.DecodeKey(mux.Vars(r)["id"])
 
+	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
-
-	q := model.NewQueryForChallenge().Ancestor(key)
 
 	var challenges model.Challenges
 
-	keys, err := q.GetAll(ctx, &challenges)
+	keys, err := model.NewQueryForChallenge().
+		Ancestor(key).
+		GetAll(ctx, &challenges)
 
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	values := make([]interface{}, len(challenges))
-	for i := range challenges {
-		values[i] = challenges[i]
-	}
 	challenges.Write(w, keys)
 	return http.StatusOK, nil
 }

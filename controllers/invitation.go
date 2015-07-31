@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/coduno/app/model"
-	"github.com/coduno/app/util"
 	"github.com/coduno/engine/passenger"
 	"github.com/coduno/engine/util/password"
 	"google.golang.org/appengine/datastore"
@@ -47,8 +46,8 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 	// TODO(flowlo): Also check whether the parent of the current user is the
 	// parent of the challenge (if any).
 
-	if err = util.CheckMethod(r, "GET"); err != nil {
-		return http.StatusMethodNotAllowed, err
+	if r.Method == "GET" {
+		return http.StatusMethodNotAllowed, nil
 	}
 
 	var params = struct {
@@ -56,13 +55,11 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		Challenge *datastore.Key
 	}{}
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return http.StatusBadRequest, err
 	}
 
 	address, err := mail.ParseAddress(params.Address)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return http.StatusBadRequest, err
 	}
 
@@ -74,7 +71,6 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		GetAll(ctx, &users)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return http.StatusInternalServerError, err
 	}
 

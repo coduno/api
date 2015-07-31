@@ -18,31 +18,14 @@ import (
 	"golang.org/x/net/context"
 )
 
-// CodeData is a hack
-// TODO(victorbalan): Remove hack when we refactor the engine
-type CodeData struct {
-	Flags    string
-	Code     string
-	Runner   string
-	Language string
-}
-
-// SubmissionData is a hack
-// TODO(victorbalan): Remove hack when we refactor the engine
-type SubmissionData struct {
-	Task *datastore.Key
-	Code,
-	Language string
-}
-
-// PostSubmission creates a new submission
+// PostSubmission creates a new submission.
 func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, errors.New("Unauthorized request")
 	}
-	if err = util.CheckMethod(r, "POST"); err != nil {
-		return http.StatusMethodNotAllowed, err
+	if r.Method != "POST" {
+		return http.StatusMethodNotAllowed, nil
 	}
 	var submission model.Submission
 	if err := json.NewDecoder(r.Body).Decode(&submission); err != nil {
@@ -53,15 +36,24 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	switch submissionKind {
 	case "code":
 		// TODO(victorbalan): Load body in separate struct and not in submission
-		var submissionData SubmissionData
-		if err := json.NewDecoder(r.Body).Decode(&submissionData); err != nil {
+		var body = struct {
+			Task *datastore.Key
+			Code,
+			Language string
+		}{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			return http.StatusInternalServerError, err
 		}
 		var codeTask model.CodeTask
-		if err = datastore.Get(ctx, submissionData.Task, &codeTask); err != nil {
+		if err = datastore.Get(ctx, body.Task, &codeTask); err != nil {
 			return http.StatusInternalServerError, err
 		}
-		runOnDocker(w, codeTask, submissionData)
+		var response *http.Response
+		if response, err = runOnDocker(w, codeTask, body.Language, body.Code); err != nil {
+			return http.StatusInternalServerError, err
+		}
+		defer response.Body.Close()
+		io.Copy(w, response.Body)
 		// TODO(victorbalan): Process the engine response and create a submission.
 		fallthrough
 	case "question":
@@ -69,7 +61,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	default:
 		return http.StatusBadRequest, errors.New("Unknown submission kind.")
 	}
-	resultKey, err := datastore.DecodeKey(mux.Vars(r)["id"])
+	resultKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
 
 	if !util.HasParent(p.UserKey, resultKey) {
 		return http.StatusBadRequest, errors.New("Cannot submit answer for other users")
@@ -83,23 +75,22 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return http.StatusCreated, nil
 }
 
-func runOnDocker(w http.ResponseWriter, task model.CodeTask, sd SubmissionData) {
-	data := CodeData{
-		Flags:    task.Flags,
-		Runner:   task.Runner,
-		Code:     sd.Code,
-		Language: sd.Language,
+func runOnDocker(w http.ResponseWriter, task model.CodeTask, language, code string) (r *http.Response, err error) {
+	var data = struct {
+		Flags, Code, Runner, Language string
+	}{
+		task.Flags, task.Runner, code, language,
 	}
-	engine := "https://engine.cod.uno"
+
+	location := "https://engine.cod.uno"
 	if appengine.IsDevAppServer() {
-		engine = "http://localhost:8081"
+		location = "http://localhost:8081"
 	}
 
 	buf := new(bytes.Buffer)
-	err := json.NewEncoder(buf).Encode(data)
-	if err != nil {
+	if err = json.NewEncoder(buf).Encode(data); err != nil {
 		return
 	}
-	res, _ := http.Post(engine, "json", buf)
-	io.Copy(w, res.Body)
+
+	return http.Post(location, "application/json", buf)
 }

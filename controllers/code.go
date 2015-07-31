@@ -4,20 +4,16 @@ import (
 	"net/http"
 
 	"golang.org/x/net/context"
-
-	"github.com/coduno/app/util"
 )
 
-// DownloadTemplate servers a static file to a client.
-// TODO(flowlo, victorbalan): decide where the templates will lay
-func DownloadTemplate(c context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if err := util.CheckMethod(r, "GET"); err != nil {
-		return http.StatusMethodNotAllowed, err
+// DownloadTemplate serves a static file to a client.
+// TODO(flowlo, victorbalan): Decide where the templates will be stored.
+func Template(c context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
 	}
-	// TODO(victorbalan): Serve correct template using the username and fingerprint id
-	// urlParams := mux.Vars(r)
-	// token := urlParams["token"]
-	// username, fingerprint, err := DecodeToken(token)
+
+	// TODO(victorbalan): Serve correct template using passenger and result key.
 
 	// FIXME(victorbalan): Send correct Content-Type
 	w.Header().Set("Content-Type", "application/octet-stream")
