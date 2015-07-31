@@ -6,16 +6,15 @@ import (
 	"encoding/json"
 
 	"github.com/coduno/app/model"
-	"github.com/coduno/engine/util"
+	"github.com/coduno/app/util"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
 )
 
 // GetUsersByCompany queries the user accounts belonging to a company.
 func GetUsersByCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-
-	if err := util.CheckMethod(r, "GET"); err != nil {
-		return http.StatusMethodNotAllowed, err
+	if !util.CheckMethod(r, "GET") {
+		return http.StatusMethodNotAllowed, nil
 	}
 	key, err := datastore.DecodeKey(r.URL.Query()["result"][0])
 	if err != nil {

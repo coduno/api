@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/coduno/app/model"
-	"github.com/coduno/engine/passenger"
-	"github.com/coduno/engine/util"
+	"github.com/coduno/app/util"
+	"github.com/coduno/app/util/passenger"
 	"github.com/gorilla/mux"
 	"google.golang.org/appengine/datastore"
 
@@ -15,8 +15,8 @@ import (
 
 // CreateResult saves a new result when a coder starts a challenge.
 func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if err := util.CheckMethod(r, "POST"); err != nil {
-		return http.StatusMethodNotAllowed, err
+	if !util.CheckMethod(r, "POST") {
+		return http.StatusMethodNotAllowed, nil
 	}
 
 	var body = struct {
@@ -61,8 +61,8 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 
 // GetResultsByChallenge queries the results for a certain challenge to be reviewed by a company.
 func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if err := util.CheckMethod(r, "POST"); err != nil {
-		return http.StatusMethodNotAllowed, err
+	if !util.CheckMethod(r, "POST") {
+		return http.StatusMethodNotAllowed, nil
 	}
 
 	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
