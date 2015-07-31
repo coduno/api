@@ -11,7 +11,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-func MockData(w http.ResponseWriter, req *http.Request) {
+func Mock(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 	pw, _ := password.Hash([]byte("password"))
 

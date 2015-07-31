@@ -17,13 +17,11 @@ import (
 	"google.golang.org/appengine/log"
 )
 
-// ContextHandleFunc is similar to a HandleFunc, but also gets passed
+// ContextHandlerFunc is similar to a http.HandlerFunc, but also gets passed
 // the current context.
-type ContextHandleFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
-
-// HandleFunc describes a function that can handle HTTP requests and respond
-// to them correctly.
-type HandleFunc func(http.ResponseWriter, *http.Request)
+// To ease error handling, a ContextHandleFunc must return a HTTP status
+// code and an error. Still, the handler is allowed to write a response.
+type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
 
 func main() {
 	http.HandleFunc("/status", controllers.Status)
@@ -32,35 +30,36 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/subscriptions", secure(subscription.Subscriptions))
 
-	r.HandleFunc("/api/code/download", setup(controllers.DownloadTemplate))
+	r.HandleFunc("/api/code/download", setup(controllers.Template))
 	r.HandleFunc("/api/invitations", setup(controllers.Invitation))
-	r.HandleFunc("/api/engineurl", secure(controllers.Engine))
 
-	r.HandleFunc("/api/challenges/{id}", setup(controllers.GetChallengeByID))
+	r.HandleFunc("/api/challenges/{key}", setup(controllers.ChallengeByKey))
 
 	r.HandleFunc("/api/companies", setup(controllers.PostCompany))
-	r.HandleFunc("/api/companies/login", setup(controllers.CompanyLogin))
-	r.HandleFunc("/api/companies/{id}/challenges", setup(controllers.GetChallengesForCompany))
+	r.HandleFunc("/api/companies/{key}/challenges", setup(controllers.GetChallengesForCompany))
 
-	r.HandleFunc("/api/task/{id}", setup(controllers.GetTaskByKey))
+	r.HandleFunc("/api/task/{key}", setup(controllers.TaskByKey))
 
 	r.HandleFunc("/api/results", setup(controllers.CreateResult))
-	r.HandleFunc("/api/results/{id}/submissions", setup(controllers.PostSubmission))
+	r.HandleFunc("/api/results/{key}/submissions", setup(controllers.PostSubmission))
 
-	r.HandleFunc("/api/mock", controllers.MockData)
+	if appengine.IsDevAppServer() {
+		r.HandleFunc("/api/mock", controllers.Mock)
+	}
+
 	http.Handle("/", r)
 	appengine.Main()
 }
 
-// setupBaseHandler is a basic wrapper that is extremely general and takes care of baseline
+// secure is a basic wrapper that is extremely general and takes care of baseline
 // features, such as tightly timed HSTS for all requests and automatic upgrades from
 // HTTP to HTTPS. All outbound flows SHOULD be wrapped.
-func secure(h HandleFunc) HandleFunc {
+func secure(h http.HandlerFunc) http.HandlerFunc {
 	if appengine.IsDevAppServer() {
 		return h
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Protect against HTTP downgrade attacks by explicitly telling
 		// clients to use HTTPS.
 		// max-age is computed to match the expiration date of our TLS
@@ -90,16 +89,17 @@ func secure(h HandleFunc) HandleFunc {
 		}
 
 		h(w, r)
-	}
+	})
 }
 
 // Rudimentary CORS checking. See
 // https://developer.mozilla.org/docs/Web/HTTP/Access_control_CORS
-func cors(h HandleFunc) HandleFunc {
+func cors(h http.HandlerFunc) http.HandlerFunc {
 	if appengine.IsDevAppServer() {
 		return h
 	}
-	return func(w http.ResponseWriter, r *http.Request) {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
 		if origin == "" {
@@ -126,31 +126,34 @@ func cors(h HandleFunc) HandleFunc {
 		}
 
 		h(w, r)
-	}
+	})
 }
 
 // auth is there to associate a user with the incoming request.
-func auth(h ContextHandleFunc) HandleFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, err := passenger.NewContextFromRequest(appengine.NewContext(r), r)
-		if err != nil {
-			log.Debugf(ctx, "auth: "+err.Error())
-		}
-		h(ctx, w, r)
-	}
-}
-
-func guard(h ContextHandleFunc) ContextHandleFunc {
+func auth(h ContextHandlerFunc) ContextHandlerFunc {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-		if status, err = h(ctx, w, r); err != nil {
-			http.Error(w, err.Error(), status)
+		ctx, err = passenger.NewContextFromRequest(ctx, r)
+		if err != nil {
+			log.Warningf(ctx, "auth: "+err.Error())
 		}
-		return
+		return h(ctx, w, r)
 	}
 }
 
-// setup is the default wrapper for any HandleFunc that talks to
+func guard(h ContextHandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		status, err := h(appengine.NewContext(r), w, r)
+
+		if err != nil {
+			http.Error(w, err.Error(), status)
+		} else if status >= 400 {
+			http.Error(w, http.StatusText(status), status)
+		}
+	})
+}
+
+// setup is the default wrapper for any ContextHandlerFunc that talks to
 // the outside. It will wrap h in scure, cors and auth.
-func setup(h ContextHandleFunc) HandleFunc {
-	return secure(cors(auth(guard(h))))
+func setup(h ContextHandlerFunc) http.HandlerFunc {
+	return secure(cors(guard(auth(h))))
 }

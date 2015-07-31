@@ -11,7 +11,6 @@ import (
 )
 
 func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-
 	var body = struct {
 		ChallengeID string
 	}{}

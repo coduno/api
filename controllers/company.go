@@ -10,57 +10,12 @@ import (
 	"google.golang.org/appengine/datastore"
 
 	"github.com/coduno/app/model"
-	"github.com/coduno/app/util"
-	"github.com/coduno/engine/util/password"
 )
 
-// LoginInfo is the login info for a company
-type LoginInfo struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// CompanyLogin starts a session for a company
-func CompanyLogin(c context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if err = util.CheckMethod(r, "GET"); err != nil {
-		return http.StatusMethodNotAllowed, err
-	}
-	var loginInfo LoginInfo
-	if err = json.NewDecoder(r.Body).Decode(&loginInfo); err != nil {
-		return http.StatusBadRequest, err
-	}
-
-	q := model.NewQueryForUser().
-		Filter("Address = ", loginInfo.Email).
-		Limit(1)
-
-	var users model.Users
-	keys, err := q.GetAll(c, &users)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	if len(users) != 1 {
-		// NOTE: Do not leak len(users) here.
-		return http.StatusUnauthorized, errors.New("Unauthorized")
-	}
-
-	user := users[0]
-	key := keys[0]
-
-	if err = password.Check([]byte(loginInfo.Password), user.HashedPassword); err != nil {
-		// NOTE: Do not leak err here.
-		return http.StatusUnauthorized, errors.New("Unauthorized")
-	}
-
-	user.Write(w, key)
-	return http.StatusOK, nil
-}
-
-// PostCompany creates a new company after validating by id
+// PostCompany creates a new company after validating by key.
 func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if err = util.CheckMethod(r, "POST"); err != nil {
-		return http.StatusMethodNotAllowed, err
+	if r.Method != "POST" {
+		return http.StatusMethodNotAllowed, nil
 	}
 
 	var company model.Company
@@ -68,12 +23,13 @@ func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (s
 		return http.StatusBadRequest, err
 	}
 
-	q := model.NewQueryForCompany().
-		Filter("Address = ", company.Address.Address).
-		Limit(1)
-
 	var companies model.Companys
-	if _, err = q.GetAll(ctx, &companies); err != nil {
+	_, err = model.NewQueryForCompany().
+		Filter("Address = ", company.Address.Address).
+		Limit(1).
+		GetAll(ctx, &companies)
+
+	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 

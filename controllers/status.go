@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"google.golang.org/appengine"
-
-	"github.com/coduno/app/util"
 )
 
 type status struct {
@@ -48,7 +46,7 @@ func init() {
 // Status gathers a quick overview of the system state
 // and dumps it in JSON format.
 func Status(w http.ResponseWriter, r *http.Request) {
-	if err := util.CheckMethod(r, "GET"); err != nil {
+	if r.Method != "GET" {
 		return
 	}
 
