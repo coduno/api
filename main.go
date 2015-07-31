@@ -8,7 +8,7 @@ import (
 
 	"github.com/coduno/app/controllers"
 	"github.com/coduno/app/subscription"
-	"github.com/coduno/engine/passenger"
+	"github.com/coduno/app/util/passenger"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
