@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/coduno/app/model"
-	"github.com/coduno/engine/util/password"
+	"github.com/coduno/app/util/password"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 )

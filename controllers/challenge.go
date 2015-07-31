@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/coduno/app/model"
-	"github.com/coduno/engine/passenger"
+	"github.com/coduno/app/util/passenger"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"

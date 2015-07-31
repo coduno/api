@@ -8,14 +8,14 @@ import (
 	"encoding/json"
 
 	"github.com/coduno/app/model"
-	"github.com/coduno/engine/util"
+	"github.com/coduno/app/util"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
 
 func GetProfileByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if err := util.CheckMethod(r, "GET"); err != nil {
-		return http.StatusMethodNotAllowed, err
+	if !util.CheckMethod(r, "GET") {
+		return http.StatusMethodNotAllowed, nil
 	}
 
 	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
@@ -33,8 +33,8 @@ func GetProfileByKey(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func DeleteProfile(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if err := util.CheckMethod(r, "DELETE"); err != nil {
-		return http.StatusMethodNotAllowed, err
+	if !util.CheckMethod(r, "DELETE") {
+		return http.StatusMethodNotAllowed, nil
 	}
 
 	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
