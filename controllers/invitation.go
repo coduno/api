@@ -10,9 +10,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/coduno/app/model"
-	"github.com/coduno/app/util/passenger"
-	"github.com/coduno/app/util/password"
+	"github.com/coduno/api/model"
+	"github.com/coduno/api/util/passenger"
+	"github.com/coduno/api/util/password"
 	"google.golang.org/appengine/datastore"
 	appmail "google.golang.org/appengine/mail"
 

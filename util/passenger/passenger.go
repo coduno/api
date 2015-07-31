@@ -9,8 +9,8 @@ import (
 
 	"google.golang.org/appengine/datastore"
 
-	"github.com/coduno/app/model"
-	"github.com/coduno/app/util/password"
+	"github.com/coduno/api/model"
+	"github.com/coduno/api/util/password"
 
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/context"

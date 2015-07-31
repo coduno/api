@@ -5,18 +5,34 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 
-	"github.com/coduno/app/model"
-	"github.com/coduno/app/util"
-	"github.com/coduno/app/util/passenger"
+	"github.com/coduno/api/model"
+	"github.com/coduno/api/util"
+	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
 )
+
+var pw = ""
+
+func init() {
+	if appengine.IsDevAppServer() {
+		return
+	}
+
+	b, err := ioutil.ReadFile("pw")
+	if err != nil {
+		panic(err)
+	}
+	pw = strings.Trim(string(b), "\r\n ")
+}
 
 // PostSubmission creates a new submission.
 func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {

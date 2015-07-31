@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/coduno/app/model"
-	"github.com/coduno/app/util/passenger"
+	"github.com/coduno/api/model"
+	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"

@@ -5,8 +5,8 @@ import (
 
 	"encoding/json"
 
-	"github.com/coduno/app/model"
-	"github.com/coduno/app/util"
+	"github.com/coduno/api/model"
+	"github.com/coduno/api/util"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
 )

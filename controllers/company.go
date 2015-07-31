@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/appengine/datastore"
 
-	"github.com/coduno/app/model"
+	"github.com/coduno/api/model"
 )
 
 // PostCompany creates a new company after validating by key.

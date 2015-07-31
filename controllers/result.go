@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/coduno/app/model"
-	"github.com/coduno/app/util"
-	"github.com/coduno/app/util/passenger"
+	"github.com/coduno/api/model"
+	"github.com/coduno/api/util"
+	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 	"google.golang.org/appengine/datastore"
 

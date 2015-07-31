@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coduno/app/controllers"
-	"github.com/coduno/app/subscription"
-	"github.com/coduno/app/util/passenger"
+	"github.com/coduno/api/controllers"
+	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
@@ -26,30 +25,31 @@ type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request
 func main() {
 	http.HandleFunc("/status", controllers.Status)
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
+	http.HandleFunc("/_ah/cert", secure(guard(controllers.Certificate)))
 
 	r := mux.NewRouter()
-	r.HandleFunc("/subscriptions", secure(subscription.Subscriptions))
+	r.HandleFunc("/subscriptions", secure(controllers.Subscriptions))
 
-	r.HandleFunc("/api/code/download", setup(controllers.Template))
-	r.HandleFunc("/api/invitations", setup(controllers.Invitation))
+	r.HandleFunc("/code/download", setup(controllers.Template))
+	r.HandleFunc("/invitations", setup(controllers.Invitation))
 
-	r.HandleFunc("/api/challenges/{key}", setup(controllers.ChallengeByKey))
-	r.HandleFunc("/api/challenges/{key}/results", setup(controllers.GetResultsByChallenge))
+	r.HandleFunc("/challenges/{key}", setup(controllers.ChallengeByKey))
+	r.HandleFunc("/challenges/{key}/results", setup(controllers.GetResultsByChallenge))
 
-	r.HandleFunc("/api/companies", setup(controllers.PostCompany))
-	r.HandleFunc("/api/companies/{key}/challenges", setup(controllers.GetChallengesForCompany))
-	r.HandleFunc("/api/companies/{key}/users", setup(controllers.GetUsersByCompany))
+	r.HandleFunc("/companies", setup(controllers.PostCompany))
+	r.HandleFunc("/companies/{key}/challenges", setup(controllers.GetChallengesForCompany))
+	r.HandleFunc("/companies/{key}/users", setup(controllers.GetUsersByCompany))
 
-	r.HandleFunc("/api/profiles/{key}", setup(controllers.GetProfileByKey))
-	r.HandleFunc("/api/profiles/{key}", setup(controllers.DeleteProfile))
+	r.HandleFunc("/profiles/{key}", setup(controllers.GetProfileByKey))
+	r.HandleFunc("/profiles/{key}", setup(controllers.DeleteProfile))
 
-	r.HandleFunc("/api/task/{key}", setup(controllers.TaskByKey))
+	r.HandleFunc("/task/{key}", setup(controllers.TaskByKey))
 
-	r.HandleFunc("/api/results", setup(controllers.CreateResult))
-	r.HandleFunc("/api/results/{key}/submissions", setup(controllers.PostSubmission))
+	r.HandleFunc("/results", setup(controllers.CreateResult))
+	r.HandleFunc("/results/{key}/submissions", setup(controllers.PostSubmission))
 
 	if appengine.IsDevAppServer() {
-		r.HandleFunc("/api/mock", controllers.Mock)
+		r.HandleFunc("/mock", controllers.Mock)
 	}
 
 	http.Handle("/", r)
@@ -81,9 +81,7 @@ func secure(h http.HandlerFunc) http.HandlerFunc {
 			version := appengine.VersionID(appengine.NewContext(r))
 			version = version[0:strings.Index(version, ".")]
 
-			// Using www here, because cod.uno will redirect to www
-			// anyway.
-			host := "www.cod.uno"
+			host := "api.cod.uno"
 			if version != "master" {
 				host = version + "-dot-coduno.appspot.com"
 			}

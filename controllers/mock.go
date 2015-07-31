@@ -5,8 +5,8 @@ import (
 	"net/mail"
 	"time"
 
-	"github.com/coduno/app/model"
-	"github.com/coduno/app/util/password"
+	"github.com/coduno/api/model"
+	"github.com/coduno/api/util/password"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 )
