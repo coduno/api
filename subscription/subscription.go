@@ -7,15 +7,25 @@ import (
 	"fmt"
 	"net/http"
 	"net/mail"
+	"text/template"
 	"time"
-
-	mailUtils "github.com/coduno/app/mail"
 
 	"golang.org/x/net/context"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
+	appmail "google.golang.org/appengine/mail"
 )
+
+var subscription *template.Template
+
+func init() {
+	var err error
+	subscription, err = template.ParseFiles("./mail/template.subscription")
+	if err != nil {
+		panic(err)
+	}
+}
 
 type Subscription struct {
 	Address          mail.Address
@@ -200,8 +210,13 @@ func subscribe(w http.ResponseWriter, r *http.Request) {
 
 func (sub Subscription) RequestConfirmation(ctx context.Context) error {
 	buf := new(bytes.Buffer)
-	if err := mailUtils.Subscription.Execute(buf, sub); err != nil {
+	if err := subscription.Execute(buf, sub); err != nil {
 		return err
 	}
-	return mailUtils.Send(ctx, sub.Address, "Hello from Coduno", buf.String())
+	return appmail.Send(ctx, &appmail.Message{
+		Sender:  "Lorenz Leutgeb <lorenz.leutgeb@cod.uno>",
+		To:      []string{sub.Address.String()},
+		Subject: "Hello from Coduno",
+		Body:    buf.String(),
+	})
 }

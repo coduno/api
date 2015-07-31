@@ -7,17 +7,28 @@ import (
 	"errors"
 	"net/http"
 	"net/mail"
+	"text/template"
 	"time"
 
-	ourmail "github.com/coduno/app/mail"
 	"github.com/coduno/app/model"
 	"github.com/coduno/app/util"
 	"github.com/coduno/engine/passenger"
 	"github.com/coduno/engine/util/password"
 	"google.golang.org/appengine/datastore"
+	appmail "google.golang.org/appengine/mail"
 
 	"golang.org/x/net/context"
 )
+
+var invitation *template.Template
+
+func init() {
+	var err error
+	invitation, err = template.ParseFiles("./mail/template.invitation")
+	if err != nil {
+		panic(err)
+	}
+}
 
 // Invitation handles the creation of a new invitation and sends an e-mail to
 // the user.
@@ -96,12 +107,12 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 
 	token := base64.URLEncoding.EncodeToString([]byte(params.Challenge.Encode() + accessToken.Value))
 
-	invitation := model.Invitation{
+	i := model.Invitation{
 		User: key,
 	}
 
 	buf := new(bytes.Buffer)
-	if err := ourmail.Invitation.Execute(buf, struct {
+	if err = invitation.Execute(buf, struct {
 		UserAddress, CompanyAddress mail.Address
 		Token                       string
 	}{
@@ -112,16 +123,20 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		return http.StatusInternalServerError, err
 	}
 
-	err = ourmail.Send(ctx, user.Address, "We challenge you!", buf.String())
+	if err = appmail.Send(ctx, &appmail.Message{
+		Sender:  "Lorenz Leutgeb <lorenz.leutgeb@cod.uno>",
+		To:      []string{user.Address.String()},
+		Subject: "We challenge you!",
+		Body:    buf.String(),
+	}); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	key, err = i.Save(ctx)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	key, err = invitation.Save(ctx)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	invitation.Write(w, key)
+	i.Write(w, key)
 	return http.StatusOK, nil
 }
