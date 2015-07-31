@@ -34,9 +34,14 @@ func main() {
 	r.HandleFunc("/api/invitations", setup(controllers.Invitation))
 
 	r.HandleFunc("/api/challenges/{key}", setup(controllers.ChallengeByKey))
+	r.HandleFunc("/api/challenges/{key}/results", setup(controllers.GetResultsByChallenge))
 
 	r.HandleFunc("/api/companies", setup(controllers.PostCompany))
 	r.HandleFunc("/api/companies/{key}/challenges", setup(controllers.GetChallengesForCompany))
+	r.HandleFunc("/api/companies/{key}/users", setup(controllers.GetUsersByCompany))
+
+	r.HandleFunc("/api/profiles/{key}", setup(controllers.GetProfileByKey))
+	r.HandleFunc("/api/profiles/{key}", setup(controllers.DeleteProfile))
 
 	r.HandleFunc("/api/task/{key}", setup(controllers.TaskByKey))
 

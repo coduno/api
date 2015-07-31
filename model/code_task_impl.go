@@ -16,12 +16,12 @@ import (
 
 type CodeTasks []CodeTask
 
-type KeyedCodeTask struct{
+type KeyedCodeTask struct {
 	CodeTask *CodeTask
 	Key      *datastore.Key
 }
 
-func (ƨ *CodeTask) Key(key *datastore.Key) (*KeyedCodeTask) {
+func (ƨ *CodeTask) Key(key *datastore.Key) *KeyedCodeTask {
 	return &KeyedCodeTask{
 		CodeTask: ƨ,
 		Key:      key,

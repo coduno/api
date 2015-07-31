@@ -16,15 +16,15 @@ import (
 
 type Tasks []Task
 
-type KeyedTask struct{
+type KeyedTask struct {
 	Task *Task
-	Key      *datastore.Key
+	Key  *datastore.Key
 }
 
-func (ƨ *Task) Key(key *datastore.Key) (*KeyedTask) {
+func (ƨ *Task) Key(key *datastore.Key) *KeyedTask {
 	return &KeyedTask{
 		Task: ƨ,
-		Key:      key,
+		Key:  key,
 	}
 }
 
@@ -37,7 +37,7 @@ func (ƨ Tasks) Key(keys []*datastore.Key) (keyed []KeyedTask) {
 	for i := range keyed {
 		keyed = append(keyed, KeyedTask{
 			Task: &ƨ[i],
-			Key:      keys[i],
+			Key:  keys[i],
 		})
 	}
 	return

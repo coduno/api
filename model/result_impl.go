@@ -16,15 +16,15 @@ import (
 
 type Results []Result
 
-type KeyedResult struct{
+type KeyedResult struct {
 	Result *Result
-	Key      *datastore.Key
+	Key    *datastore.Key
 }
 
-func (ƨ *Result) Key(key *datastore.Key) (*KeyedResult) {
+func (ƨ *Result) Key(key *datastore.Key) *KeyedResult {
 	return &KeyedResult{
 		Result: ƨ,
-		Key:      key,
+		Key:    key,
 	}
 }
 
@@ -37,7 +37,7 @@ func (ƨ Results) Key(keys []*datastore.Key) (keyed []KeyedResult) {
 	for i := range keyed {
 		keyed = append(keyed, KeyedResult{
 			Result: &ƨ[i],
-			Key:      keys[i],
+			Key:    keys[i],
 		})
 	}
 	return

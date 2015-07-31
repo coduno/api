@@ -16,15 +16,15 @@ import (
 
 type Companys []Company
 
-type KeyedCompany struct{
+type KeyedCompany struct {
 	Company *Company
-	Key      *datastore.Key
+	Key     *datastore.Key
 }
 
-func (ƨ *Company) Key(key *datastore.Key) (*KeyedCompany) {
+func (ƨ *Company) Key(key *datastore.Key) *KeyedCompany {
 	return &KeyedCompany{
 		Company: ƨ,
-		Key:      key,
+		Key:     key,
 	}
 }
 
@@ -37,7 +37,7 @@ func (ƨ Companys) Key(keys []*datastore.Key) (keyed []KeyedCompany) {
 	for i := range keyed {
 		keyed = append(keyed, KeyedCompany{
 			Company: &ƨ[i],
-			Key:      keys[i],
+			Key:     keys[i],
 		})
 	}
 	return

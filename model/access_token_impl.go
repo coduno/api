@@ -16,15 +16,15 @@ import (
 
 type AccessTokens []AccessToken
 
-type KeyedAccessToken struct{
+type KeyedAccessToken struct {
 	AccessToken *AccessToken
-	Key      *datastore.Key
+	Key         *datastore.Key
 }
 
-func (ƨ *AccessToken) Key(key *datastore.Key) (*KeyedAccessToken) {
+func (ƨ *AccessToken) Key(key *datastore.Key) *KeyedAccessToken {
 	return &KeyedAccessToken{
 		AccessToken: ƨ,
-		Key:      key,
+		Key:         key,
 	}
 }
 
@@ -37,7 +37,7 @@ func (ƨ AccessTokens) Key(keys []*datastore.Key) (keyed []KeyedAccessToken) {
 	for i := range keyed {
 		keyed = append(keyed, KeyedAccessToken{
 			AccessToken: &ƨ[i],
-			Key:      keys[i],
+			Key:         keys[i],
 		})
 	}
 	return

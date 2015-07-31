@@ -11,8 +11,8 @@
 package model
 
 import (
-	"errors"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"golang.org/x/net/context"

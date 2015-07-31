@@ -16,15 +16,15 @@ import (
 
 type Challenges []Challenge
 
-type KeyedChallenge struct{
+type KeyedChallenge struct {
 	Challenge *Challenge
-	Key      *datastore.Key
+	Key       *datastore.Key
 }
 
-func (ƨ *Challenge) Key(key *datastore.Key) (*KeyedChallenge) {
+func (ƨ *Challenge) Key(key *datastore.Key) *KeyedChallenge {
 	return &KeyedChallenge{
 		Challenge: ƨ,
-		Key:      key,
+		Key:       key,
 	}
 }
 
@@ -37,7 +37,7 @@ func (ƨ Challenges) Key(keys []*datastore.Key) (keyed []KeyedChallenge) {
 	for i := range keyed {
 		keyed = append(keyed, KeyedChallenge{
 			Challenge: &ƨ[i],
-			Key:      keys[i],
+			Key:       keys[i],
 		})
 	}
 	return
