@@ -33,12 +33,12 @@ func (ƨ Templates) Key(keys []*datastore.Key) (keyed []KeyedTemplate) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
 	}
 
-	keyed = make([]KeyedTemplate, 0, len(ƨ))
+	keyed = make([]KeyedTemplate, len(ƨ))
 	for i := range keyed {
-		keyed = append(keyed, KeyedTemplate{
+		keyed[i] = KeyedTemplate{
 			Template: &ƨ[i],
 			Key:      keys[i],
-		})
+		}
 	}
 	return
 }

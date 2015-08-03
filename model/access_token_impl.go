@@ -33,12 +33,12 @@ func (ƨ AccessTokens) Key(keys []*datastore.Key) (keyed []KeyedAccessToken) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
 	}
 
-	keyed = make([]KeyedAccessToken, 0, len(ƨ))
+	keyed = make([]KeyedAccessToken, len(ƨ))
 	for i := range keyed {
-		keyed = append(keyed, KeyedAccessToken{
+		keyed[i] = KeyedAccessToken{
 			AccessToken: &ƨ[i],
 			Key:         keys[i],
-		})
+		}
 	}
 	return
 }

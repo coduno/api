@@ -33,12 +33,12 @@ func (ƨ CodeSubmissions) Key(keys []*datastore.Key) (keyed []KeyedCodeSubmissio
 		panic("Key() called on an slice with len(keys) != len(slice)")
 	}
 
-	keyed = make([]KeyedCodeSubmission, 0, len(ƨ))
+	keyed = make([]KeyedCodeSubmission, len(ƨ))
 	for i := range keyed {
-		keyed = append(keyed, KeyedCodeSubmission{
+		keyed[i] = KeyedCodeSubmission{
 			CodeSubmission: &ƨ[i],
 			Key:            keys[i],
-		})
+		}
 	}
 	return
 }

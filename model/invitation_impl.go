@@ -33,12 +33,12 @@ func (ƨ Invitations) Key(keys []*datastore.Key) (keyed []KeyedInvitation) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
 	}
 
-	keyed = make([]KeyedInvitation, 0, len(ƨ))
+	keyed = make([]KeyedInvitation, len(ƨ))
 	for i := range keyed {
-		keyed = append(keyed, KeyedInvitation{
+		keyed[i] = KeyedInvitation{
 			Invitation: &ƨ[i],
 			Key:        keys[i],
-		})
+		}
 	}
 	return
 }
