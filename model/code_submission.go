@@ -11,9 +11,9 @@ type CodeSubmission struct {
 	Language,
 	Stdout,
 	Stderr,
+	Exit,
 	Prepare string
 
 	Rusage     Rusage
-	Exit       error
 	Start, End time.Time
 }

@@ -13,7 +13,7 @@ import (
 
 func Mock(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
-	pw, _ := password.Hash([]byte("password"))
+	pw, _ := password.Hash([]byte("passwordpassword"))
 
 	coduno, _ := model.Company{
 		Address: mail.Address{
