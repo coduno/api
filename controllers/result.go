@@ -50,6 +50,24 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
+
+	var results []model.Result
+
+	resultKeys, err := model.NewQueryForResult().
+		Ancestor(keys[0]).
+		Filter("Challenge = ", key).
+		Limit(1).
+		GetAll(ctx, &results)
+
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	if len(resultKeys) == 1 {
+		json.NewEncoder(w).Encode(results[0].Key(resultKeys[0]))
+		return http.StatusOK, nil
+	}
+
 	result := model.Result{Challenge: key}
 	key, err = result.SaveWithParent(ctx, keys[0])
 	if err != nil {
