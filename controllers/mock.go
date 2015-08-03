@@ -11,6 +11,82 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+func MockChallenge(w http.ResponseWriter, req *http.Request) {
+	ctx := appengine.NewContext(req)
+	q := model.NewQueryForCompany().Filter("Name =", "Coduno").Limit(1).KeysOnly()
+
+	var companies []model.Company
+
+	keys, err := q.GetAll(ctx, companies)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	coduno := keys[0]
+
+	taskOne, _ := model.CodeTask{
+		Task: model.Task{
+			Assignment: model.Assignment{
+				Name:         "Hello, world!",
+				Description:  "This is the easiest program. It is the hello world of this challenge.",
+				Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
+				Duration:     time.Hour,
+				Endpoints: model.Endpoints{
+					WebInterface: "simple-code-task",
+				},
+			},
+			SkillWeights: model.SkillWeights{1, 0, 0},
+		},
+		Runner: "simple",
+	}.Save(ctx)
+
+	taskTwo, _ := model.CodeTask{
+		Task: model.Task{
+			Assignment: model.Assignment{
+				Name:         "Sorting",
+				Description:  "This program will require some knowledge about algorithms.",
+				Instructions: "Implement a simple bubble sorter on numbers in a programming language of your choice.",
+				Duration:     time.Hour,
+				Endpoints: model.Endpoints{
+					WebInterface: "simple-code-task",
+				},
+			},
+			SkillWeights: model.SkillWeights{1, 2, 3},
+		},
+		Runner: "simple",
+	}.Save(ctx)
+
+	taskThree, _ := model.CodeTask{
+		Task: model.Task{
+			Assignment: model.Assignment{
+				Name:         "Some task",
+				Description:  "Description of some task",
+				Instructions: "Instructions of some task",
+				Duration:     time.Hour,
+				Endpoints: model.Endpoints{
+					WebInterface: "simple-code-task",
+				},
+			},
+			SkillWeights: model.SkillWeights{1, 2, 3},
+		},
+		Runner: "simple",
+	}.Save(ctx)
+
+	model.Challenge{
+		Assignment: model.Assignment{
+			Name:         "Sequential test",
+			Description:  "Description of sequential challenge",
+			Instructions: "Instructions of sequential challenge",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "sequential-challenge",
+			},
+		},
+		Tasks: []*datastore.Key{taskOne, taskTwo, taskThree},
+	}.SaveWithParent(ctx, coduno)
+
+}
+
 func Mock(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 	pw, _ := password.Hash([]byte("passwordpassword"))

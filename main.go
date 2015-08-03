@@ -49,7 +49,8 @@ func main() {
 	r.HandleFunc("/results/{resultKey}/tasks/{taskKey}/submissions", setup(controllers.PostSubmission))
 
 	if appengine.IsDevAppServer() {
-		r.HandleFunc("/mock", controllers.Mock)
+		r.HandleFunc("/mock/all", controllers.Mock)
+		r.HandleFunc("/mock/challenge", controllers.MockChallenge)
 	}
 
 	http.Handle("/", r)
@@ -98,28 +99,25 @@ func secure(h http.HandlerFunc) http.HandlerFunc {
 // Rudimentary CORS checking. See
 // https://developer.mozilla.org/docs/Web/HTTP/Access_control_CORS
 func cors(h http.HandlerFunc) http.HandlerFunc {
-	if appengine.IsDevAppServer() {
-		return h
-	}
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		if origin == "" {
-			h(w, r)
-			return
-		}
+		if !appengine.IsDevAppServer() {
+			if origin == "" {
+				h(w, r)
+				return
+			}
 
-		// only allow CORS on localhost for development
-		if !strings.HasPrefix(origin, "http://localhost") {
-			// TODO(flowlo): We are probably not answering this request.
-			// Is that acceptable? How to answer CORS correctly in case
-			// we do not want to accept?
-			return
+			// only allow CORS on localhost for development
+			if !strings.HasPrefix(origin, "http://localhost") {
+				// TODO(flowlo): We are probably not answering this request.
+				// Is that acceptable? How to answer CORS correctly in case
+				// we do not want to accept?
+				return
+			}
 		}
-
 		w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 
