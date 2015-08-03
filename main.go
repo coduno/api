@@ -98,11 +98,8 @@ func cors(h http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-			// only allow CORS on localhost for development
-			if !strings.HasPrefix(origin, "http://localhost") {
-				// TODO(flowlo): We are probably not answering this request.
-				// Is that acceptable? How to answer CORS correctly in case
-				// we do not want to accept?
+			if !strings.HasPrefix(origin, "https://app.cod.uno") {
+				http.Error(w, "Invalid CORS request", http.StatusUnauthorized)
 				return
 			}
 		}
