@@ -11,7 +11,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-func MockCCC(w http.ResponseWriter, req *http.Request) {
+func MockChallenge(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 	q := model.NewQueryForCompany().Filter("Name =", "Coduno").Limit(1).KeysOnly()
 
@@ -27,7 +27,7 @@ func MockCCC(w http.ResponseWriter, req *http.Request) {
 	taskOne, _ := model.CodeTask{
 		Task: model.Task{
 			Assignment: model.Assignment{
-				Name:         "Hello world!",
+				Name:         "Hello, world!",
 				Description:  "This is the easiest program. It is the hello world of this challenge.",
 				Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
 				Duration:     time.Hour,

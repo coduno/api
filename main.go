@@ -50,7 +50,7 @@ func main() {
 
 	if appengine.IsDevAppServer() {
 		r.HandleFunc("/mock/all", controllers.Mock)
-		r.HandleFunc("/mock/ccc", controllers.MockCCC)
+		r.HandleFunc("/mock/challenge", controllers.MockChallenge)
 	}
 
 	http.Handle("/", r)
@@ -117,7 +117,7 @@ func cors(h http.HandlerFunc) http.HandlerFunc {
 			}
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, content-type")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 
