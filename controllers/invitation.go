@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/mail"
 	"text/template"
@@ -32,28 +31,29 @@ func init() {
 // Invitation handles the creation of a new invitation and sends an e-mail to
 // the user.
 func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	p, ok := passenger.FromContext(ctx)
-	if !ok {
-		return http.StatusUnauthorized, errors.New("permission denied")
-	}
-	cKey := p.UserKey.Parent()
-	if cKey == nil {
-		return http.StatusUnauthorized, errors.New("permission denied")
-	}
-	var company model.Company
-	datastore.Get(ctx, cKey, &company)
-
-	// TODO(flowlo): Also check whether the parent of the current user is the
-	// parent of the challenge (if any).
-
-	if r.Method == "GET" {
+	if r.Method != "POST" {
 		return http.StatusMethodNotAllowed, nil
 	}
 
+	p, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	cKey := p.UserKey.Parent()
+	if cKey == nil {
+		return http.StatusUnauthorized, nil
+	}
+
+	var company model.Company
+	if err = datastore.Get(ctx, cKey, &company); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
 	var params = struct {
-		Address   string
-		Challenge *datastore.Key
+		Address, Challenge string
 	}{}
+
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 		return http.StatusBadRequest, err
 	}
@@ -62,6 +62,10 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
+
+	// TODO(flowlo): Check whether the parent of the current user is the
+	// parent of the challenge (if any), and check whether the challenge
+	// even exists.
 
 	var users model.Users
 	keys, err := model.NewQueryForUser().
@@ -81,7 +85,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		user = users[0]
 	} else {
 		user = model.User{Address: *address}
-		key, err = datastore.Put(ctx, key, &user)
+		key, err = user.Save(ctx)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
@@ -105,7 +109,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		Description:  "Initialization Token",
 	}
 
-	token := base64.URLEncoding.EncodeToString([]byte(params.Challenge.Encode() + accessToken.Value))
+	token := base64.URLEncoding.EncodeToString([]byte(params.Challenge + accessToken.Value))
 
 	i := model.Invitation{
 		User: key,
