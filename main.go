@@ -23,14 +23,14 @@ import (
 type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
 
 func main() {
-	http.HandleFunc("/status", controllers.Status)
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
-	http.HandleFunc("/_ah/cert", secure(guard(controllers.Certificate)))
+	http.HandleFunc("/cert", hsts(guard(controllers.Certificate)))
+	http.HandleFunc("/status", hsts(controllers.Status))
 
 	r := mux.NewRouter()
-	r.HandleFunc("/subscriptions", secure(controllers.Subscriptions))
+	r.HandleFunc("/subscriptions", hsts(controllers.Subscriptions))
 
-	r.HandleFunc("/code/download", setup(controllers.Template))
+	r.HandleFunc("/code/download", hsts(guard(controllers.Template)))
 	r.HandleFunc("/invitations", setup(controllers.Invitation))
 
 	r.HandleFunc("/challenges/{key}", setup(controllers.ChallengeByKey))
@@ -65,10 +65,9 @@ func main() {
 	appengine.Main()
 }
 
-// secure is a basic wrapper that is extremely general and takes care of baseline
-// features, such as tightly timed HSTS for all requests and automatic upgrades from
-// HTTP to HTTPS. All outbound flows SHOULD be wrapped.
-func secure(h http.HandlerFunc) http.HandlerFunc {
+// hsts is a basic wrapper that takes care of tightly timed HSTS for all requests.
+// All outbound flows should be wrapped.
+func hsts(h http.HandlerFunc) http.HandlerFunc {
 	if appengine.IsDevAppServer() {
 		return h
 	}
@@ -83,23 +82,6 @@ func secure(h http.HandlerFunc) http.HandlerFunc {
 		invalidity := time.Date(2017, time.July, 15, 8, 30, 21, 0, time.UTC)
 		maxAge := invalidity.Sub(time.Now()).Seconds()
 		w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d", int(maxAge)))
-
-		// Redirect all HTTP requests to their HTTPS version.
-		// This uses a permanent redirect to make clients adjust their bookmarks.
-		if r.URL.Scheme != "https" {
-			version := appengine.VersionID(appengine.NewContext(r))
-			version = version[0:strings.Index(version, ".")]
-
-			host := "api.cod.uno"
-			if version != "master" {
-				host = version + "-dot-coduno.appspot.com"
-			}
-
-			location := "https://" + host + r.URL.Path
-			http.Redirect(w, r, location, http.StatusMovedPermanently)
-			return
-		}
-
 		h(w, r)
 	})
 }
@@ -164,5 +146,5 @@ func guard(h ContextHandlerFunc) http.HandlerFunc {
 // setup is the default wrapper for any ContextHandlerFunc that talks to
 // the outside. It will wrap h in scure, cors and auth.
 func setup(h ContextHandlerFunc) http.HandlerFunc {
-	return secure(cors(guard(auth(h))))
+	return hsts(cors(guard(auth(h))))
 }
