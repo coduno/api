@@ -48,6 +48,11 @@ func main() {
 	r.HandleFunc("/results", setup(controllers.CreateResult))
 	r.HandleFunc("/results/{resultKey}/tasks/{taskKey}/submissions", setup(controllers.PostSubmission))
 
+	r.HandleFunc("/user/company", setup(controllers.GetCompanyByUser))
+	r.HandleFunc("/user", setup(controllers.WhoAmI))
+
+	r.HandleFunc("/whoami", setup(controllers.WhoAmI))
+
 	if appengine.IsDevAppServer() {
 		r.HandleFunc("/mock/all", controllers.Mock)
 		r.HandleFunc("/mock/challenge", controllers.MockChallenge)
