@@ -112,9 +112,18 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Name:    "Paul Bochis",
 			Address: "paul.bochis@cod.uno",
 		},
-		Nick:           "pbhcis",
+		Nick:           "pbochis",
 		HashedPassword: pw,
 	}.SaveWithParent(ctx, coduno)
+
+	model.User{
+		Address: mail.Address{
+			Name:    "Alin Mayer",
+			Address: "alin.mayer@gmail.com",
+		},
+		Nick:           "amayer",
+		HashedPassword: pw,
+	}.Save(ctx)
 
 	lorenz, _ := model.User{
 		Address: mail.Address{
