@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"google.golang.org/appengine"
@@ -55,23 +54,17 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusMethodNotAllowed, nil
 	}
 
-	resultKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
+	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
 
 	if !util.HasParent(p.UserKey, resultKey) {
 		return http.StatusBadRequest, errors.New("Cannot submit answer for other users")
 	}
 
-	var capacity int
-	capacity, err = strconv.Atoi(r.Header["Content-Length"][0])
-	body := make([]byte, 0, capacity)
-	body, err = ioutil.ReadAll(r.Body)
+	taskKey, err := datastore.DecodeKey(mux.Vars(r)["taskKey"])
 
-	var submission model.Submission
-	json.Unmarshal(body, &submission)
-
-	switch submission.Task.Kind() {
+	switch taskKey.Kind() {
 	case "codeTasks":
-		return codeSubmission(ctx, w, body, resultKey)
+		return codeSubmission(ctx, w, r, resultKey, taskKey)
 	case "questionTasks":
 		return http.StatusInternalServerError, errors.New("question submissions are not yet implemented")
 	default:
@@ -79,9 +72,9 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func codeSubmission(ctx context.Context, w http.ResponseWriter, body []byte, resultKey *datastore.Key) (status int, err error) {
+func codeSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request, resultKey, taskKey *datastore.Key) (status int, err error) {
 	var submission model.CodeSubmission
-	if err := json.Unmarshal(body, &submission); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&submission); err != nil {
 		return http.StatusInternalServerError, err
 	}
 

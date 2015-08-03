@@ -46,7 +46,7 @@ func main() {
 	r.HandleFunc("/task/{key}", setup(controllers.TaskByKey))
 
 	r.HandleFunc("/results", setup(controllers.CreateResult))
-	r.HandleFunc("/results/{key}/submissions", setup(controllers.PostSubmission))
+	r.HandleFunc("/results/{resultKey}/tasks/{taskKey}/submissions", setup(controllers.PostSubmission))
 
 	if appengine.IsDevAppServer() {
 		r.HandleFunc("/mock", controllers.Mock)
