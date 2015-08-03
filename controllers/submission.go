@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -20,18 +21,28 @@ import (
 	"golang.org/x/net/context"
 )
 
-var pw = ""
+var compute *url.URL
 
 func init() {
+	var err error
 	if appengine.IsDevAppServer() {
+		compute, err = url.Parse("http://localhost:8081")
+		if err != nil {
+			panic(err)
+		}
 		return
 	}
 
-	b, err := ioutil.ReadFile("pw")
+	b, err := ioutil.ReadFile("credentials")
 	if err != nil {
 		panic(err)
 	}
-	pw = strings.Trim(string(b), "\r\n ")
+
+	credentials := strings.Trim(string(b), "\r\n ")
+	compute, err = url.Parse("https://" + credentials + "git.cod.uno")
+	if err != nil {
+		panic(err)
+	}
 }
 
 // PostSubmission creates a new submission.
@@ -102,15 +113,10 @@ func runOnDocker(w http.ResponseWriter, task model.CodeTask, language, code stri
 		task.Flags, code, language,
 	}
 
-	location := "https://engine.cod.uno/"
-	if appengine.IsDevAppServer() {
-		location = "http://localhost:8081/"
-	}
-
 	buf := new(bytes.Buffer)
 	if err = json.NewEncoder(buf).Encode(data); err != nil {
 		return
 	}
 
-	return http.Post(location+task.Runner, "application/json;charset=utf-8", buf)
+	return http.Post(compute.String()+"/"+task.Runner, "application/json;charset=utf-8", buf)
 }
