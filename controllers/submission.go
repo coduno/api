@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"google.golang.org/appengine"
@@ -38,45 +38,10 @@ func init() {
 func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
-		return http.StatusUnauthorized, errors.New("Unauthorized request")
+		return http.StatusUnauthorized, nil
 	}
 	if r.Method != "POST" {
 		return http.StatusMethodNotAllowed, nil
-	}
-
-	submissionKind := r.URL.Query()["kind"][0]
-	switch submissionKind {
-	case "code":
-		var body = struct {
-			Task *datastore.Key
-			Code,
-			Language string
-		}{}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			return http.StatusInternalServerError, err
-		}
-		var codeTask model.CodeTask
-		if err = datastore.Get(ctx, body.Task, &codeTask); err != nil {
-			return http.StatusInternalServerError, err
-		}
-		var response *http.Response
-		if response, err = runOnDocker(w, codeTask, body.Language, body.Code); err != nil {
-			return http.StatusInternalServerError, err
-		}
-		defer response.Body.Close()
-		io.Copy(w, response.Body)
-		// TODO(victorbalan): Process the engine response and create a submission.
-		fallthrough
-	case "question":
-		return http.StatusOK, nil
-	default:
-		return http.StatusBadRequest, errors.New("Unknown submission kind.")
-	}
-
-	// TODO(victorbalan, flowlo): Create real submission from docker response.
-	var submission model.Submission
-	if err := json.NewDecoder(r.Body).Decode(&submission); err != nil {
-		return http.StatusInternalServerError, err
 	}
 
 	resultKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
@@ -85,10 +50,47 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusBadRequest, errors.New("Cannot submit answer for other users")
 	}
 
+	var capacity int
+	capacity, err = strconv.Atoi(r.Header["Content-Length"][0])
+	body := make([]byte, 0, capacity)
+	body, err = ioutil.ReadAll(r.Body)
+
+	var submission model.Submission
+	json.Unmarshal(body, &submission)
+
+	switch submission.Task.Kind() {
+	case "codeTasks":
+		return codeSubmission(ctx, w, body, resultKey)
+	case "questionTasks":
+		return http.StatusInternalServerError, errors.New("question submissions are not yet implemented")
+	default:
+		return http.StatusBadRequest, errors.New("Unknown submission kind.")
+	}
+}
+
+func codeSubmission(ctx context.Context, w http.ResponseWriter, body []byte, resultKey *datastore.Key) (status int, err error) {
+	var submission model.CodeSubmission
+	if err := json.Unmarshal(body, &submission); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	var codeTask model.CodeTask
+	if err = datastore.Get(ctx, submission.Task, &codeTask); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	var response *http.Response
+	if response, err = runOnDocker(w, codeTask, submission.Language, submission.Code); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	json.NewDecoder(response.Body).Decode(&submission)
+
 	key, err := submission.SaveWithParent(ctx, resultKey)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
+
 	json.NewEncoder(w).Encode(submission.Key(key))
 	return http.StatusCreated, nil
 }
@@ -110,5 +112,5 @@ func runOnDocker(w http.ResponseWriter, task model.CodeTask, language, code stri
 		return
 	}
 
-	return http.Post(location+task.Runner, "application/json", buf)
+	return http.Post(location+task.Runner, "application/json;charset=utf-8", buf)
 }
