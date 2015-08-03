@@ -9,7 +9,7 @@ import (
 
 // MinLength is the minimum length for any password to be
 // generated, hashed, or checked by functions in this package.
-const MinLength = 12
+const MinLength = 10
 
 // MaxLength is the maximum length for any password to be
 // generated, hashed, or checked by functions in this package.
@@ -45,7 +45,7 @@ func Generate(n int) (password []byte, err error) {
 
 // Hash computes a hash from the given password.
 func Hash(password []byte) (hash []byte, err error) {
-	if err = checkLen(password); err != nil {
+	if err = CheckLen(password); err != nil {
 		return
 	}
 
@@ -56,14 +56,14 @@ func Hash(password []byte) (hash []byte, err error) {
 // some hash. It will return nil if password and hash
 // match.
 func Check(password, hash []byte) (err error) {
-	if err = checkLen(password); err != nil {
+	if err = CheckLen(password); err != nil {
 		return
 	}
 
 	return bcrypt.CompareHashAndPassword(hash, password)
 }
 
-func checkLen(password []byte) error {
+func CheckLen(password []byte) error {
 	if len(password) < MinLength || len(password) > MaxLength {
 		return InvalidPasswordLengthError(len(password))
 	}

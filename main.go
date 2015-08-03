@@ -50,6 +50,9 @@ func main() {
 
 	r.HandleFunc("/user/company", setup(controllers.GetCompanyByUser))
 	r.HandleFunc("/user", setup(controllers.WhoAmI))
+	r.HandleFunc("/users", setup(controllers.User))
+
+	r.HandleFunc("/task/{key}", setup(controllers.TaskByKey))
 
 	r.HandleFunc("/whoami", setup(controllers.WhoAmI))
 
