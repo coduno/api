@@ -43,7 +43,7 @@ func main() {
 	r.HandleFunc("/profiles/{key}", setup(controllers.GetProfileByKey))
 	r.HandleFunc("/profiles/{key}", setup(controllers.DeleteProfile))
 
-	r.HandleFunc("/task/{key}", setup(controllers.TaskByKey))
+	r.HandleFunc("/tasks/{key}", setup(controllers.TaskByKey))
 
 	r.HandleFunc("/results", setup(controllers.CreateResult))
 	r.HandleFunc("/results/{resultKey}/tasks/{taskKey}/submissions", setup(controllers.PostSubmission))
