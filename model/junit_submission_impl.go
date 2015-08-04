@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const JunitSubmissionKind = "JunitSubmission"
+
 type JunitSubmissions []JunitSubmission
 
 type KeyedJunitSubmission struct {

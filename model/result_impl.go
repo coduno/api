@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const ResultKind = "Result"
+
 type Results []Result
 
 type KeyedResult struct {

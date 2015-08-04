@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const InvitationKind = "Invitation"
+
 type Invitations []Invitation
 
 type KeyedInvitation struct {

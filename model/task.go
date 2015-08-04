@@ -1,5 +1,7 @@
 package model
 
+//go:generate generator
+
 // Task is a concrete piece of work that cannot
 // be split any further.
 //

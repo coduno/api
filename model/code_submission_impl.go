@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const CodeSubmissionKind = "CodeSubmission"
+
 type CodeSubmissions []CodeSubmission
 
 type KeyedCodeSubmission struct {

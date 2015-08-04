@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const CompanyKind = "Company"
+
 type Companys []Company
 
 type KeyedCompany struct {

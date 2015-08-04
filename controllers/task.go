@@ -18,7 +18,7 @@ import (
 func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
-		return http.StatusUnauthorized, errors.New("Unauthorized request")
+		return http.StatusUnauthorized, nil
 	}
 
 	if r.Method != "GET" {
@@ -38,7 +38,7 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 		}
 
 		if !util.HasParent(p.UserKey, rk) {
-			return http.StatusUnauthorized, errors.New("Unauthorized")
+			return http.StatusUnauthorized, nil
 		}
 
 		var result model.Result
@@ -68,7 +68,7 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 	}
 
 	switch taskKey.Kind() {
-	case "codeTasks":
+	case model.CodeTaskKind:
 		var task model.CodeTask
 		if err = datastore.Get(ctx, taskKey, &task); err != nil {
 			return http.StatusInternalServerError, err
@@ -76,6 +76,33 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 		json.NewEncoder(w).Encode(task.Key(taskKey))
 		return http.StatusOK, nil
 	default:
-		return http.StatusInternalServerError, errors.New("Not yet impl")
+		return http.StatusInternalServerError, errors.New("Not implemented")
 	}
+}
+
+func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	p, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
+	// User is a coder
+	if p.UserKey.Parent() == nil {
+		return http.StatusUnauthorized, nil
+	}
+
+	var tasks model.Tasks
+	keys, err := model.NewQueryForTask().
+		GetAll(ctx, &tasks)
+
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	json.NewEncoder(w).Encode(tasks.Key(keys))
+	return http.StatusOK, nil
 }

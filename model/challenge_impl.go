@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const ChallengeKind = "Challenge"
+
 type Challenges []Challenge
 
 type KeyedChallenge struct {

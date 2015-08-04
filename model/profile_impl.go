@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const ProfileKind = "Profile"
+
 type Profiles []Profile
 
 type KeyedProfile struct {

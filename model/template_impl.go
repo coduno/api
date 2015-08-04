@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const TemplateKind = "Template"
+
 type Templates []Template
 
 type KeyedTemplate struct {

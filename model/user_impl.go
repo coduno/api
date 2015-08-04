@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const UserKind = "User"
+
 type Users []User
 
 type KeyedUser struct {

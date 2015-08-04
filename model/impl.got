@@ -10,6 +10,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const {{type}}Kind = {{kind}}
+
 type {{slice}} []{{type}}
 
 type Keyed{{type}} struct{

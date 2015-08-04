@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const AccessTokenKind = "AccessToken"
+
 type AccessTokens []AccessToken
 
 type KeyedAccessToken struct {

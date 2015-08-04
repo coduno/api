@@ -20,6 +20,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+const CodeTaskKind = "CodeTask"
+
 type CodeTasks []CodeTask
 
 type KeyedCodeTask struct {

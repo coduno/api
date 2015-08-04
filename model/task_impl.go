@@ -11,8 +11,16 @@
 package model
 
 import (
+	"encoding/json"
+	"errors"
+	"net/http"
+
+	"golang.org/x/net/context"
+	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 )
+
+const TaskKind = "Task"
 
 type Tasks []Task
 
@@ -33,12 +41,71 @@ func (ƨ Tasks) Key(keys []*datastore.Key) (keyed []KeyedTask) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
 	}
 
-	keyed = make([]KeyedTask, 0, len(ƨ))
+	keyed = make([]KeyedTask, len(ƨ))
 	for i := range keyed {
-		keyed = append(keyed, KeyedTask{
+		keyed[i] = KeyedTask{
 			Task: &ƨ[i],
 			Key:  keys[i],
-		})
+		}
 	}
 	return
+}
+
+// Save will put this Task into Datastore using the given key.
+func (ƨ Task) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
+	if len(key) > 1 {
+		panic("zero or one key expected")
+	}
+
+	if len(key) == 1 && key[0] != nil {
+		return datastore.Put(ctx, key[0], &ƨ)
+	}
+
+	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Task", nil), &ƨ)
+}
+
+// SaveWithParent can be used to save this Task as child of another
+// entity.
+// This will error if parent == nil.
+func (ƨ Task) SaveWithParent(ctx context.Context, parent *datastore.Key) (*datastore.Key, error) {
+	if parent == nil {
+		return nil, errors.New("parent key is nil, expected a valid key")
+	}
+	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Task", parent), &ƨ)
+}
+
+// NewQueryForTask prepares a datastore.Query that can be
+// used to query entities of type Task.
+func NewQueryForTask() *datastore.Query {
+	return datastore.NewQuery("Task")
+}
+
+type TaskHandler struct{}
+
+func (ƨ TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	if r.URL.Path == "" {
+		var results Tasks
+		keys, _ := NewQueryForTask().GetAll(ctx, &results)
+		json.NewEncoder(w).Encode(results.Key(keys))
+		return
+	}
+
+	k, _ := datastore.DecodeKey(r.URL.Path)
+	var entity Task
+	datastore.Get(ctx, k, &entity)
+	json.NewEncoder(w).Encode(entity)
+}
+
+func ServeTask(prefix string, muxes ...*http.ServeMux) {
+	path := prefix + "Task" + "/"
+
+	if len(muxes) == 0 {
+		http.Handle(path, http.StripPrefix(path, TaskHandler{}))
+	}
+
+	for _, mux := range muxes {
+		mux.Handle(path, http.StripPrefix(path, TaskHandler{}))
+	}
 }
