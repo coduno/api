@@ -63,6 +63,18 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		return http.StatusBadRequest, err
 	}
 
+	challengeKey, err := datastore.DecodeKey(params.Challenge)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	var challenge model.Challenge
+	if err := datastore.Get(ctx, challengeKey, &challenge); err != nil {
+		// TODO(flowlo): Actually look into err. If it is just something like
+		// "not found", an internal server error is not appropriate.
+		return http.StatusInternalServerError, err
+	}
+
 	// TODO(flowlo): Check whether the parent of the current user is the
 	// parent of the challenge (if any), and check whether the challenge
 	// even exists.
@@ -112,7 +124,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 	if _, err = accessToken.SaveWithParent(ctx, key); err != nil {
 		return http.StatusInternalServerError, err
 	}
-	token := base64.URLEncoding.EncodeToString([]byte(params.Challenge + accessToken.Value))
+	token := base64.URLEncoding.EncodeToString([]byte(params.Challenge + ":" + accessToken.Value))
 
 	i := model.Invitation{
 		User: key,
