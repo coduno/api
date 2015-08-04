@@ -2,6 +2,7 @@ package password
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
@@ -38,9 +39,14 @@ func Generate(n int) (password []byte, err error) {
 	if n < MinLength {
 		n = DefaultLength
 	}
-	password = make([]byte, n)
-	_, err = rand.Read(password)
-	return password, err
+	random := make([]byte, n)
+
+	if _, err = rand.Read(random); err != nil {
+		return
+	}
+	password = make([]byte, len(random)*2)
+	hex.Encode(password, random)
+	return
 }
 
 // Hash computes a hash from the given password.
