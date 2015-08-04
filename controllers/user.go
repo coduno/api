@@ -21,11 +21,19 @@ func User(ctx context.Context, w http.ResponseWriter, r *http.Request) (status i
 	}
 
 	var body = struct {
-		Address, Nick, Password string
+		Address, Nick, Password, Company string
 	}{}
 
 	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return http.StatusBadRequest, err
+	}
+
+	var companyKey *datastore.Key
+	if body.Company != "" {
+		companyKey, err = datastore.DecodeKey(body.Company)
+		if err != nil {
+			return http.StatusBadRequest, err
+		}
 	}
 
 	if err = util.CheckNick(body.Nick); err != nil {
@@ -73,7 +81,13 @@ func User(ctx context.Context, w http.ResponseWriter, r *http.Request) (status i
 		HashedPassword: hashedPassword,
 	}
 
-	key, err := user.Save(ctx)
+	var key *datastore.Key
+	if companyKey == nil {
+		key, err = user.Save(ctx)
+	} else {
+		// Bind user to company for eternity.
+		key, err = user.SaveWithParent(ctx, companyKey)
+	}
 
 	if err != nil {
 		return http.StatusInternalServerError, err
