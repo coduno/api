@@ -136,7 +136,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		return http.StatusInternalServerError, err
 	}
 
-	key, err = i.Save(ctx)
+	key, err = i.SaveWithParent(ctx, cKey)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
