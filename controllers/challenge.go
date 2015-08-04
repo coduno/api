@@ -76,3 +76,41 @@ func GetChallengesForCompany(ctx context.Context, w http.ResponseWriter, r *http
 	json.NewEncoder(w).Encode(challenges.Key(keys))
 	return http.StatusOK, nil
 }
+
+// CreateChallenge will put a new entity of kind Challenge to Datastore.
+func CreateChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if r.Method != "POST" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
+	var body = struct {
+		model.Assignment
+		Tasks []string
+	}{}
+
+	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	keys := make([]*datastore.Key, len(body.Tasks))
+	for i := range body.Tasks {
+		key, err := datastore.DecodeKey(body.Tasks[i])
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		keys[i] = key
+	}
+
+	challenge := model.Challenge{
+		Assignment: body.Assignment,
+		Tasks:      keys,
+	}
+
+	key, err := challenge.Save(ctx)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	json.NewEncoder(w).Encode(challenge.Key(key))
+	return http.StatusOK, nil
+}
