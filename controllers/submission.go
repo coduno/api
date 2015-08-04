@@ -63,9 +63,10 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	taskKey, err := datastore.DecodeKey(mux.Vars(r)["taskKey"])
 
 	switch taskKey.Kind() {
-	case "codeTasks":
+	case model.CodeTaskKind:
 		return codeSubmission(ctx, w, r, resultKey, taskKey)
-	case "questionTasks":
+	// TODO(victorbalan, flowlo): Use correct kind when possible.
+	case "QuestionTask":
 		return http.StatusInternalServerError, errors.New("question submissions are not yet implemented")
 	default:
 		return http.StatusBadRequest, errors.New("Unknown submission kind.")
@@ -79,7 +80,7 @@ func codeSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request,
 	}
 
 	var codeTask model.CodeTask
-	if err = datastore.Get(ctx, submission.Task, &codeTask); err != nil {
+	if err = datastore.Get(ctx, taskKey, &codeTask); err != nil {
 		return http.StatusInternalServerError, err
 	}
 

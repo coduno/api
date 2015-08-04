@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
@@ -68,7 +69,12 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 		return http.StatusOK, nil
 	}
 
-	result := model.Result{Challenge: key}
+	var challenge model.Challenge
+	if err = datastore.Get(ctx, key, &challenge); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	result := model.Result{Challenge: key, StartTimes: make([]time.Time, len(challenge.Tasks))}
 	key, err = result.SaveWithParent(ctx, keys[0])
 	if err != nil {
 		return http.StatusInternalServerError, err

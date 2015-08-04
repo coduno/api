@@ -37,7 +37,8 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 			},
 			SkillWeights: model.SkillWeights{1, 0, 0},
 		},
-		Runner: "simple",
+		Runner:    "simple",
+		Languages: []string{"java", "py"},
 	}.Save(ctx)
 
 	taskTwo, _ := model.CodeTask{
@@ -53,7 +54,8 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 			},
 			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner: "simple",
+		Runner:    "simple",
+		Languages: []string{"java", "py"},
 	}.Save(ctx)
 
 	taskThree, _ := model.CodeTask{
@@ -69,7 +71,8 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 			},
 			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner: "simple",
+		Runner:    "simple",
+		Languages: []string{"java", "py"},
 	}.Save(ctx)
 
 	model.Challenge{
@@ -173,7 +176,8 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			},
 			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner: "simple",
+		Runner:    "simple",
+		Languages: []string{"java", "py"},
 	}.Save(ctx)
 
 	taskTwo, _ := model.CodeTask{
@@ -189,7 +193,8 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			},
 			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner: "simple",
+		Runner:    "simple",
+		Languages: []string{"java", "py"},
 	}.Save(ctx)
 
 	taskThree, _ := model.CodeTask{
@@ -205,7 +210,8 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			},
 			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner: "simple",
+		Runner:    "simple",
+		Languages: []string{"java", "py"},
 	}.Save(ctx)
 
 	model.Challenge{

@@ -109,6 +109,9 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		Description:  "Initialization Token",
 	}
 
+	if _, err = accessToken.SaveWithParent(ctx, key); err != nil {
+		return http.StatusInternalServerError, err
+	}
 	token := base64.URLEncoding.EncodeToString([]byte(params.Challenge + accessToken.Value))
 
 	i := model.Invitation{
