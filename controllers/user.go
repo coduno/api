@@ -15,11 +15,27 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+type keyedUserWithState struct {
+	*model.KeyedUser
+	State string
+}
+
 func User(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if r.Method != "POST" {
+	p, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+	switch r.Method {
+	case "POST":
+		return createUser(ctx, w, r)
+	case "GET":
+		return getUsers(p, ctx, w, r)
+	default:
 		return http.StatusMethodNotAllowed, nil
 	}
+}
 
+func createUser(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	var body = struct {
 		Address, Nick, Password, Company string
 	}{}
@@ -95,7 +111,68 @@ func User(ctx context.Context, w http.ResponseWriter, r *http.Request) (status i
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(user.Key(key))
-	return
+	return http.StatusOK, nil
+}
+
+func getUsers(p *passenger.Passenger, ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if p.UserKey.Parent() == nil {
+		return http.StatusUnauthorized, nil
+	}
+	var invitations model.Invitations
+	_, err = model.NewQueryForInvitation().Ancestor(p.UserKey.Parent()).GetAll(ctx, &invitations)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	cckeys, err := model.NewQueryForChallenge().Ancestor(p.UserKey.Parent()).KeysOnly().GetAll(ctx, nil)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	var resultKeys []*datastore.Key
+	for _, val := range cckeys {
+		rkeys, err := model.NewQueryForResult().Filter("Challenge =", val).KeysOnly().GetAll(ctx, nil)
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		resultKeys = append(resultKeys, rkeys...)
+	}
+
+	var users model.Users
+	keys, err := model.NewQueryForUser().GetAll(ctx, &users)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	finishedUsers := make([]*datastore.Key, len(resultKeys))
+	for i := range resultKeys {
+		finishedUsers[i] = resultKeys[i].Parent().Parent()
+	}
+
+	// TODO(victorbalan): Don`t load invited users that have an result.
+	invitedUsers := make([]*datastore.Key, len(invitations))
+	for i, val := range invitations {
+		invitedUsers[i] = val.User
+	}
+	mappedStates := make(map[string]string)
+	for _, val := range invitedUsers {
+		mappedStates[val.Encode()] = "invited"
+	}
+	for _, val := range finishedUsers {
+		mappedStates[val.Encode()] = "coding"
+	}
+
+	usersWithState := make([]keyedUserWithState, len(users))
+	for i := range users {
+		usersWithState[i] = keyedUserWithState{
+			KeyedUser: &model.KeyedUser{
+				User: &users[i], Key: keys[i],
+			},
+			State: mappedStates[keys[i].Encode()],
+		}
+	}
+	json.NewEncoder(w).Encode(usersWithState)
+	return http.StatusOK, nil
 }
 
 func alreadyExists(ctx context.Context, property, value string) (exists bool, err error) {
