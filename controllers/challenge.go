@@ -83,6 +83,15 @@ func CreateChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return http.StatusMethodNotAllowed, nil
 	}
 
+	p, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	if p.UserKey.Parent() == nil {
+		return http.StatusUnauthorized, nil
+	}
+
 	var body = struct {
 		model.Assignment
 		Tasks []string
@@ -106,7 +115,7 @@ func CreateChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request
 		Tasks:      keys,
 	}
 
-	key, err := challenge.Save(ctx)
+	key, err := challenge.SaveWithParent(ctx, p.UserKey.Parent())
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
