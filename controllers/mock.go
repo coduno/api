@@ -272,5 +272,6 @@ func MockCoduno(w http.ResponseWriter, req *http.Request) {
 			SkillWeights: model.SkillWeights{1, 0, 0},
 		},
 		Runner: "simple",
+		Languages: []string{"java", "py", "c", "cpp"},
 	}.SaveWithParent(ctx, coduno)
 }
