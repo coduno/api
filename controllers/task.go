@@ -95,14 +95,22 @@ func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status 
 		return http.StatusUnauthorized, nil
 	}
 
-	var tasks model.Tasks
-	keys, err := model.NewQueryForTask().
-		GetAll(ctx, &tasks)
+	var codeTasks model.CodeTasks
+	codeTaskKeys, err := model.NewQueryForCodeTask().
+		GetAll(ctx, &codeTasks)
 
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	json.NewEncoder(w).Encode(tasks.Key(keys))
+	tasks := make([]model.KeyedTask, len(codeTasks))
+	for i := range codeTasks {
+		tasks[i] = model.KeyedTask{
+			Task: &codeTasks[i].Task,
+			Key:  codeTaskKeys[i],
+		}
+	}
+
+	json.NewEncoder(w).Encode(tasks)
 	return http.StatusOK, nil
 }
