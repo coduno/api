@@ -2,7 +2,7 @@ VERSION=$(shell git rev-parse --short HEAD)
 
 NOW=$(shell date --iso-8601=seconds)
 
-OUTPUT?='coduno'
+OUTPUT?='api'
 
 all: test
 	@go env

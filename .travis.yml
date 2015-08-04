@@ -1,5 +1,22 @@
 language: go
 
+sudo: 9000
+
 go:
-  - 1.4.2
-  - tip
+- 1.4.2
+- 1.5rc1
+- tip
+
+before_install:
+- $(! $TRAVIS_SECURE_ENV_VARS) || openssl aes-256-cbc -K $encrypted_e505aa14efb0_key
+  -iv $encrypted_e505aa14efb0_iv -in service-account.json.enc -out service-account.json -d
+
+after_success:
+- env
+- "if $($TRAVIS_SECURE_ENV_VARS) && [ \"${TRAVIS_JOB_NUMBER: -1}\" = \"1\" ];
+then
+curl https://sdk.cloud.google.com | CLOUDSDK_CORE_DISABLE_PROMPTS=1 $SHELL;
+~/google-cloud-sdk/bin/gcloud -q components update preview app;
+~/google-cloud-sdk/bin/gcloud -q auth activate-service-account --key-file service-account.json;
+~/google-cloud-sdk/bin/gcloud -q preview app --project $(dirname $TRAVIS_REPO_SLUG) deploy app.yaml --set-default;
+fi"
