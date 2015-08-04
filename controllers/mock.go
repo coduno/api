@@ -244,3 +244,33 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 	}.SaveWithParent(ctx, coduno)
 }
+
+func MockCoduno(w http.ResponseWriter, req *http.Request) {
+	ctx := appengine.NewContext(req)
+	q := model.NewQueryForCompany().Filter("Name =", "Coduno").Limit(1).KeysOnly()
+
+	var companies []model.Company
+
+	keys, err := q.GetAll(ctx, companies)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	coduno := keys[0]
+
+	model.CodeTask{
+		Task: model.Task{
+			Assignment: model.Assignment{
+				Name:         "Hello, world!",
+				Description:  "This is the easiest program. It is the hello world of this challenge.",
+				Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
+				Duration:     time.Hour,
+				Endpoints: model.Endpoints{
+					WebInterface: "simple-code-task",
+				},
+			},
+			SkillWeights: model.SkillWeights{1, 0, 0},
+		},
+		Runner: "simple",
+	}.SaveWithParent(ctx, coduno)
+}

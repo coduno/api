@@ -58,6 +58,7 @@ func main() {
 
 	r.HandleFunc("/whoami", setup(controllers.WhoAmI))
 
+	r.HandleFunc("/mock/coduno", controllers.MockCoduno)
 	if appengine.IsDevAppServer() {
 		r.HandleFunc("/mock/all", controllers.Mock)
 		r.HandleFunc("/mock/challenge", controllers.MockChallenge)
