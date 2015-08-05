@@ -8,6 +8,8 @@ import (
 
 //go:generate generator
 
+// Invitation represents the message sent by a company to a User
+// in order to ask them to do a Challenge.
 type Invitation struct {
 	User *datastore.Key
 	Sent time.Time

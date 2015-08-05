@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// JunitSubmissionKind is the kind used in Datastore to store entities of type JunitSubmission.
 const JunitSubmissionKind = "JunitSubmission"
 
+// JunitSubmissions is just a slice of JunitSubmission.
 type JunitSubmissions []JunitSubmission
 
+// KeyedJunitSubmission is a struct that embeds JunitSubmission and also contains a Key, mainly used for encoding to JSON.
 type KeyedJunitSubmission struct {
 	*JunitSubmission
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedJunitSubmission with an entity and it's key.
 func (ƨ *JunitSubmission) Key(key *datastore.Key) *KeyedJunitSubmission {
 	return &KeyedJunitSubmission{
 		JunitSubmission: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *JunitSubmission) Key(key *datastore.Key) *KeyedJunitSubmission {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedJunitSubmission with some entities alongside their keys.
 func (ƨ JunitSubmissions) Key(keys []*datastore.Key) (keyed []KeyedJunitSubmission) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ JunitSubmission) SaveWithParent(ctx context.Context, parent *datastore.
 // used to query entities of type JunitSubmission.
 func NewQueryForJunitSubmission() *datastore.Query {
 	return datastore.NewQuery("JunitSubmission")
-}
-
-type JunitSubmissionHandler struct{}
-
-func (ƨ JunitSubmissionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results JunitSubmissions
-		keys, _ := NewQueryForJunitSubmission().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity JunitSubmission
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeJunitSubmission(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "JunitSubmission" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, JunitSubmissionHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, JunitSubmissionHandler{}))
-	}
 }

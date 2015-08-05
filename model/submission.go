@@ -6,6 +6,8 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+//go:generate generator
+
 // Submission is a form of result for some
 // Task.
 //

@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// CodeSubmissionKind is the kind used in Datastore to store entities of type CodeSubmission.
 const CodeSubmissionKind = "CodeSubmission"
 
+// CodeSubmissions is just a slice of CodeSubmission.
 type CodeSubmissions []CodeSubmission
 
+// KeyedCodeSubmission is a struct that embeds CodeSubmission and also contains a Key, mainly used for encoding to JSON.
 type KeyedCodeSubmission struct {
 	*CodeSubmission
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedCodeSubmission with an entity and it's key.
 func (ƨ *CodeSubmission) Key(key *datastore.Key) *KeyedCodeSubmission {
 	return &KeyedCodeSubmission{
 		CodeSubmission: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *CodeSubmission) Key(key *datastore.Key) *KeyedCodeSubmission {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedCodeSubmission with some entities alongside their keys.
 func (ƨ CodeSubmissions) Key(keys []*datastore.Key) (keyed []KeyedCodeSubmission) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ CodeSubmission) SaveWithParent(ctx context.Context, parent *datastore.K
 // used to query entities of type CodeSubmission.
 func NewQueryForCodeSubmission() *datastore.Query {
 	return datastore.NewQuery("CodeSubmission")
-}
-
-type CodeSubmissionHandler struct{}
-
-func (ƨ CodeSubmissionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results CodeSubmissions
-		keys, _ := NewQueryForCodeSubmission().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity CodeSubmission
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeCodeSubmission(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "CodeSubmission" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, CodeSubmissionHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, CodeSubmissionHandler{}))
-	}
 }

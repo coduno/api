@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// ChallengeKind is the kind used in Datastore to store entities of type Challenge.
 const ChallengeKind = "Challenge"
 
+// Challenges is just a slice of Challenge.
 type Challenges []Challenge
 
+// KeyedChallenge is a struct that embeds Challenge and also contains a Key, mainly used for encoding to JSON.
 type KeyedChallenge struct {
 	*Challenge
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedChallenge with an entity and it's key.
 func (ƨ *Challenge) Key(key *datastore.Key) *KeyedChallenge {
 	return &KeyedChallenge{
 		Challenge: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *Challenge) Key(key *datastore.Key) *KeyedChallenge {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedChallenge with some entities alongside their keys.
 func (ƨ Challenges) Key(keys []*datastore.Key) (keyed []KeyedChallenge) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ Challenge) SaveWithParent(ctx context.Context, parent *datastore.Key) (
 // used to query entities of type Challenge.
 func NewQueryForChallenge() *datastore.Query {
 	return datastore.NewQuery("Challenge")
-}
-
-type ChallengeHandler struct{}
-
-func (ƨ ChallengeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results Challenges
-		keys, _ := NewQueryForChallenge().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity Challenge
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeChallenge(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "Challenge" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, ChallengeHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, ChallengeHandler{}))
-	}
 }

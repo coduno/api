@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// TemplateKind is the kind used in Datastore to store entities of type Template.
 const TemplateKind = "Template"
 
+// Templates is just a slice of Template.
 type Templates []Template
 
+// KeyedTemplate is a struct that embeds Template and also contains a Key, mainly used for encoding to JSON.
 type KeyedTemplate struct {
 	*Template
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedTemplate with an entity and it's key.
 func (ƨ *Template) Key(key *datastore.Key) *KeyedTemplate {
 	return &KeyedTemplate{
 		Template: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *Template) Key(key *datastore.Key) *KeyedTemplate {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedTemplate with some entities alongside their keys.
 func (ƨ Templates) Key(keys []*datastore.Key) (keyed []KeyedTemplate) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ Template) SaveWithParent(ctx context.Context, parent *datastore.Key) (*
 // used to query entities of type Template.
 func NewQueryForTemplate() *datastore.Query {
 	return datastore.NewQuery("Template")
-}
-
-type TemplateHandler struct{}
-
-func (ƨ TemplateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results Templates
-		keys, _ := NewQueryForTemplate().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity Template
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeTemplate(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "Template" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, TemplateHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, TemplateHandler{}))
-	}
 }

@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// ProfileKind is the kind used in Datastore to store entities of type Profile.
 const ProfileKind = "Profile"
 
+// Profiles is just a slice of Profile.
 type Profiles []Profile
 
+// KeyedProfile is a struct that embeds Profile and also contains a Key, mainly used for encoding to JSON.
 type KeyedProfile struct {
 	*Profile
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedProfile with an entity and it's key.
 func (ƨ *Profile) Key(key *datastore.Key) *KeyedProfile {
 	return &KeyedProfile{
 		Profile: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *Profile) Key(key *datastore.Key) *KeyedProfile {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedProfile with some entities alongside their keys.
 func (ƨ Profiles) Key(keys []*datastore.Key) (keyed []KeyedProfile) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ Profile) SaveWithParent(ctx context.Context, parent *datastore.Key) (*d
 // used to query entities of type Profile.
 func NewQueryForProfile() *datastore.Query {
 	return datastore.NewQuery("Profile")
-}
-
-type ProfileHandler struct{}
-
-func (ƨ ProfileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results Profiles
-		keys, _ := NewQueryForProfile().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity Profile
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeProfile(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "Profile" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, ProfileHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, ProfileHandler{}))
-	}
 }

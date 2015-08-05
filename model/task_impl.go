@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// TaskKind is the kind used in Datastore to store entities of type Task.
 const TaskKind = "Task"
 
+// Tasks is just a slice of Task.
 type Tasks []Task
 
+// KeyedTask is a struct that embeds Task and also contains a Key, mainly used for encoding to JSON.
 type KeyedTask struct {
 	*Task
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedTask with an entity and it's key.
 func (ƨ *Task) Key(key *datastore.Key) *KeyedTask {
 	return &KeyedTask{
 		Task: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *Task) Key(key *datastore.Key) *KeyedTask {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedTask with some entities alongside their keys.
 func (ƨ Tasks) Key(keys []*datastore.Key) (keyed []KeyedTask) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ Task) SaveWithParent(ctx context.Context, parent *datastore.Key) (*data
 // used to query entities of type Task.
 func NewQueryForTask() *datastore.Query {
 	return datastore.NewQuery("Task")
-}
-
-type TaskHandler struct{}
-
-func (ƨ TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results Tasks
-		keys, _ := NewQueryForTask().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity Task
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeTask(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "Task" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, TaskHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, TaskHandler{}))
-	}
 }

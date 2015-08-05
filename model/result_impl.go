@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// ResultKind is the kind used in Datastore to store entities of type Result.
 const ResultKind = "Result"
 
+// Results is just a slice of Result.
 type Results []Result
 
+// KeyedResult is a struct that embeds Result and also contains a Key, mainly used for encoding to JSON.
 type KeyedResult struct {
 	*Result
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedResult with an entity and it's key.
 func (ƨ *Result) Key(key *datastore.Key) *KeyedResult {
 	return &KeyedResult{
 		Result: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *Result) Key(key *datastore.Key) *KeyedResult {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedResult with some entities alongside their keys.
 func (ƨ Results) Key(keys []*datastore.Key) (keyed []KeyedResult) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ Result) SaveWithParent(ctx context.Context, parent *datastore.Key) (*da
 // used to query entities of type Result.
 func NewQueryForResult() *datastore.Query {
 	return datastore.NewQuery("Result")
-}
-
-type ResultHandler struct{}
-
-func (ƨ ResultHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results Results
-		keys, _ := NewQueryForResult().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity Result
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeResult(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "Result" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, ResultHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, ResultHandler{}))
-	}
 }

@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// CompanyKind is the kind used in Datastore to store entities of type Company.
 const CompanyKind = "Company"
 
+// Companys is just a slice of Company.
 type Companys []Company
 
+// KeyedCompany is a struct that embeds Company and also contains a Key, mainly used for encoding to JSON.
 type KeyedCompany struct {
 	*Company
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedCompany with an entity and it's key.
 func (ƨ *Company) Key(key *datastore.Key) *KeyedCompany {
 	return &KeyedCompany{
 		Company: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *Company) Key(key *datastore.Key) *KeyedCompany {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedCompany with some entities alongside their keys.
 func (ƨ Companys) Key(keys []*datastore.Key) (keyed []KeyedCompany) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ Company) SaveWithParent(ctx context.Context, parent *datastore.Key) (*d
 // used to query entities of type Company.
 func NewQueryForCompany() *datastore.Query {
 	return datastore.NewQuery("Company")
-}
-
-type CompanyHandler struct{}
-
-func (ƨ CompanyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results Companys
-		keys, _ := NewQueryForCompany().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity Company
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeCompany(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "Company" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, CompanyHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, CompanyHandler{}))
-	}
 }

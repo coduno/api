@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// AccessTokenKind is the kind used in Datastore to store entities of type AccessToken.
 const AccessTokenKind = "AccessToken"
 
+// AccessTokens is just a slice of AccessToken.
 type AccessTokens []AccessToken
 
+// KeyedAccessToken is a struct that embeds AccessToken and also contains a Key, mainly used for encoding to JSON.
 type KeyedAccessToken struct {
 	*AccessToken
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedAccessToken with an entity and it's key.
 func (ƨ *AccessToken) Key(key *datastore.Key) *KeyedAccessToken {
 	return &KeyedAccessToken{
 		AccessToken: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *AccessToken) Key(key *datastore.Key) *KeyedAccessToken {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedAccessToken with some entities alongside their keys.
 func (ƨ AccessTokens) Key(keys []*datastore.Key) (keyed []KeyedAccessToken) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ AccessToken) SaveWithParent(ctx context.Context, parent *datastore.Key)
 // used to query entities of type AccessToken.
 func NewQueryForAccessToken() *datastore.Query {
 	return datastore.NewQuery("AccessToken")
-}
-
-type AccessTokenHandler struct{}
-
-func (ƨ AccessTokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results AccessTokens
-		keys, _ := NewQueryForAccessToken().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity AccessToken
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeAccessToken(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "AccessToken" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, AccessTokenHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, AccessTokenHandler{}))
-	}
 }

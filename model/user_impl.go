@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// UserKind is the kind used in Datastore to store entities of type User.
 const UserKind = "User"
 
+// Users is just a slice of User.
 type Users []User
 
+// KeyedUser is a struct that embeds User and also contains a Key, mainly used for encoding to JSON.
 type KeyedUser struct {
 	*User
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedUser with an entity and it's key.
 func (ƨ *User) Key(key *datastore.Key) *KeyedUser {
 	return &KeyedUser{
 		User: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *User) Key(key *datastore.Key) *KeyedUser {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedUser with some entities alongside their keys.
 func (ƨ Users) Key(keys []*datastore.Key) (keyed []KeyedUser) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ User) SaveWithParent(ctx context.Context, parent *datastore.Key) (*data
 // used to query entities of type User.
 func NewQueryForUser() *datastore.Query {
 	return datastore.NewQuery("User")
-}
-
-type UserHandler struct{}
-
-func (ƨ UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results Users
-		keys, _ := NewQueryForUser().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity User
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeUser(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "User" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, UserHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, UserHandler{}))
-	}
 }

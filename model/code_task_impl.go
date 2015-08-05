@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// CodeTaskKind is the kind used in Datastore to store entities of type CodeTask.
 const CodeTaskKind = "CodeTask"
 
+// CodeTasks is just a slice of CodeTask.
 type CodeTasks []CodeTask
 
+// KeyedCodeTask is a struct that embeds CodeTask and also contains a Key, mainly used for encoding to JSON.
 type KeyedCodeTask struct {
 	*CodeTask
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedCodeTask with an entity and it's key.
 func (ƨ *CodeTask) Key(key *datastore.Key) *KeyedCodeTask {
 	return &KeyedCodeTask{
 		CodeTask: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *CodeTask) Key(key *datastore.Key) *KeyedCodeTask {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedCodeTask with some entities alongside their keys.
 func (ƨ CodeTasks) Key(keys []*datastore.Key) (keyed []KeyedCodeTask) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ CodeTask) SaveWithParent(ctx context.Context, parent *datastore.Key) (*
 // used to query entities of type CodeTask.
 func NewQueryForCodeTask() *datastore.Query {
 	return datastore.NewQuery("CodeTask")
-}
-
-type CodeTaskHandler struct{}
-
-func (ƨ CodeTaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results CodeTasks
-		keys, _ := NewQueryForCodeTask().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity CodeTask
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeCodeTask(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "CodeTask" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, CodeTaskHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, CodeTaskHandler{}))
-	}
 }

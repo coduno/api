@@ -20,15 +20,19 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+// InvitationKind is the kind used in Datastore to store entities of type Invitation.
 const InvitationKind = "Invitation"
 
+// Invitations is just a slice of Invitation.
 type Invitations []Invitation
 
+// KeyedInvitation is a struct that embeds Invitation and also contains a Key, mainly used for encoding to JSON.
 type KeyedInvitation struct {
 	*Invitation
 	Key *datastore.Key
 }
 
+// Key is a shorthand to fill a KeyedInvitation with an entity and it's key.
 func (ƨ *Invitation) Key(key *datastore.Key) *KeyedInvitation {
 	return &KeyedInvitation{
 		Invitation: ƨ,
@@ -36,6 +40,7 @@ func (ƨ *Invitation) Key(key *datastore.Key) *KeyedInvitation {
 	}
 }
 
+// Key is a shorthand to fill a slice of KeyedInvitation with some entities alongside their keys.
 func (ƨ Invitations) Key(keys []*datastore.Key) (keyed []KeyedInvitation) {
 	if len(keys) != len(ƨ) {
 		panic("Key() called on an slice with len(keys) != len(slice)")
@@ -78,34 +83,4 @@ func (ƨ Invitation) SaveWithParent(ctx context.Context, parent *datastore.Key) 
 // used to query entities of type Invitation.
 func NewQueryForInvitation() *datastore.Query {
 	return datastore.NewQuery("Invitation")
-}
-
-type InvitationHandler struct{}
-
-func (ƨ InvitationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	if r.URL.Path == "" {
-		var results Invitations
-		keys, _ := NewQueryForInvitation().GetAll(ctx, &results)
-		json.NewEncoder(w).Encode(results.Key(keys))
-		return
-	}
-
-	k, _ := datastore.DecodeKey(r.URL.Path)
-	var entity Invitation
-	datastore.Get(ctx, k, &entity)
-	json.NewEncoder(w).Encode(entity)
-}
-
-func ServeInvitation(prefix string, muxes ...*http.ServeMux) {
-	path := prefix + "Invitation" + "/"
-
-	if len(muxes) == 0 {
-		http.Handle(path, http.StripPrefix(path, InvitationHandler{}))
-	}
-
-	for _, mux := range muxes {
-		mux.Handle(path, http.StripPrefix(path, InvitationHandler{}))
-	}
 }
