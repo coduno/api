@@ -11,12 +11,9 @@
 package model
 
 import (
-	"encoding/json"
 	"errors"
-	"net/http"
 
 	"golang.org/x/net/context"
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 )
 
