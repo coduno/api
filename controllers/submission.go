@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -12,6 +10,7 @@ import (
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 
+	"github.com/coduno/api/runner"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
 	"github.com/coduno/api/util/passenger"
@@ -64,55 +63,11 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	switch taskKey.Kind() {
 	case model.CodeTaskKind:
-		return codeSubmission(ctx, w, r, resultKey, taskKey)
+		return runner.HandleCodeSubmission(ctx, w, r, resultKey, taskKey)
 	// TODO(victorbalan, flowlo): Use correct kind when possible.
 	case "QuestionTask":
 		return http.StatusInternalServerError, errors.New("question submissions are not yet implemented")
 	default:
 		return http.StatusBadRequest, errors.New("Unknown submission kind.")
 	}
-}
-
-func codeSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request, resultKey, taskKey *datastore.Key) (status int, err error) {
-	var submission model.CodeSubmission
-	if err := json.NewDecoder(r.Body).Decode(&submission); err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	var codeTask model.CodeTask
-	if err = datastore.Get(ctx, taskKey, &codeTask); err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	var response *http.Response
-	if response, err = runOnDocker(w, codeTask, submission.Language, submission.Code); err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	json.NewDecoder(response.Body).Decode(&submission)
-
-	key, err := submission.SaveWithParent(ctx, resultKey)
-	if err != nil {
-		// TODO(flowlo): we cannot bilindly return err here, as it could possibly
-		// leak confidential information from engine (credentials).
-		return http.StatusInternalServerError, nil
-	}
-
-	json.NewEncoder(w).Encode(submission.Key(key))
-	return http.StatusCreated, nil
-}
-
-func runOnDocker(w http.ResponseWriter, task model.CodeTask, language, code string) (r *http.Response, err error) {
-	var data = struct {
-		Flags, Code, Language string
-	}{
-		task.Flags, code, language,
-	}
-
-	buf := new(bytes.Buffer)
-	if err = json.NewEncoder(buf).Encode(data); err != nil {
-		return
-	}
-
-	return http.Post(compute.String()+"/"+task.Runner, "application/json;charset=utf-8", buf)
 }
