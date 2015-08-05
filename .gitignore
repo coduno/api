@@ -16,5 +16,9 @@ coduno
 app
 api
 
-#jetbrains folders
+# jetbrains folders
 .idea
+
+# secrets
+service-account.json
+credentials
