@@ -38,7 +38,7 @@ func init() {
 	}
 
 	credentials := strings.Trim(string(b), "\r\n ")
-	compute, err = url.Parse("https://" + credentials + "git.cod.uno")
+	compute, err = url.Parse("https://" + credentials + "@git.cod.uno")
 	if err != nil {
 		panic(err)
 	}
@@ -93,7 +93,9 @@ func codeSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request,
 
 	key, err := submission.SaveWithParent(ctx, resultKey)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		// TODO(flowlo): we cannot bilindly return err here, as it could possibly
+		// leak confidential information from engine (credentials).
+		return http.StatusInternalServerError, nil
 	}
 
 	json.NewEncoder(w).Encode(submission.Key(key))
