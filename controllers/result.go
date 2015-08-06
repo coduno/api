@@ -108,3 +108,72 @@ func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(results.Key(keys))
 	return http.StatusOK, nil
 }
+
+func CreateFinalResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
+	if !util.CheckMethod(r, "GET") {
+		return http.StatusMethodNotAllowed, nil
+	}
+
+	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
+
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	if p, ok := passenger.FromContext(ctx); !ok || !util.HasParent(resultKey, p.UserKey) {
+		return http.StatusUnauthorized, nil
+	}
+
+	var result model.Result
+	if err = datastore.Get(ctx, resultKey, &result); err != nil {
+		return http.StatusInternalServerError, nil
+	}
+
+	go computeFinalScore(ctx, result)
+
+	var challenge model.Challenge
+	if err = datastore.Get(ctx, result.Challenge, &challenge); err != nil {
+		return http.StatusInternalServerError, nil
+	}
+
+	var taskKey *datastore.Key
+	for _, taskKey = range challenge.Tasks {
+		switch taskKey.Kind() {
+		case model.CodeTaskKind:
+			var submissions model.CodeSubmissions
+			keys, err := doQuery(ctx, model.NewQueryForCodeSubmission(), resultKey, taskKey, submissions)
+			if err != nil {
+				return http.StatusInternalServerError, nil
+			}
+			if len(keys) == 0 {
+				// Most likely the authenticated user called this endpoint
+				// before finishing the challenge
+				return http.StatusUnauthorized, nil
+			}
+			result.FinalSubmissions = append(result.FinalSubmissions, keys[0])
+		//TODO(pbochis, vbalan, flowlo): Add more cases when more task kinds are added.
+		default:
+			return http.StatusBadRequest, errors.New("Unknown submission kind.")
+		}
+	}
+	json.NewEncoder(w).Encode(result.Key(resultKey))
+	return http.StatusOK, nil
+}
+
+func doQuery(ctx context.Context, query *datastore.Query, resultKey, taskKey *datastore.Key, dst interface{}) ([]*datastore.Key, error) {
+	keys, err := query.
+		Ancestor(resultKey).
+		Filter("Task=", taskKey).
+		Order("-Time").
+		Limit(1).
+		GetAll(ctx, &dst)
+	if err != nil {
+		return nil, err
+	}
+	return keys, nil
+}
+
+func computeFinalScore(ctx context.Context, result model.Result) {
+	// Note: See comment above Logic in model/challenge.go. This can only be
+	// calculated after challenge.Logic is clearly defined
+}

@@ -10,8 +10,8 @@ import (
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 
-	"github.com/coduno/api/runner"
 	"github.com/coduno/api/model"
+	"github.com/coduno/api/runner"
 	"github.com/coduno/api/util"
 	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
@@ -60,7 +60,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	taskKey, err := datastore.DecodeKey(mux.Vars(r)["taskKey"])
-
+	// Note: When more task kinds are added, see controllers.CreateFinalResult.
 	switch taskKey.Kind() {
 	case model.CodeTaskKind:
 		return runner.HandleCodeSubmission(ctx, w, r, resultKey, taskKey)
