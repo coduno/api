@@ -1,6 +1,8 @@
 package passenger
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -8,6 +10,7 @@ import (
 	"strings"
 
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/memcache"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util/password"
@@ -58,6 +61,11 @@ func (p *Passenger) HasScope(scope string) (has bool) {
 // FromAccessToken tries do identify a Passenger by the access token he gave us.
 // It will look up the AccessToken and consequently the corresponding User.
 func FromAccessToken(ctx context.Context, accessToken string) (p *Passenger, err error) {
+	p, err = fromCache(ctx, accessToken)
+	if err == nil {
+		return
+	}
+
 	p = new(Passenger)
 	p.AccessTokenKey, err = model.NewQueryForAccessToken().
 		Filter("Value=", accessToken).
@@ -71,8 +79,17 @@ func FromAccessToken(ctx context.Context, accessToken string) (p *Passenger, err
 	if p.UserKey = p.AccessTokenKey.Parent(); p.UserKey == nil {
 		return nil, ErrTokenNotAssociated
 	}
-	// TODO(flowlo): Make this independent of Datastore import.
 	err = datastore.Get(ctx, p.UserKey, &p.User)
+	return
+}
+
+func fromCache(ctx context.Context, accessToken string) (p *Passenger, err error) {
+	item, err := memcache.Get(ctx, accessToken)
+	if err != nil {
+		return nil, err
+	}
+	p = new(Passenger)
+	err = gob.NewDecoder(bytes.NewReader(item.Value)).Decode(&p)
 	return
 }
 

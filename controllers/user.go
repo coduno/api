@@ -232,14 +232,15 @@ func GetCompanyByUser(ctx context.Context, w http.ResponseWriter, r *http.Reques
 }
 
 func WhoAmI(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "GET") {
+	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
 	}
-	p, ok := passenger.FromContext(ctx)
 
+	p, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, nil
 	}
+
 	json.NewEncoder(w).Encode(p.User.Key(p.UserKey))
 	return http.StatusOK, nil
 }
