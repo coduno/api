@@ -1,0 +1,16 @@
+engines:
+  fixme:
+    enabled: true
+  golint:
+    enabled: true
+  gofmt:
+    enabled: true
+
+ratings:
+   paths:
+   - "**.go"
+
+exclude_paths:
+- "**.got"
+- model/*_impl.go
+- vendor/**/*
