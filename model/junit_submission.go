@@ -17,11 +17,11 @@ type JunitSubmission struct {
 
 	Start, End time.Time
 
-	Result UnitTestResult
+	Results UnitTestResults
 }
 
-// UnitTestResult holds the unit test result created by JUnit.
-type UnitTestResult struct {
+// UnitTestResults holds the unit test result created by JUnit.
+type UnitTestResults struct {
 	Tests    int        `xml:"tests,attr"`
 	Failures int        `xml:"failures,attr"`
 	Errors   int        `xml:"errors,attr"`

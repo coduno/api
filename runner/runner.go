@@ -59,6 +59,9 @@ func HandleCodeSubmission(ctx context.Context, w http.ResponseWriter, r *http.Re
 	case "javaut":
 		submission := model.JunitSubmission{Submission: model.Submission{Task: taskKey}}
 		runner = &JunitRunner{Submission: submission}
+	case "outputtest":
+		submission := model.DiffSubmission{CodeSubmission: model.CodeSubmission{Submission: model.Submission{Task: taskKey}}}
+		runner = &DiffRunner{Submission: submission}
 	default:
 		return http.StatusBadRequest, nil
 	}
