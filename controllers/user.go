@@ -241,6 +241,11 @@ func WhoAmI(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, e
 		return http.StatusUnauthorized, nil
 	}
 
-	json.NewEncoder(w).Encode(p.User.Key(p.UserKey))
+	var user model.User
+	if err := datastore.Get(ctx, p.UserKey, &user); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	json.NewEncoder(w).Encode(user.Key(p.UserKey))
 	return http.StatusOK, nil
 }

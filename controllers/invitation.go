@@ -11,7 +11,6 @@ import (
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util/passenger"
-	"github.com/coduno/api/util/password"
 	"google.golang.org/appengine/datastore"
 	appmail "google.golang.org/appengine/mail"
 
@@ -107,24 +106,25 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		}
 	}
 
-	// TODO(flowlo): Generate token with its own util.
-	tokenValue, err := password.Generate(0)
+	// NOTE: We are creating a new, orphaned Passenger here, because a
+	// Passenger can only issue tokens for the encapsulated user.
+	np := passenger.Passenger{
+		UserKey: key,
+	}
+
+	now := time.Now()
+	token := &model.AccessToken{
+		Creation:    now,
+		Expiry:      now.Add(time.Hour * 24 * 365),
+		Description: "Initialization Token",
+	}
+
+	value, err := np.IssueToken(ctx, token)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
-	now := time.Now()
-	accessToken := model.AccessToken{
-		Value:        string(tokenValue),
-		Creation:     now,
-		Modification: now,
-		Expiry:       now.Add(time.Hour * 24 * 365),
-		Description:  "Initialization Token",
-	}
 
-	if _, err = accessToken.SaveWithParent(ctx, key); err != nil {
-		return http.StatusInternalServerError, err
-	}
-	token := base64.URLEncoding.EncodeToString([]byte(params.Challenge + ":" + accessToken.Value))
+	query := base64.URLEncoding.EncodeToString([]byte(params.Challenge + ":" + value))
 
 	i := model.Invitation{
 		User: key,
@@ -137,7 +137,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 	}{
 		user.Address,
 		company.Address,
-		token,
+		query,
 	}); err != nil {
 		return http.StatusInternalServerError, err
 	}
