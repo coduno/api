@@ -142,8 +142,6 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		LastUpdate: time.Now(),
 	}.SaveWithParent(ctx, victor)
 
-	model.AccessToken{Value: "random_string"}.SaveWithParent(ctx, victor)
-
 	model.Profile{
 		Skills:     model.Skills{11, 1234, 14},
 		LastUpdate: time.Now(),
@@ -271,7 +269,7 @@ func MockCoduno(w http.ResponseWriter, req *http.Request) {
 			},
 			SkillWeights: model.SkillWeights{1, 0, 0},
 		},
-		Runner: "simple",
+		Runner:    "simple",
 		Languages: []string{"java", "py", "c", "cpp"},
 	}.SaveWithParent(ctx, coduno)
 }
