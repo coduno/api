@@ -9,9 +9,7 @@ go:
 
 before_install:
 - $(! $TRAVIS_SECURE_ENV_VARS) || openssl aes-256-cbc -K $encrypted_e505aa14efb0_key
-  -iv $encrypted_e505aa14efb0_iv -in service-account.json.enc -out service-account.json -d
-- $(! $TRAVIS_SECURE_ENV_VARS) || openssl aes-256-cbc -K $encrypted_e505aa14efb0_key
-  -iv $encrypted_e505aa14efb0_iv -in credentials.enc -out credentials -d
+  -iv $encrypted_e505aa14efb0_iv -in secrets.tar.enc -d | tar xv
 
 
 after_success:

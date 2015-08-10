@@ -20,5 +20,6 @@ api
 .idea
 
 # secrets
-service-account.json
-credentials
+service-account.json*
+credentials*
+secrets.tar
