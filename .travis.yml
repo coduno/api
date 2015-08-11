@@ -7,6 +7,9 @@ go:
 - 1.5rc1
 - tip
 
+notifications:
+  email: never
+
 cache:
   directories:
   - "~/google-cloud-sdk/"
