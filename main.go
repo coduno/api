@@ -49,7 +49,7 @@ func main() {
 	r.HandleFunc("/results", setup(controllers.CreateResult))
 	r.HandleFunc("/results/{resultKey}/tasks/{taskKey}/submissions", setup(controllers.PostSubmission))
 	r.HandleFunc("/results/{resultKey}/finalSubmissions/{index}", setup(controllers.FinalSubmission))
-	r.HandleFunc("/results/{resultKey}", setup(controllers.CreateFinalResult))
+	r.HandleFunc("/results/{resultKey}", setup(controllers.GetResult))
 
 	r.HandleFunc("/user/company", setup(controllers.GetCompanyByUser))
 	r.HandleFunc("/user", setup(controllers.WhoAmI))

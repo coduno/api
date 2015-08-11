@@ -90,7 +90,7 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 
 // GetResultsByChallenge queries the results for a certain challenge to be reviewed by a company.
 func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "POST") {
+	if !util.CheckMethod(r, "GET") {
 		return http.StatusMethodNotAllowed, nil
 	}
 
@@ -113,30 +113,42 @@ func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.R
 	return http.StatusOK, nil
 }
 
-func CreateFinalResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
+func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
 	if !util.CheckMethod(r, "GET") {
 		return http.StatusMethodNotAllowed, nil
 	}
 
 	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
-
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	if p, ok := passenger.FromContext(ctx); !ok || !util.HasParent(resultKey, p.UserKey) {
-		return http.StatusUnauthorized, nil
-	}
-
 	var result model.Result
-	if err = datastore.Get(ctx, resultKey, &result); err != nil {
+	if err := datastore.Get(ctx, resultKey, &result); err != nil {
 		return http.StatusInternalServerError, nil
 	}
 
+	p, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	if p.UserKey.Parent() != nil {
+		json.NewEncoder(w).Encode(result.Key(resultKey))
+		return http.StatusOK, nil
+	}
+
+	if !util.HasParent(resultKey, p.UserKey) {
+		return http.StatusUnauthorized, nil
+	}
+	return createFinalResult(ctx, w, resultKey, result)
+}
+
+func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *datastore.Key, result model.Result) (int, error) {
 	go computeFinalScore(ctx, result)
 
 	var challenge model.Challenge
-	if err = datastore.Get(ctx, result.Challenge, &challenge); err != nil {
+	if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
 		return http.StatusInternalServerError, nil
 	}
 
@@ -160,7 +172,11 @@ func CreateFinalResult(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			return http.StatusBadRequest, errors.New("Unknown submission kind.")
 		}
 	}
-	json.NewEncoder(w).Encode(result.Key(resultKey))
+	key, err := result.Save(ctx, resultKey)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	json.NewEncoder(w).Encode(result.Key(key))
 	return http.StatusOK, nil
 }
 
