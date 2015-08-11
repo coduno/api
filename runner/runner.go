@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/coduno/api/model"
 
@@ -52,15 +53,16 @@ func HandleCodeSubmission(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return http.StatusInternalServerError, err
 	}
 	var runner Runner
+	rawSubmission := model.Submission{Task: taskKey, Time: time.Now()}
 	switch codeTask.Runner {
 	case "simple":
-		submission := model.CodeSubmission{Submission: model.Submission{Task: taskKey}}
+		submission := model.CodeSubmission{Submission: rawSubmission}
 		runner = &SimpleRunner{Submission: submission}
 	case "javaut":
-		submission := model.JunitSubmission{Submission: model.Submission{Task: taskKey}}
+		submission := model.JunitSubmission{Submission: rawSubmission}
 		runner = &JunitRunner{Submission: submission}
 	case "outputtest":
-		submission := model.DiffSubmission{CodeSubmission: model.CodeSubmission{Submission: model.Submission{Task: taskKey}}}
+		submission := model.DiffSubmission{CodeSubmission: model.CodeSubmission{Submission: rawSubmission}}
 		runner = &DiffRunner{Submission: submission}
 	default:
 		return http.StatusBadRequest, nil
