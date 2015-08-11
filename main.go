@@ -46,17 +46,16 @@ func main() {
 	r.HandleFunc("/profiles/{key}", setup(controllers.GetProfileByKey))
 	r.HandleFunc("/profiles/{key}", setup(controllers.DeleteProfile))
 
-	r.HandleFunc("/tasks/{key}", setup(controllers.TaskByKey))
-
 	r.HandleFunc("/results", setup(controllers.CreateResult))
 	r.HandleFunc("/results/{resultKey}/tasks/{taskKey}/submissions", setup(controllers.PostSubmission))
+	r.HandleFunc("/results/{resultKey}/finalSubmissions/{index}", setup(controllers.FinalSubmission))
 	r.HandleFunc("/results/{resultKey}", setup(controllers.CreateFinalResult))
 
 	r.HandleFunc("/user/company", setup(controllers.GetCompanyByUser))
 	r.HandleFunc("/user", setup(controllers.WhoAmI))
 	r.HandleFunc("/users", setup(controllers.User))
 
-	r.HandleFunc("/task/{key}", setup(controllers.TaskByKey))
+	r.HandleFunc("/tasks/{key}", setup(controllers.TaskByKey))
 	r.HandleFunc("/tasks", setup(controllers.Tasks))
 
 	r.HandleFunc("/whoami", setup(controllers.WhoAmI))

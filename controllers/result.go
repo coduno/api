@@ -74,7 +74,11 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 		return http.StatusInternalServerError, err
 	}
 
-	result := model.Result{Challenge: key, StartTimes: make([]time.Time, len(challenge.Tasks))}
+	result := model.Result{
+		Challenge:        key,
+		StartTimes:       make([]time.Time, len(challenge.Tasks)),
+		FinalSubmissions: make([]*datastore.Key, len(challenge.Tasks)),
+	}
 	key, err = result.SaveWithParent(ctx, keys[0])
 	if err != nil {
 		return http.StatusInternalServerError, err

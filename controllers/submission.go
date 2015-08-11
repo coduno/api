@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"google.golang.org/appengine"
@@ -56,7 +57,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
 
 	if !util.HasParent(p.UserKey, resultKey) {
-		return http.StatusBadRequest, errors.New("Cannot submit answer for other users")
+		return http.StatusBadRequest, errors.New("cannot submit answer for other users")
 	}
 
 	taskKey, err := datastore.DecodeKey(mux.Vars(r)["taskKey"])
@@ -70,4 +71,46 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	default:
 		return http.StatusBadRequest, errors.New("Unknown submission kind.")
 	}
+}
+
+// FinalSubmission makes the last submission final.
+func FinalSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	p, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+	if r.Method != "POST" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
+	var resultKey *datastore.Key
+	if resultKey, err = datastore.DecodeKey(mux.Vars(r)["resultKey"]); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	if !util.HasParent(p.UserKey, resultKey) {
+		return http.StatusBadRequest, errors.New("cannot submit answer for other users")
+	}
+
+	var index int
+	if index, err = strconv.Atoi(mux.Vars(r)["index"]); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	var submissionKey *datastore.Key
+	if submissionKey, err = datastore.DecodeKey(mux.Vars(r)["submissionKey"]); err != nil {
+		return http.StatusInternalServerError, err
+	}
+	var result model.Result
+	if err = datastore.Get(ctx, resultKey, &result); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	result.FinalSubmissions[index] = submissionKey
+
+	if _, err = result.Save(ctx, resultKey); err != nil {
+		return http.StatusInternalServerError, err
+	}
+	w.Write([]byte("OK"))
+	return
 }
