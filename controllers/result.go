@@ -6,18 +6,20 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/coduno/api/logic"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
 	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
 
 	"golang.org/x/net/context"
 )
 
 // CreateResult saves a new result when a coder starts a challenge.
 func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "POST") {
+	if r.Method != "POST" {
 		return http.StatusMethodNotAllowed, nil
 	}
 
@@ -145,8 +147,6 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 }
 
 func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *datastore.Key, result model.Result) (int, error) {
-	go computeFinalScore(ctx, result)
-
 	var challenge model.Challenge
 	if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
 		return http.StatusInternalServerError, nil
@@ -177,6 +177,9 @@ func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *da
 		return http.StatusInternalServerError, err
 	}
 	json.NewEncoder(w).Encode(result.Key(key))
+
+	go computeFinalScore(ctx, challenge, result, resultKey)
+
 	return http.StatusOK, nil
 }
 
@@ -193,7 +196,8 @@ func doQuery(ctx context.Context, query *datastore.Query, resultKey, taskKey *da
 	return keys, nil
 }
 
-func computeFinalScore(ctx context.Context, result model.Result) {
-	// Note: See comment above Logic in model/challenge.go. This can only be
-	// calculated after challenge.Logic is clearly defined
+func computeFinalScore(ctx context.Context, challenge model.Challenge, result model.Result, resultKey *datastore.Key) {
+	if err := logic.Resulter(challenge.Resulter).Call(ctx, resultKey); err != nil {
+		log.Warningf(ctx, "resulter failed: %s", err.Error())
+	}
 }

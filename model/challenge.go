@@ -25,8 +25,8 @@ type Challenge struct {
 	// guaranteed to be stable.
 	Tasks []*datastore.Key
 
-	// To normalize the results of all Tasks
-	//
-	// TODO(flowlo): Clear specification.
-	Logic logic
+	// The Resulter to use to compute skills (and
+	// therefore a Result) from the outcome of
+	// the Submissions to Tasks.
+	Resulter int
 }
