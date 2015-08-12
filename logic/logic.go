@@ -2,6 +2,7 @@ package logic
 
 import (
 	"strconv"
+	"time"
 
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
@@ -107,6 +108,7 @@ func init() {
 		}
 
 		result.Skills = average.Div(weightSum)
+		result.Computed = time.Now()
 
 		_, err := result.Save(ctx, resultKey)
 		return err

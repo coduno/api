@@ -45,4 +45,8 @@ type Result struct {
 	//
 	// Indexed the same as Challenge.Tasks.
 	FinalSubmissions []*datastore.Key
+
+	// When this result was last (re)computed by the
+	// Resulter in Challenge.
+	Computed time.Time
 }
