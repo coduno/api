@@ -81,7 +81,6 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 	var users model.Users
 	keys, err := model.NewQueryForUser().
 		Filter("Address=", address.Address).
-		KeysOnly().
 		Limit(1).
 		GetAll(ctx, &users)
 
