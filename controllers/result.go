@@ -78,6 +78,7 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 		Challenge:        key,
 		StartTimes:       make([]time.Time, len(challenge.Tasks)),
 		FinalSubmissions: make([]*datastore.Key, len(challenge.Tasks)),
+		Started:          time.Now(),
 	}
 	key, err = result.SaveWithParent(ctx, keys[0])
 	if err != nil {
@@ -133,64 +134,61 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 		return http.StatusUnauthorized, nil
 	}
 
-	if p.UserKey.Parent() != nil {
-		json.NewEncoder(w).Encode(result.Key(resultKey))
-		return http.StatusOK, nil
-	}
-
-	if !util.HasParent(resultKey, p.UserKey) {
+	if p.UserKey.Parent() != nil && !util.HasParent(resultKey, p.UserKey) {
 		return http.StatusUnauthorized, nil
 	}
-	return createFinalResult(ctx, w, resultKey, result)
-}
 
-func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *datastore.Key, result model.Result) (int, error) {
-	go computeFinalScore(ctx, result)
-
-	var challenge model.Challenge
-	if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
-		return http.StatusInternalServerError, nil
-	}
-
-	var taskKey *datastore.Key
-	for _, taskKey = range challenge.Tasks {
-		switch taskKey.Kind() {
-		case model.CodeTaskKind:
-			var submissions model.CodeSubmissions
-			keys, err := doQuery(ctx, model.NewQueryForCodeSubmission(), resultKey, taskKey, submissions)
-			if err != nil {
-				return http.StatusInternalServerError, nil
-			}
-			if len(keys) == 0 {
-				// Most likely the authenticated user called this endpoint
-				// before finishing the challenge
-				return http.StatusUnauthorized, nil
-			}
-			result.FinalSubmissions = append(result.FinalSubmissions, keys[0])
-		//TODO(pbochis, vbalan, flowlo): Add more cases when more task kinds are added.
-		default:
-			return http.StatusBadRequest, errors.New("Unknown submission kind.")
+	if result.Finished == (time.Time{}) {
+		var challenge model.Challenge
+		if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
+			return http.StatusInternalServerError, err
 		}
+		if p.UserKey.Parent() != nil && result.Started.Add(challenge.Duration).After(time.Now()) {
+			json.NewEncoder(w).Encode(result.Key(resultKey))
+			return http.StatusOK, nil
+		}
+		return createFinalResult(ctx, w, resultKey, result, challenge)
 	}
-	key, err := result.Save(ctx, resultKey)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-	json.NewEncoder(w).Encode(result.Key(key))
+
+	json.NewEncoder(w).Encode(result.Key(resultKey))
 	return http.StatusOK, nil
 }
 
-func doQuery(ctx context.Context, query *datastore.Query, resultKey, taskKey *datastore.Key, dst interface{}) ([]*datastore.Key, error) {
-	keys, err := query.
+func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *datastore.Key, result model.Result, challenge model.Challenge) (status int, err error) {
+	go computeFinalScore(ctx, result)
+
+	result.Finished = time.Now()
+
+	for i, taskKey := range challenge.Tasks {
+		var key *datastore.Key
+		if key, err = getLatestSubmissionKey(ctx, resultKey, taskKey); err != nil {
+			return http.StatusInternalServerError, err
+		}
+		result.FinalSubmissions[i] = key
+	}
+
+	if _, err = result.Save(ctx, resultKey); err != nil {
+		return http.StatusInternalServerError, err
+	}
+	json.NewEncoder(w).Encode(result.Key(resultKey))
+	return
+}
+
+func getLatestSubmissionKey(ctx context.Context, resultKey, taskKey *datastore.Key) (*datastore.Key, error) {
+	keys, err := datastore.NewQuery("").
 		Ancestor(resultKey).
 		Filter("Task=", taskKey).
 		Order("-Time").
+		KeysOnly().
 		Limit(1).
-		GetAll(ctx, &dst)
+		GetAll(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return keys, nil
+	if len(keys) == 0 {
+		return nil, errors.New("no submission found")
+	}
+	return keys[0], nil
 }
 
 func computeFinalScore(ctx context.Context, result model.Result) {

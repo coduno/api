@@ -45,4 +45,10 @@ type Result struct {
 	//
 	// Indexed the same as Challenge.Tasks.
 	FinalSubmissions []*datastore.Key
+
+	// The time when the coder started the Challenge.
+	Started,
+
+	// The time when the coder finished the Challenge.
+	Finished time.Time
 }
