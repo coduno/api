@@ -51,4 +51,8 @@ type Result struct {
 
 	// The time when the coder finished the Challenge.
 	Finished time.Time
+
+	// When this result was last (re)computed by the
+	// Resulter in Challenge.
+	Computed time.Time
 }

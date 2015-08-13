@@ -6,18 +6,20 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/coduno/api/logic"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
 	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
 
 	"golang.org/x/net/context"
 )
 
 // CreateResult saves a new result when a coder starts a challenge.
 func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "POST") {
+	if r.Method != "POST" {
 		return http.StatusMethodNotAllowed, nil
 	}
 
@@ -154,8 +156,11 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 	return http.StatusOK, nil
 }
 
-func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *datastore.Key, result model.Result, challenge model.Challenge) (status int, err error) {
-	go computeFinalScore(ctx, result)
+func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *datastore.Key, result model.Result) (int, error) {
+	var challenge model.Challenge
+	if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
+		return http.StatusInternalServerError, nil
+	}
 
 	result.Finished = time.Now()
 
@@ -166,12 +171,15 @@ func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *da
 		}
 		result.FinalSubmissions[i] = key
 	}
-
-	if _, err = result.Save(ctx, resultKey); err != nil {
+	key, err := result.Save(ctx, resultKey)
+	if err != nil {
 		return http.StatusInternalServerError, err
 	}
-	json.NewEncoder(w).Encode(result.Key(resultKey))
-	return
+	json.NewEncoder(w).Encode(result.Key(key))
+
+	go computeFinalScore(ctx, challenge, result, resultKey)
+
+	return http.StatusOK, nil
 }
 
 func getLatestSubmissionKey(ctx context.Context, resultKey, taskKey *datastore.Key) (*datastore.Key, error) {
@@ -191,7 +199,8 @@ func getLatestSubmissionKey(ctx context.Context, resultKey, taskKey *datastore.K
 	return keys[0], nil
 }
 
-func computeFinalScore(ctx context.Context, result model.Result) {
-	// Note: See comment above Logic in model/challenge.go. This can only be
-	// calculated after challenge.Logic is clearly defined
+func computeFinalScore(ctx context.Context, challenge model.Challenge, result model.Result, resultKey *datastore.Key) {
+	if err := logic.Resulter(challenge.Resulter).Call(ctx, resultKey); err != nil {
+		log.Warningf(ctx, "resulter failed: %s", err.Error())
+	}
 }

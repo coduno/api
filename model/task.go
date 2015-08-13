@@ -27,8 +27,9 @@ type Task struct {
 	// the Task.
 	SkillWeights SkillWeights
 
-	// To normalize this task.
-	//
-	// TODO(flowlo): Clear specification.
-	Logic logic
+	// Refers to some logic that looks at the Submissions
+	// of this task and produces a set of skills that
+	// represent how well the user did in doing this Task.
+	// It is to be weighted by Skillweights.
+	Tasker int
 }
