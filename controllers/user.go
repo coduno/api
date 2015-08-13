@@ -11,6 +11,7 @@ import (
 	"github.com/coduno/api/util"
 	"github.com/coduno/api/util/passenger"
 	"github.com/coduno/api/util/password"
+	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
 )
@@ -33,6 +34,26 @@ func User(ctx context.Context, w http.ResponseWriter, r *http.Request) (status i
 	default:
 		return http.StatusMethodNotAllowed, nil
 	}
+}
+
+func GetUser(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	_, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	var userKey *datastore.Key
+	if userKey, err = datastore.DecodeKey(mux.Vars(r)["key"]); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	var user model.User
+	if err = datastore.Get(ctx, userKey, &user); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	json.NewEncoder(w).Encode(user.Key(userKey))
+	return
 }
 
 func createUser(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
