@@ -149,7 +149,7 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 			json.NewEncoder(w).Encode(result.Key(resultKey))
 			return http.StatusOK, nil
 		}
-		return createFinalResult(ctx, w, resultKey, result, challenge)
+		return createFinalResult(ctx, w, resultKey, result)
 	}
 
 	json.NewEncoder(w).Encode(result.Key(resultKey))
@@ -165,8 +165,8 @@ func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *da
 	result.Finished = time.Now()
 
 	for i, taskKey := range challenge.Tasks {
-		var key *datastore.Key
-		if key, err = getLatestSubmissionKey(ctx, resultKey, taskKey); err != nil {
+		key, err := getLatestSubmissionKey(ctx, resultKey, taskKey)
+		if err != nil {
 			return http.StatusInternalServerError, err
 		}
 		result.FinalSubmissions[i] = key
