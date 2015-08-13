@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/gob"
 	"encoding/hex"
 	"errors"
@@ -132,7 +133,7 @@ func (p *Passenger) Save(ctx context.Context) (*datastore.Key, error) {
 func (p *Passenger) check(raw []byte) error {
 	digest := crypto.Hash(p.AccessToken.Hash).New().Sum(raw)
 
-	if !bytes.Equal(digest, p.AccessToken.Digest) {
+	if subtle.ConstantTimeCompare(digest, p.AccessToken.Digest) != 1 {
 		return ErrDigestMismatch
 	}
 
