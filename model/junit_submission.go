@@ -28,7 +28,7 @@ type UnitTestResults struct {
 	TestCase []TestCase `xml:"testcase"`
 }
 
-// TestCase holds a test case created by JUnit
+// TestCase holds a test case created by JUnit.
 type TestCase struct {
 	Name     string        `xml:"name,attr"`
 	Duration time.Duration `xml:"time,attr"`
