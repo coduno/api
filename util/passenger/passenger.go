@@ -10,8 +10,9 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/rand"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/gob"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	mathrand "math/rand"
@@ -41,6 +42,11 @@ const minValidity = time.Minute * 30
 const defaultValidity = time.Hour * 24 * 14
 
 const defaultHash = crypto.SHA3_256
+
+const tokenLength = 16
+
+var endianness = binary.LittleEndian
+var encoding = base64.StdEncoding
 
 type key int64
 
@@ -173,16 +179,16 @@ func (p *Passenger) IssueToken(ctx context.Context, token *model.AccessToken) (s
 		return "", fmt.Errorf("passenger: description has bad len %d", len(token.Description))
 	}
 
-	raw := make([]byte, 16)
+	var raw [tokenLength]byte
 
-	if _, err := rand.Read(raw); err != nil {
+	if _, err := rand.Read(raw[:]); err != nil {
 		return "", err
 	}
 
 	if token.Hash == 0 {
 		token.Hash = int(defaultHash)
 	}
-	token.Digest = crypto.Hash(token.Hash).New().Sum(raw)
+	token.Digest = crypto.Hash(token.Hash).New().Sum(raw[:])
 
 	clone := Passenger{
 		UserKey:     p.UserKey,
@@ -194,13 +200,13 @@ func (p *Passenger) IssueToken(ctx context.Context, token *model.AccessToken) (s
 		return "", err
 	}
 
-	return encodeToken(key, raw)
+	return encodeToken(key, &raw)
 }
 
 // FromAccessToken tries do identify a Passenger by the access token he gave us.
 // It will look up the AccessToken and consequently the corresponding User.
 func FromAccessToken(ctx context.Context, accessToken string) (*Passenger, error) {
-	key, raw, err := decodeToken(accessToken)
+	key, raw, err := decodeToken(ctx, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -310,35 +316,65 @@ func NewContextFromRequest(ctx context.Context, r *http.Request) (context.Contex
 
 // DecodeToken will take a token as sent by a client and translate it into a
 // key to look up the full token on the server side and the raw secret.
-func decodeToken(token string) (*datastore.Key, []byte, error) {
-	b, err := hex.DecodeString(token)
+func decodeToken(ctx context.Context, token string) (*datastore.Key, []byte, error) {
+	b, err := encoding.DecodeString(token)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dec := gob.NewDecoder(bytes.NewReader(b))
+	companyID, n := binary.Varint(b[0:8])
+	if n < 8 {
+		return nil, nil, errors.New("short read when decoding token")
+	}
 
 	var key *datastore.Key
-	if err := dec.Decode(&key); err != nil {
-		return nil, nil, err
+	if companyID != 0 {
+		key = datastore.NewKey(ctx, model.CompanyKind, "", companyID, nil)
 	}
-	var raw []byte
-	if err := dec.Decode(&raw); err != nil {
-		return nil, nil, err
+
+	l := int(b[8])
+	sid := string(b[9 : 9+l])
+
+	key = datastore.NewKey(ctx, model.UserKind, sid, 0, key)
+
+	tokenID, n := binary.Varint(b[0:8])
+	if n < 8 {
+		return nil, nil, errors.New("short read when decoding token")
 	}
-	return key, raw, nil
+
+	key = datastore.NewKey(ctx, model.AccessTokenKind, "", tokenID, key)
+
+	if key == nil {
+		return nil, nil, errors.New("failed to construct key")
+	}
+
+	return key, b[8:], nil
 }
 
 // EncodeToken translates the key and raw secret of a newly generated token to
 // a form suitable for the client.
-func encodeToken(key *datastore.Key, raw []byte) (string, error) {
-	buf := new(bytes.Buffer)
-	enc := gob.NewEncoder(buf)
-	if err := enc.Encode(key); err != nil {
-		return "", err
+func encodeToken(key *datastore.Key, raw *[tokenLength]byte) (string, error) {
+	user := key.Parent()
+	company := user.Parent()
+
+	sid := user.StringID()
+	l := len(sid)
+
+	b := make([]byte, 2*8+l)
+
+	if n := binary.PutVarint(b[0:8], company.IntID()); n < 8 {
+		return "", errors.New("short write when encoding token")
 	}
-	if err := enc.Encode(raw); err != nil {
-		return "", err
+
+	b[8] = byte(l)
+	copy(b[9:9+l], []byte(sid))
+
+	if n := binary.PutVarint(b[9+l:9+l+8], key.IntID()); n < 8 {
+		return "", errors.New("short write when encoding token")
 	}
-	return hex.EncodeToString(buf.Bytes()), nil
+
+	for i := range raw {
+		b[9+l+8+i] = raw[i]
+	}
+	return encoding.EncodeToString(b), nil
 }
