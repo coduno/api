@@ -44,6 +44,10 @@ func main() {
 	r.HandleFunc("/companies/{key}/challenges", setup(controllers.GetChallengesForCompany))
 	r.HandleFunc("/companies/{key}/users", setup(controllers.GetUsersByCompany))
 
+	r.HandleFunc("/mock/coduno", controllers.MockCoduno)
+	r.HandleFunc("/mock/all", controllers.Mock)
+	r.HandleFunc("/mock/challenge", controllers.MockChallenge)
+
 	r.HandleFunc("/profiles/{key}", setup(controllers.GetProfileByKey))
 	r.HandleFunc("/profiles/{key}", setup(controllers.DeleteProfile))
 	r.HandleFunc("/profiles/{key}/challenges", setup(controllers.GetChallengesForProfile))
@@ -63,12 +67,6 @@ func main() {
 	r.HandleFunc("/tasks", setup(controllers.Tasks))
 
 	r.HandleFunc("/whoami", setup(controllers.WhoAmI))
-
-	r.HandleFunc("/mock/coduno", controllers.MockCoduno)
-	if appengine.IsDevAppServer() {
-		r.HandleFunc("/mock/all", controllers.Mock)
-		r.HandleFunc("/mock/challenge", controllers.MockChallenge)
-	}
 
 	http.Handle("/", r)
 	appengine.Main()
