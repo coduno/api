@@ -33,8 +33,8 @@ func main() {
 	r.HandleFunc("/code/download", hsts(guard(controllers.Template)))
 	r.HandleFunc("/invitations", setup(controllers.Invitation))
 
-	r.HandleFunc("/accessTokens", setup(controllers.AccessTokens))
-	r.HandleFunc("/accessTokens/collect", setup(controllers.CollectAccessTokens))
+	r.HandleFunc("/tokens", setup(controllers.Tokens))
+	r.HandleFunc("/tokens/collect", setup(controllers.CollectTokens))
 
 	r.HandleFunc("/challenges", setup(controllers.CreateChallenge))
 	r.HandleFunc("/challenges/{key}", setup(controllers.ChallengeByKey))

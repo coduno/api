@@ -68,7 +68,7 @@ var ErrUnkAuthHeader = errors.New("passenger: cannot interpret authorization hea
 var ErrDigestMismatch = errors.New("passenger: digest mismatch")
 
 // ErrTokenNotAssociated can be returned if this package encounters invalid
-// data during authentication. An AccessToken must be child of a User.
+// data during authentication. A Token must be child of a User.
 var ErrTokenNotAssociated = errors.New("passenger: token not associated to any user")
 
 // ErrTokenExpired is returned if the token is not valid anymore.
@@ -89,19 +89,19 @@ func init() {
 }
 
 // Passenger holds the currently authenticated user
-// together with the access token (if relevant).
+// together with the token (if relevant).
 type Passenger struct {
-	User        *datastore.Key
-	AccessToken *model.AccessToken
+	User  *datastore.Key
+	Token *model.Token
 }
 
 // HasScope can be used to check whether this Passenger was
 // granted access to a given scope.
 // Note that a user authenticated via username and password
-// (not via access token) will have access to all scopes by
+// (not via token) will have access to all scopes by
 // default.
 func (p *Passenger) HasScope(scope string) (has bool) {
-	for _, grantedScope := range p.AccessToken.Scopes {
+	for _, grantedScope := range p.Token.Scopes {
 		if scope == grantedScope {
 			return true
 		}
@@ -113,7 +113,7 @@ func (p *Passenger) HasScope(scope string) (has bool) {
 func (p *Passenger) Save(ctx context.Context) (*datastore.Key, error) {
 	now := time.Now()
 
-	key, err := p.AccessToken.SaveWithParent(ctx, p.User)
+	key, err := p.Token.SaveWithParent(ctx, p.User)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (p *Passenger) Save(ctx context.Context) (*datastore.Key, error) {
 	item := &memcache.Item{
 		Key:        key.Encode(),
 		Value:      buf.Bytes(),
-		Expiration: p.AccessToken.Expiry.Sub(now) + 10*time.Second,
+		Expiration: p.Token.Expiry.Sub(now) + 10*time.Second,
 	}
 
 	if err = memcache.Set(ctx, item); err != nil {
@@ -137,13 +137,13 @@ func (p *Passenger) Save(ctx context.Context) (*datastore.Key, error) {
 }
 
 func (p *Passenger) check(raw []byte) error {
-	digest := crypto.Hash(p.AccessToken.Hash).New().Sum(raw)
+	digest := crypto.Hash(p.Token.Hash).New().Sum(raw)
 
-	if subtle.ConstantTimeCompare(digest, p.AccessToken.Digest) != 1 {
+	if subtle.ConstantTimeCompare(digest, p.Token.Digest) != 1 {
 		return ErrDigestMismatch
 	}
 
-	if p.AccessToken.Expiry.Before(time.Now()) {
+	if p.Token.Expiry.Before(time.Now()) {
 		return ErrTokenExpired
 	}
 
@@ -151,11 +151,11 @@ func (p *Passenger) check(raw []byte) error {
 }
 
 // IssueToken creates a new Token for the authenticated user. Callers should
-// prefill the accessToken with whatever values they like and leave zero values
+// prefill the Token with whatever values they like and leave zero values
 // to be set.
 // The generated token will also be persisted and can be handed to the client
 // with no more handling.
-func (p *Passenger) IssueToken(ctx context.Context, token *model.AccessToken) (string, error) {
+func (p *Passenger) IssueToken(ctx context.Context, token *model.Token) (string, error) {
 	now := time.Now()
 
 	if token.Expiry == (time.Time{}) {
@@ -192,8 +192,8 @@ func (p *Passenger) IssueToken(ctx context.Context, token *model.AccessToken) (s
 	token.Digest = crypto.Hash(token.Hash).New().Sum(raw[:])
 
 	clone := Passenger{
-		User:        p.User,
-		AccessToken: token,
+		User:  p.User,
+		Token: token,
 	}
 
 	key, err := clone.Save(ctx)
@@ -204,10 +204,10 @@ func (p *Passenger) IssueToken(ctx context.Context, token *model.AccessToken) (s
 	return encodeToken(key, &raw)
 }
 
-// FromAccessToken tries do identify a Passenger by the access token he gave us.
-// It will look up the AccessToken and consequently the corresponding User.
-func FromAccessToken(ctx context.Context, accessToken string) (*Passenger, error) {
-	key, raw, err := decodeToken(ctx, accessToken)
+// FromToken tries do identify a Passenger by the token he gave us.
+// It will look up the Token and consequently the corresponding User.
+func FromToken(ctx context.Context, Token string) (*Passenger, error) {
+	key, raw, err := decodeToken(ctx, Token)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func fromCache(ctx context.Context, key *datastore.Key) (p *Passenger, err error
 
 func fromDatastore(ctx context.Context, key *datastore.Key) (p *Passenger, err error) {
 	p = new(Passenger)
-	if err = datastore.Get(ctx, key, p.AccessToken); err != nil {
+	if err = datastore.Get(ctx, key, p.Token); err != nil {
 		return
 	}
 	if p.User = key.Parent(); p.User == nil {
@@ -243,7 +243,7 @@ func fromDatastore(ctx context.Context, key *datastore.Key) (p *Passenger, err e
 	return
 }
 
-// FromBasicAuth tries do identify a Passenger by the access token he gave us.
+// FromBasicAuth tries do identify a Passenger by the token he gave us.
 // It will look up the the user by username and try to match password.
 func FromBasicAuth(ctx context.Context, username, pw string) (p *Passenger, err error) {
 	p = new(Passenger)
@@ -263,7 +263,7 @@ func FromBasicAuth(ctx context.Context, username, pw string) (p *Passenger, err 
 	// should encapsulate that.
 	if err == bcrypt.ErrMismatchedHashAndPassword {
 		userKey := p.User
-		p, err = FromAccessToken(ctx, pw)
+		p, err = FromToken(ctx, pw)
 		if err != nil {
 			return
 		}
@@ -283,7 +283,7 @@ func FromRequest(ctx context.Context, r *http.Request) (p *Passenger, err error)
 	}
 
 	if strings.HasPrefix(auth, "Token ") {
-		return FromAccessToken(ctx, auth[6:])
+		return FromToken(ctx, auth[6:])
 	}
 
 	username, password, ok := "", "", false
@@ -336,7 +336,7 @@ func decodeToken(ctx context.Context, token string) (*datastore.Key, []byte, err
 		intIDs[len(intIDs)-1-i] = intID
 	}
 
-	kinds := [3]string{model.CompanyKind, model.UserKind, model.AccessTokenKind}
+	kinds := [3]string{model.CompanyKind, model.UserKind, model.TokenKind}
 
 	var key *datastore.Key
 	for i := range intIDs {

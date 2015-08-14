@@ -41,7 +41,7 @@ handlers:
     login: admin
     secure: always
 
-  - url: /accessTokens/collect
+  - url: /tokens/collect
     script: _go_app
     login: admin
     secure: always

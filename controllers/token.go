@@ -14,8 +14,8 @@ import (
 	"google.golang.org/appengine/log"
 )
 
-// AccessTokens will create new AccessTokens for the user.
-func AccessTokens(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+// Tokens will create new Tokens for the user.
+func Tokens(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "POST" {
 		return http.StatusMethodNotAllowed, nil
 	}
@@ -25,7 +25,7 @@ func AccessTokens(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 		return http.StatusUnauthorized, nil
 	}
 
-	var body model.AccessToken
+	var body model.Token
 
 	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return http.StatusBadRequest, err
@@ -49,23 +49,23 @@ func AccessTokens(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 	return
 }
 
-// CollectAccessTokens runs a query against Datastore to find expired
-// AccessTokens and deletes them.
-func CollectAccessTokens(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	keys, err := model.NewQueryForAccessToken().
+// CollectTokens runs a query against Datastore to find expired
+// Tokens and deletes them.
+func CollectTokens(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
+	keys, err := model.NewQueryForToken().
 		Filter("Expiry <", time.Now()).
 		KeysOnly().
 		GetAll(ctx, nil)
 
 	if err != nil {
-		log.Warningf(ctx, "garbage collecting access tokens failed: %s", err.Error())
+		log.Warningf(ctx, "garbage collecting tokens failed: %s", err.Error())
 		return http.StatusInternalServerError, err
 	}
 
 	err = datastore.DeleteMulti(ctx, keys)
 
 	if err != nil {
-		log.Warningf(ctx, "garbage collecting access tokens failed: %s", err.Error())
+		log.Warningf(ctx, "garbage collecting tokens failed: %s", err.Error())
 		return http.StatusInternalServerError, err
 	}
 

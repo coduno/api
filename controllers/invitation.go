@@ -117,7 +117,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 	}
 
 	now := time.Now()
-	token := &model.AccessToken{
+	token := &model.Token{
 		Creation:    now,
 		Expiry:      now.Add(time.Hour * 24 * 365),
 		Description: "Initialization Token",

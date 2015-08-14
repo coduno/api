@@ -1,4 +1,4 @@
 cron:
-- description: delete expired access tokens
-  url: /accessTokens/collect
+- description: delete expired tokens
+  url: /tokens/collect
   schedule: every 24 hours
