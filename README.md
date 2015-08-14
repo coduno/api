@@ -3,4 +3,5 @@
 
 # api
 
-This is the Coduno API, serving for [app](/coduno/app) and [app](/coduno/cli).
+This is the Coduno API, serving as backend for [app](/coduno/app) and [cli](/coduno/cli). It is a
+custom RPC system based on the JSON and transported over HTTPS.
