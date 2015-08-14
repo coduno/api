@@ -39,7 +39,12 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		return http.StatusUnauthorized, nil
 	}
 
-	cKey := p.UserKey.Parent()
+	var u model.User
+	if err = datastore.Get(ctx, p.User, &u); err != nil {
+		return http.StatusInternalServerError, nil
+	}
+
+	cKey := u.Company
 	if cKey == nil {
 		return http.StatusUnauthorized, nil
 	}
@@ -108,7 +113,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 	// NOTE: We are creating a new, orphaned Passenger here, because a
 	// Passenger can only issue tokens for the encapsulated user.
 	np := passenger.Passenger{
-		UserKey: key,
+		User: key,
 	}
 
 	now := time.Now()

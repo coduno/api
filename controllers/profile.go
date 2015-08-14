@@ -10,14 +10,13 @@ import (
 	"encoding/json"
 
 	"github.com/coduno/api/model"
-	"github.com/coduno/api/util"
 	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
 
 func GetProfileByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "GET") {
+	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
 	}
 
@@ -36,6 +35,10 @@ func GetProfileByKey(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func GetChallengesForProfile(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
 	_, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, nil
@@ -109,7 +112,7 @@ func GetProfileForUser(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func DeleteProfile(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "DELETE") {
+	if r.Method != "DELETE" {
 		return http.StatusMethodNotAllowed, nil
 	}
 

@@ -34,8 +34,13 @@ func ChallengeByKey(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusInternalServerError, err
 	}
 
+	var u model.User
+	if err := datastore.Get(ctx, p.User, &u); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
 	e := json.NewEncoder(w)
-	if parent := p.UserKey.Parent(); parent == nil {
+	if u.Company == nil {
 		// The current user is a coder so we must also create a result.
 		e.Encode(challenge.Key(key))
 	} else {
@@ -88,7 +93,12 @@ func CreateChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return http.StatusUnauthorized, nil
 	}
 
-	if p.UserKey.Parent() == nil {
+	var u model.User
+	if err := datastore.Get(ctx, p.User, &u); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	if u.Company == nil {
 		return http.StatusUnauthorized, nil
 	}
 
@@ -115,7 +125,7 @@ func CreateChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request
 		Tasks:      keys,
 	}
 
-	key, err := challenge.SaveWithParent(ctx, p.UserKey.Parent())
+	key, err := challenge.SaveWithParent(ctx, u.Company)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}

@@ -30,14 +30,19 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 		return http.StatusInternalServerError, err
 	}
 
+	var u model.User
+	if err = datastore.Get(ctx, p.User, &u); err != nil {
+		return http.StatusInternalServerError, nil
+	}
+
 	// User is a coder
-	if p.UserKey.Parent() == nil {
+	if u.Company == nil {
 		rk, err := datastore.DecodeKey(r.URL.Query()["result"][0])
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
 
-		if !util.HasParent(p.UserKey, rk) {
+		if !util.HasParent(p.User, rk) {
 			return http.StatusUnauthorized, nil
 		}
 
@@ -81,17 +86,22 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 }
 
 func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, nil
 	}
 
-	if r.Method != "GET" {
-		return http.StatusMethodNotAllowed, nil
+	var u model.User
+	if err = datastore.Get(ctx, p.User, &u); err != nil {
+		return http.StatusInternalServerError, nil
 	}
 
 	// User is a coder
-	if p.UserKey.Parent() == nil {
+	if u.Company == nil {
 		return http.StatusUnauthorized, nil
 	}
 

@@ -35,7 +35,7 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 
 	var profiles model.Profiles
 	keys, err := model.NewQueryForProfile().
-		Ancestor(p.UserKey).
+		Ancestor(p.User).
 		GetAll(ctx, &profiles)
 
 	if len(keys) != 1 {
@@ -93,19 +93,18 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 
 // GetResultsByChallenge queries the results for a certain challenge to be reviewed by a company.
 func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "GET") {
+	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
 	}
 
 	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
-
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
 
 	var results model.Results
 	keys, err := model.NewQueryForResult().
-		Filter("Challenge=", key).
+		Filter("Challenge =", key).
 		GetAll(ctx, &results)
 
 	if err != nil {
@@ -117,7 +116,7 @@ func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "GET") {
+	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
 	}
 
@@ -136,7 +135,12 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 		return http.StatusUnauthorized, nil
 	}
 
-	if p.UserKey.Parent() != nil && !util.HasParent(resultKey, p.UserKey) {
+	var u model.User
+	if err = datastore.Get(ctx, p.User, &u); err != nil {
+		return http.StatusInternalServerError, nil
+	}
+
+	if u.Company != nil && !util.HasParent(resultKey, p.User) {
 		return http.StatusUnauthorized, nil
 	}
 
@@ -145,7 +149,7 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 		if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
 			return http.StatusInternalServerError, err
 		}
-		if p.UserKey.Parent() != nil && result.Started.Add(challenge.Duration).After(time.Now()) {
+		if u.Company != nil && result.Started.Add(challenge.Duration).After(time.Now()) {
 			json.NewEncoder(w).Encode(result.Key(resultKey))
 			return http.StatusOK, nil
 		}
@@ -185,7 +189,7 @@ func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *da
 func getLatestSubmissionKey(ctx context.Context, resultKey, taskKey *datastore.Key) (*datastore.Key, error) {
 	keys, err := datastore.NewQuery("").
 		Ancestor(resultKey).
-		Filter("Task=", taskKey).
+		Filter("Task =", taskKey).
 		Order("-Time").
 		KeysOnly().
 		Limit(1).
@@ -193,8 +197,8 @@ func getLatestSubmissionKey(ctx context.Context, resultKey, taskKey *datastore.K
 	if err != nil {
 		return nil, err
 	}
-	if len(keys) == 0 {
-		return nil, errors.New("no submission found")
+	if len(keys) != 1 {
+		return nil, errors.New("found wrong number of final submissions")
 	}
 	return keys[0], nil
 }

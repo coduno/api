@@ -46,17 +46,18 @@ func init() {
 
 // PostSubmission creates a new submission.
 func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	p, ok := passenger.FromContext(ctx)
-	if !ok {
-		return http.StatusUnauthorized, nil
-	}
 	if r.Method != "POST" {
 		return http.StatusMethodNotAllowed, nil
 	}
 
+	p, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
 	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
 
-	if !util.HasParent(p.UserKey, resultKey) {
+	if !util.HasParent(p.User, resultKey) {
 		return http.StatusBadRequest, errors.New("cannot submit answer for other users")
 	}
 
@@ -75,12 +76,13 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 // FinalSubmission makes the last submission final.
 func FinalSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if r.Method != "POST" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, nil
-	}
-	if r.Method != "POST" {
-		return http.StatusMethodNotAllowed, nil
 	}
 
 	var resultKey *datastore.Key
@@ -88,7 +90,7 @@ func FinalSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return http.StatusInternalServerError, err
 	}
 
-	if !util.HasParent(p.UserKey, resultKey) {
+	if !util.HasParent(p.User, resultKey) {
 		return http.StatusBadRequest, errors.New("cannot submit answer for other users")
 	}
 
@@ -101,6 +103,7 @@ func FinalSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request
 	if submissionKey, err = datastore.DecodeKey(mux.Vars(r)["submissionKey"]); err != nil {
 		return http.StatusInternalServerError, err
 	}
+
 	var result model.Result
 	if err = datastore.Get(ctx, resultKey, &result); err != nil {
 		return http.StatusInternalServerError, err

@@ -91,8 +91,8 @@ func init() {
 // Passenger holds the currently authenticated user
 // together with the access token (if relevant).
 type Passenger struct {
-	UserKey     *datastore.Key
-	AccessToken model.AccessToken
+	User        *datastore.Key
+	AccessToken *model.AccessToken
 }
 
 // HasScope can be used to check whether this Passenger was
@@ -113,7 +113,7 @@ func (p *Passenger) HasScope(scope string) (has bool) {
 func (p *Passenger) Save(ctx context.Context) (*datastore.Key, error) {
 	now := time.Now()
 
-	key, err := p.AccessToken.SaveWithParent(ctx, p.UserKey)
+	key, err := p.AccessToken.SaveWithParent(ctx, p.User)
 	if err != nil {
 		return nil, err
 	}
@@ -192,8 +192,8 @@ func (p *Passenger) IssueToken(ctx context.Context, token *model.AccessToken) (s
 	token.Digest = crypto.Hash(token.Hash).New().Sum(raw[:])
 
 	clone := Passenger{
-		UserKey:     p.UserKey,
-		AccessToken: *token,
+		User:        p.User,
+		AccessToken: token,
 	}
 
 	key, err := clone.Save(ctx)
@@ -237,7 +237,7 @@ func fromDatastore(ctx context.Context, key *datastore.Key) (p *Passenger, err e
 	if err = datastore.Get(ctx, key, p.AccessToken); err != nil {
 		return
 	}
-	if p.UserKey = key.Parent(); p.UserKey == nil {
+	if p.User = key.Parent(); p.User == nil {
 		return nil, ErrTokenNotAssociated
 	}
 	return
@@ -248,7 +248,7 @@ func fromDatastore(ctx context.Context, key *datastore.Key) (p *Passenger, err e
 func FromBasicAuth(ctx context.Context, username, pw string) (p *Passenger, err error) {
 	p = new(Passenger)
 	var user model.User
-	p.UserKey, err = model.NewQueryForUser().
+	p.User, err = model.NewQueryForUser().
 		Filter("Nick=", username).
 		Limit(1).
 		Run(ctx).
@@ -262,13 +262,13 @@ func FromBasicAuth(ctx context.Context, username, pw string) (p *Passenger, err 
 	// TODO(flowlo): Depending on bcrypt is very fragile. We
 	// should encapsulate that.
 	if err == bcrypt.ErrMismatchedHashAndPassword {
-		userKey := p.UserKey
+		userKey := p.User
 		p, err = FromAccessToken(ctx, pw)
 		if err != nil {
 			return
 		}
-		if !p.UserKey.Equal(userKey) {
-			return nil, ErrTokenNotMatchingUser{Parent: p.UserKey, Actual: userKey}
+		if !p.User.Equal(userKey) {
+			return nil, ErrTokenNotMatchingUser{Parent: p.User, Actual: userKey}
 		}
 	}
 	return

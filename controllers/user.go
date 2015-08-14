@@ -136,16 +136,21 @@ func createUser(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 }
 
 func getUsers(p *passenger.Passenger, ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if p.UserKey.Parent() == nil {
+	var u model.User
+	if err = datastore.Get(ctx, p.User, &u); err != nil {
+		return http.StatusInternalServerError, nil
+	}
+
+	if u.Company == nil {
 		return http.StatusUnauthorized, nil
 	}
 	var invitations model.Invitations
-	_, err = model.NewQueryForInvitation().Ancestor(p.UserKey.Parent()).GetAll(ctx, &invitations)
+	_, err = model.NewQueryForInvitation().Ancestor(u.Company).GetAll(ctx, &invitations)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	cckeys, err := model.NewQueryForChallenge().Ancestor(p.UserKey.Parent()).KeysOnly().GetAll(ctx, nil)
+	cckeys, err := model.NewQueryForChallenge().Ancestor(u.Company).KeysOnly().GetAll(ctx, nil)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -212,43 +217,54 @@ func alreadyExists(ctx context.Context, property, value string) (exists bool, er
 
 // GetUsersByCompany queries the user accounts belonging to a company.
 func GetUsersByCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "GET") {
+	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
 	}
+
 	key, err := datastore.DecodeKey(r.URL.Query()["result"][0])
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
+
 	var users model.Users
 	keys, err := model.NewQueryForUser().
 		Ancestor(key).
 		GetAll(ctx, &users)
+
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
+
 	json.NewEncoder(w).Encode(users.Key(keys))
 	return http.StatusOK, nil
 }
 
 func GetCompanyByUser(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if !util.CheckMethod(r, "GET") {
+	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
 	}
-	p, ok := passenger.FromContext(ctx)
 
+	p, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, nil
 	}
-	key := p.UserKey.Parent()
-	if key == nil {
+
+	var u model.User
+	if err := datastore.Get(ctx, p.User, &u); err != nil {
+		return http.StatusInternalServerError, nil
+	}
+
+	if u.Company == nil {
 		return http.StatusUnauthorized, nil
 	}
+
 	// The account is associated with a company, so we return it.
 	var company model.Company
-	if err := datastore.Get(ctx, key, &company); err != nil {
+	if err := datastore.Get(ctx, u.Company, &company); err != nil {
 		return http.StatusInternalServerError, err
 	}
-	json.NewEncoder(w).Encode(company.Key(key))
+
+	json.NewEncoder(w).Encode(company.Key(u.Company))
 	return http.StatusOK, nil
 }
 
@@ -263,10 +279,10 @@ func WhoAmI(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, e
 	}
 
 	var user model.User
-	if err := datastore.Get(ctx, p.UserKey, &user); err != nil {
+	if err := datastore.Get(ctx, p.User, &user); err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	json.NewEncoder(w).Encode(user.Key(p.UserKey))
+	json.NewEncoder(w).Encode(user.Key(p.User))
 	return http.StatusOK, nil
 }

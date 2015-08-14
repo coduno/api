@@ -25,7 +25,7 @@ func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (s
 
 	var companies model.Companys
 	_, err = model.NewQueryForCompany().
-		Filter("Address = ", company.Address.Address).
+		Filter("Address =", company.Address.Address).
 		Limit(1).
 		GetAll(ctx, &companies)
 
@@ -34,7 +34,7 @@ func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (s
 	}
 
 	if len(companies) > 0 {
-		return http.StatusConflict, errors.New("Already registered.")
+		return http.StatusConflict, errors.New("already registered")
 	}
 
 	var key *datastore.Key
