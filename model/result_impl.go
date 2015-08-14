@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// ResultKind is the kind used in Datastore to store entities of type Result.
+// ResultKind is the kind used in Datastore to store entities Result entities.
 const ResultKind = "Result"
 
 // Results is just a slice of Result.
@@ -54,13 +54,9 @@ func (ƨ Results) Key(keys []*datastore.Key) (keyed []KeyedResult) {
 }
 
 // Save will put this Result into Datastore using the given key.
-func (ƨ Result) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ Result) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Result", nil), &ƨ)

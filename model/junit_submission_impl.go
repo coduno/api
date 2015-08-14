@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// JunitSubmissionKind is the kind used in Datastore to store entities of type JunitSubmission.
+// JunitSubmissionKind is the kind used in Datastore to store entities JunitSubmission entities.
 const JunitSubmissionKind = "JunitSubmission"
 
 // JunitSubmissions is just a slice of JunitSubmission.
@@ -54,13 +54,9 @@ func (ƨ JunitSubmissions) Key(keys []*datastore.Key) (keyed []KeyedJunitSubmiss
 }
 
 // Save will put this JunitSubmission into Datastore using the given key.
-func (ƨ JunitSubmission) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ JunitSubmission) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "JunitSubmission", nil), &ƨ)

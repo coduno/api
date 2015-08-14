@@ -38,7 +38,7 @@ func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (s
 	}
 
 	var key *datastore.Key
-	if key, err = company.Save(ctx); err != nil {
+	if key, err = company.Save(ctx, nil); err != nil {
 		return http.StatusInternalServerError, err
 	}
 

@@ -25,11 +25,11 @@ type Task struct {
 
 	// Says what skills are needed/exercised to complete
 	// the Task.
-	SkillWeights SkillWeights
+	SkillWeights SkillWeights `datastore:",index"`
 
 	// Refers to some logic that looks at the Submissions
 	// of this task and produces a set of skills that
 	// represent how well the user did in doing this Task.
 	// It is to be weighted by Skillweights.
-	Tasker int
+	Tasker int `datastore:",noindex"`
 }

@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// CodeTaskKind is the kind used in Datastore to store entities of type CodeTask.
+// CodeTaskKind is the kind used in Datastore to store entities CodeTask entities.
 const CodeTaskKind = "CodeTask"
 
 // CodeTasks is just a slice of CodeTask.
@@ -54,13 +54,9 @@ func (ƨ CodeTasks) Key(keys []*datastore.Key) (keyed []KeyedCodeTask) {
 }
 
 // Save will put this CodeTask into Datastore using the given key.
-func (ƨ CodeTask) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ CodeTask) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "CodeTask", nil), &ƨ)

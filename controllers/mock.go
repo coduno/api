@@ -39,7 +39,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 		},
 		Runner:    "simple",
 		Languages: []string{"java", "py"},
-	}.Save(ctx)
+	}.Save(ctx, nil)
 
 	taskTwo, _ := model.CodeTask{
 		Task: model.Task{
@@ -56,7 +56,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 		},
 		Runner:    "simple",
 		Languages: []string{"java", "py"},
-	}.Save(ctx)
+	}.Save(ctx, nil)
 
 	taskThree, _ := model.CodeTask{
 		Task: model.Task{
@@ -73,7 +73,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 		},
 		Runner:    "simple",
 		Languages: []string{"java", "py"},
-	}.Save(ctx)
+	}.Save(ctx, nil)
 
 	model.Challenge{
 		Assignment: model.Assignment{
@@ -99,7 +99,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Name:    "Coduno",
 			Address: "team@cod.uno",
 		},
-	}.Save(ctx)
+	}.Save(ctx, nil)
 
 	victor, _ := model.User{
 		Address: mail.Address{
@@ -126,7 +126,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Nick:           "amayer",
 		HashedPassword: pw,
-	}.Save(ctx)
+	}.Save(ctx, nil)
 
 	lorenz, _ := model.User{
 		Address: mail.Address{
@@ -176,7 +176,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Runner:    "simple",
 		Languages: []string{"java", "py"},
-	}.Save(ctx)
+	}.Save(ctx, nil)
 
 	taskTwo, _ := model.CodeTask{
 		Task: model.Task{
@@ -193,7 +193,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Runner:    "simple",
 		Languages: []string{"java", "py"},
-	}.Save(ctx)
+	}.Save(ctx, nil)
 
 	taskThree, _ := model.CodeTask{
 		Task: model.Task{
@@ -210,7 +210,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Runner:    "simple",
 		Languages: []string{"java", "py"},
-	}.Save(ctx)
+	}.Save(ctx, nil)
 
 	model.Challenge{
 		Assignment: model.Assignment{

@@ -1,16 +1,16 @@
 package model
 
-import "net/mail"
+import (
+	"net/mail"
+
+	"google.golang.org/cloud/datastore"
+)
 
 //go:generate generator -c "Profile"
 
 // User is anybody interacting with our systems. It will
 // ultimately refer to who accessed Coduno (or on whose
 // behalf).
-//
-// Saved in Datastore, User will be optionally a child
-// entity to Company, so keys pointing to a User
-// can be used to obtain the company they work.
 type User struct {
 	// Encapsulates Name (combined first and last name,
 	// however the user likes) and an e-mail address.
@@ -18,14 +18,17 @@ type User struct {
 	// Datastore will split this into two properties
 	// called Name and Address, where Address must be
 	// guaranteed to be unique.
-	mail.Address
+	mail.Address `datastore:",index"`
 
 	// Unique name for this user, like analogous to @flowlo
-	// on GitHub/Twitter/... Mandatory and unique.
-	Nick string
+	// on GitHub/Twitter/...
+	Nick string `datastore:",index"`
+
+	// Points to the company a user works for, if any.
+	Company *datastore.Key `datastore:",index"`
 
 	// Hashed and salted password to be accessed by
 	// corresponding helpers in util.
 	// See https://godoc.org/golang.org/x/crypto/bcrypt
-	HashedPassword []byte `json:"-"`
+	HashedPassword []byte `datastore:",noindex" json:"-"`
 }

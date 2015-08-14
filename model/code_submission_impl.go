@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// CodeSubmissionKind is the kind used in Datastore to store entities of type CodeSubmission.
+// CodeSubmissionKind is the kind used in Datastore to store entities CodeSubmission entities.
 const CodeSubmissionKind = "CodeSubmission"
 
 // CodeSubmissions is just a slice of CodeSubmission.
@@ -54,13 +54,9 @@ func (ƨ CodeSubmissions) Key(keys []*datastore.Key) (keyed []KeyedCodeSubmissio
 }
 
 // Save will put this CodeSubmission into Datastore using the given key.
-func (ƨ CodeSubmission) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ CodeSubmission) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "CodeSubmission", nil), &ƨ)

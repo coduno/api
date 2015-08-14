@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// DiffSubmissionKind is the kind used in Datastore to store entities of type DiffSubmission.
+// DiffSubmissionKind is the kind used in Datastore to store entities DiffSubmission entities.
 const DiffSubmissionKind = "DiffSubmission"
 
 // DiffSubmissions is just a slice of DiffSubmission.
@@ -54,13 +54,9 @@ func (ƨ DiffSubmissions) Key(keys []*datastore.Key) (keyed []KeyedDiffSubmissio
 }
 
 // Save will put this DiffSubmission into Datastore using the given key.
-func (ƨ DiffSubmission) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ DiffSubmission) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "DiffSubmission", nil), &ƨ)

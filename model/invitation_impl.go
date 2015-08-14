@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// InvitationKind is the kind used in Datastore to store entities of type Invitation.
+// InvitationKind is the kind used in Datastore to store entities Invitation entities.
 const InvitationKind = "Invitation"
 
 // Invitations is just a slice of Invitation.
@@ -54,13 +54,9 @@ func (ƨ Invitations) Key(keys []*datastore.Key) (keyed []KeyedInvitation) {
 }
 
 // Save will put this Invitation into Datastore using the given key.
-func (ƨ Invitation) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ Invitation) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Invitation", nil), &ƨ)

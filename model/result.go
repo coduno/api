@@ -21,11 +21,11 @@ type Result struct {
 	// Calculated by logic from the Challenge. If
 	// it is missing an average over all FinalSubmissions
 	// will be computed at best effort.
-	Skills
+	Skills `datastore:",index"`
 
 	// Challenge refers to the challenge that this
 	// result provides data for.
-	Challenge *datastore.Key
+	Challenge *datastore.Key `datastore:",index"`
 
 	// Indicates when the user has started to work on
 	// a Task (meaning as soon as the Task
@@ -38,21 +38,21 @@ type Result struct {
 	// of this property and how to interpret it.
 	//
 	// Indexed the same as Challenge.Tasks.
-	StartTimes []time.Time
+	StartTimes []time.Time `datastore:",noindex"`
 
 	// Points to the last submission to the
 	// corresponding Task.
 	//
 	// Indexed the same as Challenge.Tasks.
-	FinalSubmissions []*datastore.Key
+	FinalSubmissions []*datastore.Key `datastore:",noindex"`
 
 	// The time when the coder started the Challenge.
-	Started,
+	Started time.Time `datastore:",index"`
 
 	// The time when the coder finished the Challenge.
-	Finished time.Time
+	Finished time.Time `datastore:",index"`
 
 	// When this result was last (re)computed by the
 	// Resulter in Challenge.
-	Computed time.Time
+	Computed time.Time `datastore:",index"`
 }

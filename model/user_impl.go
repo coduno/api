@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// UserKind is the kind used in Datastore to store entities of type User.
+// UserKind is the kind used in Datastore to store entities User entities.
 const UserKind = "User"
 
 // Users is just a slice of User.
@@ -54,13 +54,9 @@ func (ƨ Users) Key(keys []*datastore.Key) (keyed []KeyedUser) {
 }
 
 // Save will put this User into Datastore using the given key.
-func (ƨ User) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ User) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "User", nil), &ƨ)

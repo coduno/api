@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// TaskKind is the kind used in Datastore to store entities of type Task.
+// TaskKind is the kind used in Datastore to store entities Task entities.
 const TaskKind = "Task"
 
 // Tasks is just a slice of Task.
@@ -54,13 +54,9 @@ func (ƨ Tasks) Key(keys []*datastore.Key) (keyed []KeyedTask) {
 }
 
 // Save will put this Task into Datastore using the given key.
-func (ƨ Task) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ Task) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Task", nil), &ƨ)

@@ -6,5 +6,5 @@ package model
 type DiffSubmission struct {
 	CodeSubmission
 
-	DiffLines []int
+	DiffLines []int `datastore:",noindex"`
 }

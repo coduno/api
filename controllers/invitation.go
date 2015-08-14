@@ -95,7 +95,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		user = users[0]
 	} else {
 		user = model.User{Address: *address}
-		key, err = user.Save(ctx)
+		key, err = user.Save(ctx, nil)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
