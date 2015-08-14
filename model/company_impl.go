@@ -4,7 +4,7 @@
 //
 // by
 //
-//	generator -c Challenge,User
+//	generator -c Challenge
 //
 // DO NOT EDIT
 
@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// CompanyKind is the kind used in Datastore to store entities of type Company.
+// CompanyKind is the kind used in Datastore to store entities Company entities.
 const CompanyKind = "Company"
 
 // Companys is just a slice of Company.
@@ -54,13 +54,9 @@ func (ƨ Companys) Key(keys []*datastore.Key) (keyed []KeyedCompany) {
 }
 
 // Save will put this Company into Datastore using the given key.
-func (ƨ Company) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ Company) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Company", nil), &ƨ)

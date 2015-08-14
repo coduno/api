@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// ChallengeKind is the kind used in Datastore to store entities of type Challenge.
+// ChallengeKind is the kind used in Datastore to store entities Challenge entities.
 const ChallengeKind = "Challenge"
 
 // Challenges is just a slice of Challenge.
@@ -54,13 +54,9 @@ func (ƨ Challenges) Key(keys []*datastore.Key) (keyed []KeyedChallenge) {
 }
 
 // Save will put this Challenge into Datastore using the given key.
-func (ƨ Challenge) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ Challenge) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Challenge", nil), &ƨ)

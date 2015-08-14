@@ -7,7 +7,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// {{type}}Kind is the kind used in Datastore to store entities of type {{type}}.
+// {{type}}Kind is the kind used in Datastore to store entities {{type}} entities.
 const {{type}}Kind = {{kind}}
 
 // {{slice}} is just a slice of {{type}}.
@@ -44,13 +44,9 @@ func ({{t}} {{slice}}) Key(keys []*datastore.Key) (keyed []Keyed{{type}}) {
 }
 
 // Save will put this {{type}} into Datastore using the given key.
-func ({{t}} {{type}}) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &{{t}})
+func ({{t}} {{type}}) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &{{t}})
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, {{kind}}, nil), &{{t}})

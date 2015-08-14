@@ -33,6 +33,6 @@ import (
 //		// error
 //	}
 type Submission struct {
-	Time time.Time
-	Task *datastore.Key
+	Time time.Time      `datastore:",index"`
+	Task *datastore.Key `datastore:",index"`
 }

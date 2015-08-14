@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// ProfileKind is the kind used in Datastore to store entities of type Profile.
+// ProfileKind is the kind used in Datastore to store entities Profile entities.
 const ProfileKind = "Profile"
 
 // Profiles is just a slice of Profile.
@@ -54,13 +54,9 @@ func (ƨ Profiles) Key(keys []*datastore.Key) (keyed []KeyedProfile) {
 }
 
 // Save will put this Profile into Datastore using the given key.
-func (ƨ Profile) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ Profile) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Profile", nil), &ƨ)

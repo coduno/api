@@ -6,7 +6,7 @@ package model
 type Endpoints struct {
 	// Name of the WebComponent used to render
 	// the assignment accordingly.
-	WebInterface string
+	WebInterface string `datastore:",noindex"`
 
 	// URL of the remote that should be pushed
 	// to.
@@ -16,5 +16,5 @@ type Endpoints struct {
 	//
 	// TODO(flowlo): Investigate why we can not use
 	// url.URL
-	GitRepository string
+	GitRepository string `datastore:",noindex"`
 }

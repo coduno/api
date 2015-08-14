@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// SubmissionKind is the kind used in Datastore to store entities of type Submission.
+// SubmissionKind is the kind used in Datastore to store entities Submission entities.
 const SubmissionKind = "Submission"
 
 // Submissions is just a slice of Submission.
@@ -54,13 +54,9 @@ func (ƨ Submissions) Key(keys []*datastore.Key) (keyed []KeyedSubmission) {
 }
 
 // Save will put this Submission into Datastore using the given key.
-func (ƨ Submission) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ Submission) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Submission", nil), &ƨ)

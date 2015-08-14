@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// TemplateKind is the kind used in Datastore to store entities of type Template.
+// TemplateKind is the kind used in Datastore to store entities Template entities.
 const TemplateKind = "Template"
 
 // Templates is just a slice of Template.
@@ -54,13 +54,9 @@ func (ƨ Templates) Key(keys []*datastore.Key) (keyed []KeyedTemplate) {
 }
 
 // Save will put this Template into Datastore using the given key.
-func (ƨ Template) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ Template) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Template", nil), &ƨ)

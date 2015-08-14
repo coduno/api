@@ -10,14 +10,15 @@ import "time"
 type JunitSubmission struct {
 	Submission
 
-	Code,
-	Stdout,
-	Stderr,
-	Exit string
+	Code   string `datastore:",noindex"`
+	Stdout string `datastore:",noindex"`
+	Stderr string `datastore:",noindex"`
+	Exit   string `datastore:",noindex"`
 
-	Start, End time.Time
+	Start time.Time `datastore:",index"`
+	End   time.Time `datastore:",index"`
 
-	Results UnitTestResults
+	Results UnitTestResults `datastore:",noindex"`
 }
 
 // UnitTestResults holds the unit test result created by JUnit.

@@ -11,6 +11,6 @@ import (
 // Invitation represents the message sent by a company to a User
 // in order to ask them to do a Challenge.
 type Invitation struct {
-	User *datastore.Key
-	Sent time.Time
+	User *datastore.Key `datastore:",index"`
+	Sent time.Time      `datastore:",index"`
 }

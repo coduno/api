@@ -17,7 +17,7 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-// AccessTokenKind is the kind used in Datastore to store entities of type AccessToken.
+// AccessTokenKind is the kind used in Datastore to store entities AccessToken entities.
 const AccessTokenKind = "AccessToken"
 
 // AccessTokens is just a slice of AccessToken.
@@ -54,13 +54,9 @@ func (ƨ AccessTokens) Key(keys []*datastore.Key) (keyed []KeyedAccessToken) {
 }
 
 // Save will put this AccessToken into Datastore using the given key.
-func (ƨ AccessToken) Save(ctx context.Context, key ...*datastore.Key) (*datastore.Key, error) {
-	if len(key) > 1 {
-		panic("zero or one key expected")
-	}
-
-	if len(key) == 1 && key[0] != nil {
-		return datastore.Put(ctx, key[0], &ƨ)
+func (ƨ AccessToken) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+	if key != nil {
+		return datastore.Put(ctx, key, &ƨ)
 	}
 
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "AccessToken", nil), &ƨ)

@@ -2,12 +2,16 @@ package model
 
 import "net/mail"
 
-//go:generate generator -c "Challenge,User"
+//go:generate generator -c "Challenge"
 
 // Company contains the data related to a company.
 //
 // TODO(flowlo, victorbalan): In the future, the company
-// will point at Users to enable role based authentication.
+// may point at Users to enable role based authentication.
 type Company struct {
-	mail.Address
+	mail.Address `datastore:",index"`
+
+	// Unique name for this user, like analogous to @google
+	// on GitHub/Twitter/...
+	Nick string `datastore:",index"`
 }

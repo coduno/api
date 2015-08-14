@@ -10,13 +10,14 @@ import "time"
 type CodeSubmission struct {
 	Submission
 
-	Code,
-	Language,
-	Stdout,
-	Stderr,
-	Exit,
-	Prepare string
+	Code     string `datastore:",noindex"`
+	Language string `datastore:",index"`
+	Stdout   string `datastore:",noindex"`
+	Stderr   string `datastore:",noindex"`
+	Exit     string `datastore:",noindex"`
+	Prepare  string `datastore:",noindex"`
 
-	Rusage     Rusage
-	Start, End time.Time
+	Rusage Rusage    `datastore:",noindex"`
+	Start  time.Time `datastore:",index"`
+	End    time.Time `datastore:",index"`
 }
