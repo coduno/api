@@ -2,16 +2,6 @@
 
 for file in $(git diff --cached --name-only --diff-filter=ACMR -- **/*.go)
 do
-	# Check for occurences of http.SetCookie
-	git show :$file | grep --color --label="$file" -H --line-number 'http\.SetCookie'
-
-	if [ $? -eq 0 ]
-	then
-		echo >&2 "Please rewrite: "
-		echo >&2 "    gofmt -w -s -r 'http.SetCookie -> util.SetCookie' $PWD/$file"
-		exit 1
-	fi
-
 	# Check for unformatted code
 	unformatted=$(gofmt -l $file)
 	if [ ! -z "$unformatted" ]
