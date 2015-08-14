@@ -38,7 +38,7 @@ func init() {
 	}
 
 	credentials := strings.Trim(string(b), "\r\n ")
-	compute, err = url.Parse("https://" + credentials + "@git.cod.uno")
+	compute, err = url.Parse("https://" + credentials + "@compute.cod.uno")
 	if err != nil {
 		panic(err)
 	}
