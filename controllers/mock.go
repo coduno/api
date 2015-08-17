@@ -108,7 +108,8 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Nick:           "vbalan",
 		HashedPassword: pw,
-	}.SaveWithParent(ctx, coduno)
+		Company:        coduno,
+	}.Save(ctx, nil)
 
 	paul, _ := model.User{
 		Address: mail.Address{
@@ -117,7 +118,8 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Nick:           "pbochis",
 		HashedPassword: pw,
-	}.SaveWithParent(ctx, coduno)
+		Company:        coduno,
+	}.Save(ctx, nil)
 
 	model.User{
 		Address: mail.Address{
@@ -135,7 +137,8 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Nick:           "flowlo",
 		HashedPassword: pw,
-	}.SaveWithParent(ctx, coduno)
+		Company:        coduno,
+	}.Save(ctx, nil)
 
 	model.Profile{
 		Skills:     model.Skills{12, 40, 1231},
