@@ -11,9 +11,9 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/subtle"
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/gob"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	mathrand "math/rand"
@@ -44,10 +44,11 @@ const defaultValidity = time.Hour * 24 * 14
 
 const defaultHash = crypto.SHA3_256
 
-const tokenLength = 16
+const tokenLength = 8
+
+var kinds = [2]string{model.UserKind, model.TokenKind}
 
 var endianness = binary.LittleEndian
-var encoding = base64.StdEncoding
 
 type key int64
 
@@ -249,7 +250,7 @@ func FromBasicAuth(ctx context.Context, username, pw string) (p *Passenger, err 
 	p = new(Passenger)
 	var user model.User
 	p.User, err = model.NewQueryForUser().
-		Filter("Nick=", username).
+		Filter("Nick =", username).
 		Limit(1).
 		Run(ctx).
 		Next(&user)
@@ -318,16 +319,16 @@ func NewContextFromRequest(ctx context.Context, r *http.Request) (context.Contex
 // DecodeToken will take a token as sent by a client and translate it into a
 // key to look up the full token on the server side and the raw secret.
 func decodeToken(ctx context.Context, token string) (*datastore.Key, []byte, error) {
-	b, err := encoding.DecodeString(token)
+	b, err := hex.DecodeString(token)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if len(b) != 3*8+tokenLength {
+	if len(b) != len(kinds)*8+tokenLength {
 		return nil, nil, errors.New("token length mismatch")
 	}
 
-	var intIDs [3]int64
+	var intIDs [len(kinds)]int64
 	for i := range intIDs {
 		intID, n := binary.Varint(b[i*8 : (i+1)*8])
 		if n < 8 {
@@ -335,8 +336,6 @@ func decodeToken(ctx context.Context, token string) (*datastore.Key, []byte, err
 		}
 		intIDs[len(intIDs)-1-i] = intID
 	}
-
-	kinds := [3]string{model.CompanyKind, model.UserKind, model.TokenKind}
 
 	var key *datastore.Key
 	for i := range intIDs {
@@ -349,17 +348,17 @@ func decodeToken(ctx context.Context, token string) (*datastore.Key, []byte, err
 		}
 	}
 
-	return key, b[3*8:], nil
+	return key, b[len(kinds)*8:], nil
 }
 
 // EncodeToken translates the key and raw secret of a newly generated token to
 // a form suitable for the client.
 func encodeToken(key *datastore.Key, raw *[tokenLength]byte) (string, error) {
-	// Buffer size will be 8 (size of an int64) plus the length of the raw
-	// token itself.
-	var b [3*8 + tokenLength]byte
+	// Buffer size will be 8 (size of an int64) times the number of keys
+	// in the hirarchy plus the length of the raw token itself.
+	var b [len(kinds)*8 + tokenLength]byte
 
-	for i := 0; i < 3; i++ {
+	for i := range kinds {
 		if n := binary.PutVarint(b[i*8:(i+1)*8], key.IntID()); n < 8 {
 			return "", errors.New("short write when encoding token")
 		}
@@ -367,8 +366,8 @@ func encodeToken(key *datastore.Key, raw *[tokenLength]byte) (string, error) {
 			key = key.Parent()
 		}
 	}
-	for i := range raw {
-		b[3*8+i] = raw[i]
-	}
-	return encoding.EncodeToString(b[:]), nil
+
+	copy(b[len(kinds)*8:len(kinds)*8+tokenLength], raw[:])
+
+	return hex.EncodeToString(b[:]), nil
 }

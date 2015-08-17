@@ -26,12 +26,14 @@ func Tokens(ctx context.Context, w http.ResponseWriter, r *http.Request) (status
 	}
 
 	var body model.Token
-
 	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return http.StatusBadRequest, err
 	}
 
 	value, err := p.IssueToken(ctx, &body)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
 
 	var result = struct {
 		Value       string
@@ -45,7 +47,9 @@ func Tokens(ctx context.Context, w http.ResponseWriter, r *http.Request) (status
 		Description: body.Description,
 	}
 
-	json.NewEncoder(w).Encode(result)
+	if err = json.NewEncoder(w).Encode(result); err != nil {
+		return http.StatusInternalServerError, err
+	}
 	return
 }
 
