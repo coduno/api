@@ -1,15 +1,16 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
-	"net/url"
 	"strconv"
-	"strings"
+	"time"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
+	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/runner"
@@ -20,28 +21,11 @@ import (
 	"golang.org/x/net/context"
 )
 
-var compute *url.URL
-
-func init() {
-	var err error
-	if appengine.IsDevAppServer() {
-		compute, err = url.Parse("http://localhost:8081")
-		if err != nil {
-			panic(err)
-		}
-		return
-	}
-
-	b, err := ioutil.ReadFile("credentials")
-	if err != nil {
-		panic(err)
-	}
-
-	credentials := strings.Trim(string(b), "\r\n ")
-	compute, err = url.Parse("https://" + credentials + "@compute.cod.uno")
-	if err != nil {
-		panic(err)
-	}
+var fileNames = map[string]string{
+	"py":   "app.py",
+	"c":    "app.c",
+	"cpp":  "app.cpp",
+	"java": "Application.java",
 }
 
 // PostSubmission creates a new submission.
@@ -50,28 +34,116 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusMethodNotAllowed, nil
 	}
 
+	var body = struct {
+		Code     string
+		Language string
+	}{}
+
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return http.StatusBadRequest, err
+	}
+
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, nil
 	}
 
 	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
+	if err != nil {
+		return http.StatusNotFound, err
+	}
 
 	if !util.HasParent(p.User, resultKey) {
 		return http.StatusBadRequest, errors.New("cannot submit answer for other users")
 	}
 
 	taskKey, err := datastore.DecodeKey(mux.Vars(r)["taskKey"])
-	// Note: When more task kinds are added, see controllers.CreateFinalResult.
-	switch taskKey.Kind() {
-	case model.CodeTaskKind:
-		return runner.HandleCodeSubmission(ctx, w, r, resultKey, taskKey)
-	// TODO(victorbalan, flowlo): Use correct kind when possible.
-	case "QuestionTask":
-		return http.StatusInternalServerError, errors.New("question submissions are not yet implemented")
-	default:
-		return http.StatusBadRequest, errors.New("Unknown submission kind.")
+	if err != nil {
+		return http.StatusNotFound, err
 	}
+
+	var task model.Task
+	if err = datastore.Get(ctx, taskKey, &task); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	// Furthermore, the name of the GCS object is derived from the of the
+	// encapsulating Submission. To avoid race conditions, allocate an ID.
+	low, _, err := datastore.AllocateIDs(ctx, model.SubmissionKind, resultKey, 1)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	submissionKey := datastore.NewKey(ctx, model.SubmissionKind, "", low, resultKey)
+
+	submission := model.Submission{
+		Task: taskKey,
+		Time: time.Now(),
+	}
+
+	if body.Code != "" {
+		submission.Code, err = store(ctx, submissionKey, body.Code, body.Language)
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		submission.Language = body.Language
+	}
+
+	// Set the submission in stone.
+	if _, err = datastore.Put(ctx, submissionKey, submission); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	var tests model.Tests
+	_, err = model.NewQueryForTest().
+		Ancestor(taskKey).
+		GetAll(ctx, &tests)
+
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	for _, test := range tests {
+		runf, ok := runner.Runners[runner.Runner(test.Runner)]
+		if !ok {
+			log.Warningf(ctx, "Unknown runner %d was referenced.", test.Runner)
+			continue
+		}
+		runf(ctx, &test, *submission.Key(submissionKey))
+	}
+
+	return 0, nil
+}
+
+func store(ctx context.Context, key *datastore.Key, code, language string) (model.StoredObject, error) {
+	o := model.StoredObject{}
+
+	// We'll be storing code, so check what name the file should have in GCS.
+	fn, ok := fileNames[language]
+	if !ok {
+		return o, errors.New("language unknown")
+	}
+
+	const submissionBucket = "submissions"
+
+	// Now, construct the object.
+	o = model.StoredObject{
+		Bucket: submissionBucket,
+		Name:   nameObject(key) + "/Code/" + fn,
+	}
+
+	// Upload the code to GCS.
+	gcs := storage.NewWriter(ctx, o.Bucket, o.Name)
+	if gcs == nil {
+		return o, errors.New("cannot obtain writer to gcs")
+	}
+	gcs.ObjectAttrs = defaultObjectAttrs(fn)
+
+	if _, err := io.WriteString(gcs, code); err != nil {
+		return o, err
+	}
+
+	return o, gcs.Close()
 }
 
 // FinalSubmission makes the last submission final.
@@ -116,4 +188,27 @@ func FinalSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 	w.Write([]byte("OK"))
 	return
+}
+
+func nameObject(key *datastore.Key) string {
+	name := ""
+	for key != nil {
+		id := key.StringID()
+		if id == "" {
+			id = strconv.FormatInt(key.IntID(), 10)
+		}
+		name = "/" + key.Kind() + "/" + id + name
+	}
+	return name
+}
+
+func defaultObjectAttrs(disposition string) storage.ObjectAttrs {
+	// TODO(flowlo): Establish ACLs?
+	return storage.ObjectAttrs{
+		ContentType:        "text/plain", // TODO(flowlo): Content types per language?
+		ContentLanguage:    "",           // TODO(flowlo): Does it make sense to set this?
+		ContentEncoding:    "utf-8",
+		CacheControl:       "max-age=31556926", // Aggressive caching for one year
+		ContentDisposition: "attachment; filename=\"" + disposition + "\"",
+	}
 }
