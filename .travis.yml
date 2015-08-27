@@ -1,11 +1,13 @@
 language: go
 
-sudo: 9000
+sudo: required
 
 go:
-- 1.4.2
-- 1.5rc1
+- 1.5
 - tip
+
+services:
+ - docker
 
 notifications:
   email: never
@@ -18,15 +20,13 @@ before_install:
 - $(! $TRAVIS_SECURE_ENV_VARS) || openssl aes-256-cbc -K $encrypted_e505aa14efb0_key
   -iv $encrypted_e505aa14efb0_iv -in secrets.tar.enc -d | tar xv
 
-after_success:
-- env
-- "if $($TRAVIS_SECURE_ENV_VARS) && [ \"${TRAVIS_JOB_NUMBER: -1}\" = \"1\" ];
-then
-if [ ! -f ~/google-cloud-sdk/bin/gcloud ];
-then
-curl https://sdk.cloud.google.com | CLOUDSDK_CORE_DISABLE_PROMPTS=1 $SHELL;
-~/google-cloud-sdk/bin/gcloud -q components update preview app;
-fi;
-~/google-cloud-sdk/bin/gcloud -q auth activate-service-account --key-file service-account.json;
-~/google-cloud-sdk/bin/gcloud -q preview app --project $(dirname $TRAVIS_REPO_SLUG) deploy app.yaml --version $TRAVIS_BRANCH --force;
-fi"
+deploy:
+  provider: gae
+  edge:
+    source: flowlo/dpl
+    branch: gae
+  project: coduno
+  default: false
+  docker_build: local
+  on:
+    all_branches: true
