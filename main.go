@@ -24,7 +24,7 @@ type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request
 
 func main() {
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
-	http.HandleFunc("/cert", hsts(guard(controllers.Certificate)))
+	http.HandleFunc("/cert", hsts(controllers.Certificate))
 	http.HandleFunc("/status", hsts(controllers.Status))
 
 	r := mux.NewRouter()
