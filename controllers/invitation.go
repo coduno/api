@@ -11,7 +11,9 @@ import (
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util/passenger"
+	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
 	appmail "google.golang.org/appengine/mail"
 
 	"golang.org/x/net/context"
@@ -134,16 +136,31 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		User: key,
 	}
 
+	// If we're on dev, generate a URL that will point at the dev instance, not
+	// production.
+	// TODO(flowlo): Move this magic constant somewhere to be configured, as port
+	// 6060 is no official thing.
+	prefix := "https://app.cod.uno"
+	if appengine.IsDevAppServer() {
+		prefix = "http://localhost:6060"
+	}
+
 	buf := new(bytes.Buffer)
 	if err = invitation.Execute(buf, struct {
 		UserAddress, CompanyAddress mail.Address
-		Token                       string
+		URL                         string
 	}{
 		user.Address,
 		company.Address,
-		query,
+		prefix + "/#!/token/" + query,
 	}); err != nil {
 		return http.StatusInternalServerError, err
+	}
+
+	// If we're on dev, it is very likely that the e-mail won't be sent.
+	// Print the body for quick debugging.
+	if appengine.IsDevAppServer() {
+		log.Infof(ctx, "%s", buf.String())
 	}
 
 	if err = appmail.Send(ctx, &appmail.Message{

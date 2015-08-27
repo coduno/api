@@ -5,7 +5,7 @@ do a quick coding challenge.
 
 You can access it via
 
-	https://app.cod.uno/#!/token/{{.Token}}
+	{{.URL}}
 
 All further information is provided there!
 
