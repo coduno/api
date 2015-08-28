@@ -13,7 +13,7 @@ import (
 	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
-	"github.com/coduno/api/runner"
+	"github.com/coduno/api/test"
 	"github.com/coduno/api/util"
 	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
@@ -103,13 +103,11 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusInternalServerError, err
 	}
 
-	for _, test := range tests {
-		runf, ok := runner.Runners[runner.Runner(test.Runner)]
-		if !ok {
-			log.Warningf(ctx, "Unknown runner %d was referenced.", test.Runner)
+	for _, t := range tests {
+		if err := test.Tester(t.Tester).Call(ctx, nil); err != nil {
+			log.Warningf(ctx, "%s", err)
 			continue
 		}
-		runf(ctx, &test, *submission.Key(submissionKey))
 	}
 
 	return 0, nil

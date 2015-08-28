@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/coduno/api/model"
-	"github.com/coduno/api/runner"
+	"github.com/coduno/api/test"
 	"github.com/coduno/api/util/password"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
@@ -39,7 +39,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 	}.Save(ctx, nil)
 
 	model.Test{
-		Runner: int(runner.SimpleRunner),
+		Tester: int(test.Simple),
 		Name:   "Useless name",
 	}.SaveWithParent(ctx, taskOne)
 

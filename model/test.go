@@ -3,6 +3,6 @@ package model
 //go:generate generator
 
 type Test struct {
-	Runner int
+	Tester int
 	Name   string
 }
