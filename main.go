@@ -65,6 +65,7 @@ func main() {
 
 	r.HandleFunc("/tasks/{key}", setup(controllers.TaskByKey))
 	r.HandleFunc("/tasks", setup(controllers.Tasks))
+	r.HandleFunc("/task/code", setup(controllers.CreateCodeTask))
 
 	r.HandleFunc("/whoami", setup(controllers.WhoAmI))
 
