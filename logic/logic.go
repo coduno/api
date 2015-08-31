@@ -1,11 +1,14 @@
 package logic
 
 import (
+	"io/ioutil"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
 )
@@ -22,7 +25,7 @@ type Tasker int
 
 // TaskerFunc is a function that will compute task results for the given Task
 // and User.
-type TaskerFunc func(ctx context.Context, task, user *datastore.Key) (model.Skills, error)
+type TaskerFunc func(ctx context.Context, task, resultKey, user *datastore.Key) (model.Skills, error)
 
 const (
 	// Average computes the weighted average over all task results. It is included
@@ -32,7 +35,8 @@ const (
 )
 
 const (
-	maxTasker Tasker = iota
+	JunitTasker Tasker = 1 + iota
+	maxTasker
 )
 
 var resulters = make([]ResulterFunc, maxResulter)
@@ -68,11 +72,11 @@ func (r Resulter) Call(ctx context.Context, resultKey *datastore.Key) error {
 }
 
 // Call looks up a registered Tasker and calls it.
-func (t Tasker) Call(ctx context.Context, task, user *datastore.Key) (model.Skills, error) {
+func (t Tasker) Call(ctx context.Context, task, result, user *datastore.Key) (model.Skills, error) {
 	if t > 0 && t < maxTasker {
 		f := taskers[t]
 		if f != nil {
-			return f(ctx, task, user)
+			return f(ctx, task, result, user)
 		}
 	}
 	panic("logic: requested tasker function #" + strconv.Itoa(int(t)) + " is unavailable")
@@ -99,7 +103,7 @@ func init() {
 		average := model.Skills{}
 
 		for i, task := range tasks {
-			taskResult, err := Tasker(task.Tasker).Call(ctx, challenge.Tasks[i], resultKey.Parent().Parent())
+			taskResult, err := Tasker(task.Tasker).Call(ctx, challenge.Tasks[i], resultKey, resultKey.Parent().Parent())
 			if err != nil {
 				return err
 			}
@@ -113,4 +117,126 @@ func init() {
 		_, err := result.Save(ctx, resultKey)
 		return err
 	})
+
+	RegisterTasker(JunitTasker, func(ctx context.Context, taskKey, resultKey, userKey *datastore.Key) (skills model.Skills, err error) {
+		var submissions []model.Submission
+		_, err = model.NewQueryForSubmission().
+			Ancestor(resultKey).
+			Filter("Task =", taskKey).
+			Order("Start").
+			GetAll(ctx, submissions)
+		if err != nil {
+			return
+		}
+		var task model.Task
+		if err = datastore.Get(ctx, taskKey, &task); err != nil {
+			return
+		}
+
+		var result model.Result
+		if err = datastore.Get(ctx, resultKey, &result); err != nil {
+			return
+		}
+
+		var challenge model.Challenge
+		if err = datastore.Get(ctx, result.Challenge, &challenge); err != nil {
+			return
+		}
+
+		// TODO(victorbalan): Load it from the params map
+		nrOfTests := 5
+		userCodingTime := submissions[len(submissions)].Time.Sub(result.StartTimes[getTaskIndex(challenge, taskKey)])
+
+		splitByNewLine := func(c rune) bool {
+			return c == '\n'
+		}
+
+		var oldCode string
+		oldCode, err = loadFromGCS(ctx, submissions[0].Code)
+		if err != nil {
+			return
+		}
+
+		insDel := &InsDel{len(strings.FieldsFunc(oldCode, splitByNewLine)), 0}
+		// Iterate all submissions
+		for i := 1; i < len(submissions); i++ {
+			var newCode string
+			newCode, err = loadFromGCS(ctx, submissions[i].Code)
+			if err != nil {
+				return
+			}
+			insDel.Add(computeInsertedDeletedLines(newCode, oldCode, splitByNewLine))
+
+			// TODO(victorbalan, flowlo): Take in account the nr of green/red tests
+			// var testResultKeys []*datastore.Key
+			// testResultKeys, err = model.NewQueryForJunitTestResult().
+			// 	Ancestor(submissionKeys[i]).
+			// 	Order("Start").
+			// 	GetAll(ctx, nil)
+			// if err != nil {
+			// 	return
+			// }
+			oldCode = newCode
+		}
+
+		var cs float64
+		cs, err = codingSpeed(len(submissions), nrOfTests,
+			userCodingTime, task.Assignment.Duration,
+			insDel.Inserted, insDel.Deleted,
+			0.4, 0.3, 0.3)
+
+		skills.CodingSpeed = cs
+		return
+	})
+}
+
+// InsDel holds the number of inserted and deleted lines
+type InsDel struct {
+	Inserted,
+	Deleted int
+}
+
+func (id *InsDel) Add(insDel InsDel) {
+	id.Inserted += insDel.Inserted
+	id.Deleted += insDel.Deleted
+}
+
+func computeInsertedDeletedLines(oldCode, newCode string, splitFunc func(c rune) bool) InsDel {
+	var i, d int
+	currentFields := strings.FieldsFunc(newCode, splitFunc)
+	oldFields := strings.FieldsFunc(oldCode, splitFunc)
+	for _, val := range currentFields {
+		if !strings.Contains(oldCode, val) {
+			i++
+		}
+	}
+	for _, val := range oldFields {
+		if !strings.Contains(oldCode, val) {
+			d++
+		}
+	}
+	return InsDel{i, d}
+}
+
+func getTaskIndex(c model.Challenge, task *datastore.Key) int {
+	for i, val := range c.Tasks {
+		if val.Equal(task) {
+			return i
+		}
+	}
+	return -1
+}
+
+func loadFromGCS(ctx context.Context, so model.StoredObject) (string, error) {
+	rc, err := storage.NewReader(ctx, so.Bucket, so.Name)
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close()
+	b, err := ioutil.ReadAll(rc)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/coduno/api/model"
+	"github.com/coduno/api/runner"
 	"github.com/coduno/api/util/password"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
@@ -24,56 +25,55 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 	}
 	coduno := keys[0]
 
-	taskOne, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Hello, world!",
-				Description:  "This is the easiest program. It is the hello world of this challenge.",
-				Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	taskOne, _ := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Hello, world!",
+			Description:  "This is the easiest program. It is the hello world of this challenge.",
+			Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 0, 0},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
+		SkillWeights: model.SkillWeights{1, 0, 0},
 	}.Save(ctx, nil)
 
-	taskTwo, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Sorting",
-				Description:  "This program will require some knowledge about algorithms.",
-				Instructions: "Implement a simple bubble sorter on numbers in a programming language of your choice.",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	model.Test{
+		Runner: int(runner.SimpleRunner),
+		Name:   "Useless name",
+	}.SaveWithParent(ctx, taskOne)
+
+	taskTwo, _ := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Sorting",
+			Description:  "This program will require some knowledge about algorithms.",
+			Instructions: "Implement a simple bubble sorter on numbers in a programming language of your choice.",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
+		SkillWeights: model.SkillWeights{1, 2, 3},
 	}.Save(ctx, nil)
 
-	taskThree, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Some task",
-				Description:  "Description of some task",
-				Instructions: "Instructions of some task",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	// Runner:    "simple",
+	// Languages: []string{"java", "py"},
+
+	taskThree, _ := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Some task",
+			Description:  "Description of some task",
+			Instructions: "Instructions of some task",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
+		SkillWeights: model.SkillWeights{1, 2, 3},
 	}.Save(ctx, nil)
+
+	// Runner:    "simple",
+	// Languages: []string{"java", "py"},
 
 	model.Challenge{
 		Assignment: model.Assignment{
@@ -87,7 +87,6 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 		},
 		Tasks: []*datastore.Key{taskOne, taskTwo, taskThree},
 	}.SaveWithParent(ctx, coduno)
-
 }
 
 func Mock(w http.ResponseWriter, req *http.Request) {
@@ -164,56 +163,53 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		HashedPassword: pw,
 	}.SaveWithParent(ctx, coduno)
 
-	taskOne, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Task one",
-				Description:  "Description of task one",
-				Instructions: "Instructions of task one",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "coding-task",
-				},
+	taskOne, _ := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Task one",
+			Description:  "Description of task one",
+			Instructions: "Instructions of task one",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "coding-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
+		SkillWeights: model.SkillWeights{1, 2, 3},
 	}.Save(ctx, nil)
 
-	taskTwo, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Task two",
-				Description:  "Description of task two",
-				Instructions: "Instructions of task two",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	// Runner:    "simple",
+	// Languages: []string{"java", "py"},
+
+	taskTwo, _ := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Task two",
+			Description:  "Description of task two",
+			Instructions: "Instructions of task two",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
+		SkillWeights: model.SkillWeights{1, 2, 3},
 	}.Save(ctx, nil)
 
-	taskThree, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Task three",
-				Description:  "Description of task three",
-				Instructions: "Instructions of task three",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	// Runner:    "simple",
+	// Languages: []string{"java", "py"},
+
+	taskThree, _ := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Task three",
+			Description:  "Description of task three",
+			Instructions: "Instructions of task three",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
+		SkillWeights: model.SkillWeights{1, 2, 3},
 	}.Save(ctx, nil)
+
+	// Runner:    "simple",
+	// Languages: []string{"java", "py"},
 
 	model.Challenge{
 		Assignment: model.Assignment{
@@ -259,20 +255,19 @@ func MockCoduno(w http.ResponseWriter, req *http.Request) {
 	}
 	coduno := keys[0]
 
-	model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Hello, world!",
-				Description:  "This is the easiest program. It is the hello world of this challenge.",
-				Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	model.Task{
+		Assignment: model.Assignment{
+			Name:         "Hello, world!",
+			Description:  "This is the easiest program. It is the hello world of this challenge.",
+			Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 0, 0},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py", "c", "cpp"},
+		SkillWeights: model.SkillWeights{1, 0, 0},
 	}.SaveWithParent(ctx, coduno)
+
+	// Runner:    "simple",
+	// Languages: []string{"java", "py", "c", "cpp"},
 }

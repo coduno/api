@@ -5,6 +5,7 @@ package model
 // TODO(flowlo, victorbalan): Add further categories
 // of assessment.
 type Skills struct {
+	CodingSpeed,
 	Readability,
 	Security,
 	Algorithmics float64
@@ -16,6 +17,7 @@ type SkillWeights Skills
 
 func (s Skills) Add(skills Skills) Skills {
 	return Skills{
+		CodingSpeed:  skills.CodingSpeed + s.CodingSpeed,
 		Readability:  skills.Readability + s.Readability,
 		Security:     skills.Security + s.Security,
 		Algorithmics: skills.Algorithmics + s.Algorithmics,
@@ -24,6 +26,7 @@ func (s Skills) Add(skills Skills) Skills {
 
 func (s Skills) Mul(skills Skills) Skills {
 	return Skills{
+		CodingSpeed:  skills.CodingSpeed * s.CodingSpeed,
 		Readability:  skills.Readability * s.Readability,
 		Security:     skills.Security * s.Security,
 		Algorithmics: skills.Algorithmics * s.Algorithmics,
@@ -32,6 +35,7 @@ func (s Skills) Mul(skills Skills) Skills {
 
 func (s Skills) Div(skills Skills) Skills {
 	return Skills{
+		CodingSpeed:  skills.CodingSpeed / s.CodingSpeed,
 		Readability:  skills.Readability / s.Readability,
 		Security:     skills.Security / s.Security,
 		Algorithmics: skills.Algorithmics / s.Algorithmics,
