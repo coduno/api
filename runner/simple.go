@@ -3,12 +3,10 @@ package runner
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/coduno/api/model"
 	"github.com/fsouza/go-dockerclient"
-	"golang.org/x/net/context"
 )
 
 type waitResult struct {
@@ -16,7 +14,7 @@ type waitResult struct {
 	Err      error
 }
 
-func simpleRunner(ctx context.Context, test *model.Test, sub model.KeyedSubmission) error {
+func Simple(sub model.KeyedSubmission) (stdout, stderr *bytes.Buffer, err error) {
 	c, err := dc.CreateContainer(docker.CreateContainerOptions{
 		Config: &docker.Config{
 			Image: newImage(sub.Language),
@@ -24,19 +22,19 @@ func simpleRunner(ctx context.Context, test *model.Test, sub model.KeyedSubmissi
 		HostConfig: &docker.HostConfig{
 			Privileged: false,
 			Memory:     0, // TODO(flowlo): Limit memory
+			Binds:      []string{"/tmp/submissions:/run"},
 		},
 	})
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	err = dc.StartContainer(c.ID, c.HostConfig)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	waitc := make(chan waitResult)
-
 	go func() {
 		exitCode, err := dc.WaitContainer(c.ID)
 		waitc <- waitResult{exitCode, err}
@@ -46,14 +44,14 @@ func simpleRunner(ctx context.Context, test *model.Test, sub model.KeyedSubmissi
 	select {
 	case res = <-waitc:
 	case <-time.After(time.Minute):
-		return errors.New("execution timed out")
+		return nil, nil, errors.New("execution timed out")
 	}
 
 	if res.Err != nil {
-		return err
+		return nil, nil, res.Err
 	}
 
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
 	err = dc.Logs(docker.LogsOptions{
 		OutputStream: stdout,
 		ErrorStream:  stderr,
@@ -61,18 +59,8 @@ func simpleRunner(ctx context.Context, test *model.Test, sub model.KeyedSubmissi
 		Stderr:       true,
 	})
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	var result = struct {
-		Stdout, Stderr string
-	}{
-		Stdout: stdout.String(),
-		Stderr: stderr.String(),
-	}
-
-	fmt.Printf("%v", result)
-
-	// TODO(flowlo): Store result in Datastore.
-	return nil
+	return
 }

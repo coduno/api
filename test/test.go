@@ -3,19 +3,18 @@ package test
 import (
 	"strconv"
 
+	"github.com/coduno/api/model"
+
 	"golang.org/x/net/context"
-	"google.golang.org/cloud/datastore"
 )
 
-// Tester is a reference to a unique implementation of a TesterFunc.
 type Tester int
 
-// TesterFunc is a function that will compute skills for the referenced
-// Result. It will call Taskers of encapsulated tasks on demand.
-type TesterFunc func(ctx context.Context, resultKey *datastore.Key) error
+type TesterFunc func(ctx context.Context, params map[string]string, sub model.KeyedSubmission) error
 
 const (
 	Simple Tester = 1 + iota
+	Junit
 	maxTester
 )
 
@@ -31,12 +30,12 @@ func RegisterTester(t Tester, f TesterFunc) {
 }
 
 // Call looks up a registered Resulter and calls it.
-func (t Tester) Call(ctx context.Context, resultKey *datastore.Key) error {
+func (t Tester) Call(ctx context.Context, params map[string]string, sub model.KeyedSubmission) error {
 	if t > 0 && t < maxTester {
 		f := testers[t]
 		if f != nil {
-			return f(ctx, resultKey)
+			return f(ctx, params, sub)
 		}
 	}
-	panic("logic: requested resulter function #" + strconv.Itoa(int(t)) + " is unavailable")
+	panic("test: requested tester function #" + strconv.Itoa(int(t)) + " is unavailable")
 }

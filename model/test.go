@@ -5,4 +5,5 @@ package model
 type Test struct {
 	Tester int
 	Name   string
+	Params map[string]string
 }
