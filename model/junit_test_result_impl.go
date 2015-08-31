@@ -53,8 +53,8 @@ func (ƨ JunitTestResults) Key(keys []*datastore.Key) (keyed []KeyedJunitTestRes
 	return
 }
 
-// Save will put this JunitTestResult into Datastore using the given key.
-func (ƨ JunitTestResult) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+// Put will put this JunitTestResult into Datastore using the given key.
+func (ƨ JunitTestResult) Put(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
 	if key != nil {
 		return datastore.Put(ctx, key, &ƨ)
 	}
@@ -62,10 +62,10 @@ func (ƨ JunitTestResult) Save(ctx context.Context, key *datastore.Key) (*datast
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "JunitTestResult", nil), &ƨ)
 }
 
-// SaveWithParent can be used to save this JunitTestResult as child of another
+// PutWithParent can be used to save this JunitTestResult as child of another
 // entity.
 // This will error if parent == nil.
-func (ƨ JunitTestResult) SaveWithParent(ctx context.Context, parent *datastore.Key) (*datastore.Key, error) {
+func (ƨ JunitTestResult) PutWithParent(ctx context.Context, parent *datastore.Key) (*datastore.Key, error) {
 	if parent == nil {
 		return nil, errors.New("parent key is nil, expected a valid key")
 	}

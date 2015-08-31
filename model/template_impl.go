@@ -53,8 +53,8 @@ func (ƨ Templates) Key(keys []*datastore.Key) (keyed []KeyedTemplate) {
 	return
 }
 
-// Save will put this Template into Datastore using the given key.
-func (ƨ Template) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+// Put will put this Template into Datastore using the given key.
+func (ƨ Template) Put(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
 	if key != nil {
 		return datastore.Put(ctx, key, &ƨ)
 	}
@@ -62,10 +62,10 @@ func (ƨ Template) Save(ctx context.Context, key *datastore.Key) (*datastore.Key
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Template", nil), &ƨ)
 }
 
-// SaveWithParent can be used to save this Template as child of another
+// PutWithParent can be used to save this Template as child of another
 // entity.
 // This will error if parent == nil.
-func (ƨ Template) SaveWithParent(ctx context.Context, parent *datastore.Key) (*datastore.Key, error) {
+func (ƨ Template) PutWithParent(ctx context.Context, parent *datastore.Key) (*datastore.Key, error) {
 	if parent == nil {
 		return nil, errors.New("parent key is nil, expected a valid key")
 	}

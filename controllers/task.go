@@ -63,7 +63,7 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 				}
 			}
 			if updateResult {
-				if _, err = result.Save(ctx, rk); err != nil {
+				if _, err = result.Put(ctx, rk); err != nil {
 					return http.StatusInternalServerError, err
 				}
 			}

@@ -36,12 +36,12 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		SkillWeights: model.SkillWeights{1, 0, 0},
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	model.Test{
 		Tester: int(test.Simple),
 		Name:   "Useless name",
-	}.SaveWithParent(ctx, taskOne)
+	}.PutWithParent(ctx, taskOne)
 
 	taskTwo, _ := model.Task{
 		Assignment: model.Assignment{
@@ -54,7 +54,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		SkillWeights: model.SkillWeights{1, 2, 3},
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	// Runner:    "simple",
 	// Languages: []string{"java", "py"},
@@ -70,7 +70,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		SkillWeights: model.SkillWeights{1, 2, 3},
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	// Runner:    "simple",
 	// Languages: []string{"java", "py"},
@@ -86,7 +86,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		Tasks: []*datastore.Key{taskOne, taskTwo, taskThree},
-	}.SaveWithParent(ctx, coduno)
+	}.PutWithParent(ctx, coduno)
 }
 
 func Mock(w http.ResponseWriter, req *http.Request) {
@@ -98,7 +98,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Name:    "Coduno",
 			Address: "team@cod.uno",
 		},
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	victor, _ := model.User{
 		Address: mail.Address{
@@ -108,7 +108,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Nick:           "vbalan",
 		HashedPassword: pw,
 		Company:        coduno,
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	paul, _ := model.User{
 		Address: mail.Address{
@@ -118,7 +118,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Nick:           "pbochis",
 		HashedPassword: pw,
 		Company:        coduno,
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	model.User{
 		Address: mail.Address{
@@ -127,7 +127,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Nick:           "amayer",
 		HashedPassword: pw,
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	lorenz, _ := model.User{
 		Address: mail.Address{
@@ -137,22 +137,22 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Nick:           "flowlo",
 		HashedPassword: pw,
 		Company:        coduno,
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	model.Profile{
 		Skills:     model.Skills{12, 40, 1231},
 		LastUpdate: time.Now(),
-	}.SaveWithParent(ctx, victor)
+	}.PutWithParent(ctx, victor)
 
 	model.Profile{
 		Skills:     model.Skills{11, 1234, 14},
 		LastUpdate: time.Now(),
-	}.SaveWithParent(ctx, paul)
+	}.PutWithParent(ctx, paul)
 
 	model.Profile{
 		Skills:     model.Skills{154, 12, 1123},
 		LastUpdate: time.Now(),
-	}.SaveWithParent(ctx, lorenz)
+	}.PutWithParent(ctx, lorenz)
 
 	model.User{
 		Address: mail.Address{
@@ -161,7 +161,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Nick:           "admin",
 		HashedPassword: pw,
-	}.SaveWithParent(ctx, coduno)
+	}.PutWithParent(ctx, coduno)
 
 	taskOne, _ := model.Task{
 		Assignment: model.Assignment{
@@ -174,7 +174,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		SkillWeights: model.SkillWeights{1, 2, 3},
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	// Runner:    "simple",
 	// Languages: []string{"java", "py"},
@@ -190,7 +190,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		SkillWeights: model.SkillWeights{1, 2, 3},
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	// Runner:    "simple",
 	// Languages: []string{"java", "py"},
@@ -206,7 +206,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		SkillWeights: model.SkillWeights{1, 2, 3},
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
 	// Runner:    "simple",
 	// Languages: []string{"java", "py"},
@@ -222,7 +222,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		Tasks: []*datastore.Key{taskThree},
-	}.SaveWithParent(ctx, coduno)
+	}.PutWithParent(ctx, coduno)
 
 	model.Challenge{
 		Assignment: model.Assignment{
@@ -239,7 +239,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			taskTwo,
 			taskThree,
 		},
-	}.SaveWithParent(ctx, coduno)
+	}.PutWithParent(ctx, coduno)
 }
 
 func MockCoduno(w http.ResponseWriter, req *http.Request) {
@@ -266,7 +266,7 @@ func MockCoduno(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		SkillWeights: model.SkillWeights{1, 0, 0},
-	}.SaveWithParent(ctx, coduno)
+	}.PutWithParent(ctx, coduno)
 
 	// Runner:    "simple",
 	// Languages: []string{"java", "py", "c", "cpp"},

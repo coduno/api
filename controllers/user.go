@@ -120,10 +120,10 @@ func createUser(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 
 	var key *datastore.Key
 	if companyKey == nil {
-		key, err = user.Save(ctx, nil)
+		key, err = user.Put(ctx, nil)
 	} else {
 		// Bind user to company for eternity.
-		key, err = user.SaveWithParent(ctx, companyKey)
+		key, err = user.PutWithParent(ctx, companyKey)
 	}
 
 	if err != nil {

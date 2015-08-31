@@ -181,7 +181,7 @@ func FinalSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	result.FinalSubmissions[index] = submissionKey
 
-	if _, err = result.Save(ctx, resultKey); err != nil {
+	if _, err = result.Put(ctx, resultKey); err != nil {
 		return http.StatusInternalServerError, err
 	}
 	w.Write([]byte("OK"))

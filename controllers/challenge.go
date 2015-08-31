@@ -125,7 +125,7 @@ func CreateChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request
 		Tasks:      keys,
 	}
 
-	key, err := challenge.SaveWithParent(ctx, u.Company)
+	key, err := challenge.PutWithParent(ctx, u.Company)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}

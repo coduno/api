@@ -53,8 +53,8 @@ func (ƨ Tests) Key(keys []*datastore.Key) (keyed []KeyedTest) {
 	return
 }
 
-// Save will put this Test into Datastore using the given key.
-func (ƨ Test) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+// Put will put this Test into Datastore using the given key.
+func (ƨ Test) Put(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
 	if key != nil {
 		return datastore.Put(ctx, key, &ƨ)
 	}
@@ -62,10 +62,10 @@ func (ƨ Test) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, er
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, "Test", nil), &ƨ)
 }
 
-// SaveWithParent can be used to save this Test as child of another
+// PutWithParent can be used to save this Test as child of another
 // entity.
 // This will error if parent == nil.
-func (ƨ Test) SaveWithParent(ctx context.Context, parent *datastore.Key) (*datastore.Key, error) {
+func (ƨ Test) PutWithParent(ctx context.Context, parent *datastore.Key) (*datastore.Key, error) {
 	if parent == nil {
 		return nil, errors.New("parent key is nil, expected a valid key")
 	}

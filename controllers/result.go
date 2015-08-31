@@ -82,7 +82,7 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 		FinalSubmissions: make([]*datastore.Key, len(challenge.Tasks)),
 		Started:          time.Now(),
 	}
-	key, err = result.SaveWithParent(ctx, keys[0])
+	key, err = result.PutWithParent(ctx, keys[0])
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -176,7 +176,7 @@ func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *da
 		}
 		result.FinalSubmissions[i] = key
 	}
-	key, err := result.Save(ctx, resultKey)
+	key, err := result.Put(ctx, resultKey)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}

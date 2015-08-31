@@ -114,7 +114,7 @@ func (p *Passenger) HasScope(scope string) (has bool) {
 func (p *Passenger) Save(ctx context.Context) (*datastore.Key, error) {
 	now := time.Now()
 
-	key, err := p.Token.SaveWithParent(ctx, p.User)
+	key, err := p.Token.PutWithParent(ctx, p.User)
 	if err != nil {
 		return nil, err
 	}

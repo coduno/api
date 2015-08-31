@@ -43,8 +43,8 @@ func ({{t}} {{slice}}) Key(keys []*datastore.Key) (keyed []Keyed{{type}}) {
 	return
 }
 
-// Save will put this {{type}} into Datastore using the given key.
-func ({{t}} {{type}}) Save(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
+// Put will put this {{type}} into Datastore using the given key.
+func ({{t}} {{type}}) Put(ctx context.Context, key *datastore.Key) (*datastore.Key, error) {
 	if key != nil {
 		return datastore.Put(ctx, key, &{{t}})
 	}
@@ -52,10 +52,10 @@ func ({{t}} {{type}}) Save(ctx context.Context, key *datastore.Key) (*datastore.
 	return datastore.Put(ctx, datastore.NewIncompleteKey(ctx, {{kind}}, nil), &{{t}})
 }
 
-// SaveWithParent can be used to save this {{type}} as child of another
+// PutWithParent can be used to save this {{type}} as child of another
 // entity.
 // This will error if parent == nil.
-func ({{t}} {{type}}) SaveWithParent(ctx context.Context, parent *datastore.Key) (*datastore.Key, error) {
+func ({{t}} {{type}}) PutWithParent(ctx context.Context, parent *datastore.Key) (*datastore.Key, error) {
 	if parent == nil {
 		return nil, errors.New("parent key is nil, expected a valid key")
 	}
