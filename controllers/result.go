@@ -140,20 +140,21 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 		return http.StatusInternalServerError, nil
 	}
 
-	if u.Company != nil && !util.HasParent(resultKey, p.User) {
+	if u.Company == nil && !util.HasParent(resultKey, p.User) {
 		return http.StatusUnauthorized, nil
 	}
 
 	if result.Finished == (time.Time{}) {
+		if util.HasParent(resultKey, p.User) {
+			return createFinalResult(ctx, w, resultKey, result)
+		}
 		var challenge model.Challenge
 		if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
 			return http.StatusInternalServerError, err
 		}
-		if u.Company != nil && result.Started.Add(challenge.Duration).After(time.Now()) {
-			json.NewEncoder(w).Encode(result.Key(resultKey))
-			return http.StatusOK, nil
+		if u.Company != nil && result.Started.Add(challenge.Duration).Before(time.Now()) {
+			return createFinalResult(ctx, w, resultKey, result)
 		}
-		return createFinalResult(ctx, w, resultKey, result)
 	}
 
 	json.NewEncoder(w).Encode(result.Key(resultKey))
