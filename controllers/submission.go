@@ -196,6 +196,7 @@ func nameObject(key *datastore.Key) string {
 			id = strconv.FormatInt(key.IntID(), 10)
 		}
 		name = "/" + key.Kind() + "/" + id + name
+		key = key.Parent()
 	}
 	return name
 }
