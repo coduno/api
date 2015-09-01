@@ -41,15 +41,16 @@ func (t *Test) Save() ([]datastore.Property, error) {
 	return []datastore.Property{
 		{
 			Name:  "Tester",
-			Value: int(t.Tester),
+			Value: int64(t.Tester),
 		},
 		{
 			Name:  "Name",
 			Value: t.Name,
 		},
 		{
-			Name:  "Params",
-			Value: buf.Bytes(),
+			Name:    "Params",
+			Value:   buf.Bytes(),
+			NoIndex: true,
 		},
 	}, nil
 }
