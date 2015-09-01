@@ -42,7 +42,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 	}
 
 	_, err = model.Test{
-		Tester: int(test.Simple),
+		Tester: int64(test.Simple),
 		Name:   "Useless name",
 	}.PutWithParent(ctx, taskOne)
 	if err != nil {
@@ -67,7 +67,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 	}
 
 	model.Test{
-		Tester: int(test.Simple),
+		Tester: int64(test.Simple),
 	}.PutWithParent(ctx, taskTwo)
 
 	taskThree, err := model.Task{
@@ -88,7 +88,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 	}
 
 	model.Test{
-		Tester: int(test.Simple),
+		Tester: int64(test.Simple),
 	}.PutWithParent(ctx, taskThree)
 
 	_, err = model.Challenge{
@@ -212,7 +212,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	}
 
 	_, err = model.Test{
-		Tester: int(test.Simple),
+		Tester: int64(test.Simple),
 		Name:   "Useless name",
 	}.PutWithParent(ctx, taskOne)
 	if err != nil {
@@ -237,7 +237,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	}
 
 	model.Test{
-		Tester: int(test.Simple),
+		Tester: int64(test.Simple),
 	}.PutWithParent(ctx, taskTwo)
 
 	taskThree, err := model.Task{
@@ -258,7 +258,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	}
 
 	model.Test{
-		Tester: int(test.Simple),
+		Tester: int64(test.Simple),
 	}.PutWithParent(ctx, taskThree)
 
 	_, err = model.Challenge{
@@ -329,6 +329,6 @@ func MockCoduno(w http.ResponseWriter, req *http.Request) {
 	}
 
 	model.Test{
-		Tester: int(test.Simple),
+		Tester: int64(test.Simple),
 	}.PutWithParent(ctx, task)
 }

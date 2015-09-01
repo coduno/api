@@ -10,7 +10,7 @@ import (
 //go:generate generator
 
 type Test struct {
-	Tester int
+	Tester int64
 	Name   string
 	Params map[string]string
 }
@@ -19,7 +19,7 @@ func (t *Test) Load(ps []datastore.Property) error {
 	for _, p := range ps {
 		switch p.Name {
 		case "Tester":
-			t.Tester = p.Value.(int)
+			t.Tester = p.Value.(int64)
 		case "Name":
 			t.Name = p.Value.(string)
 		case "Params":
