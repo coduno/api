@@ -1,7 +1,5 @@
 package model
 
-import "google.golang.org/cloud/datastore"
-
 //go:generate generator
 
 // Task is a concrete piece of work that cannot
@@ -21,10 +19,8 @@ type Task struct {
 	// Refers to some logic that looks at the Submissions
 	// of this task and produces a set of skills that
 	// represent how well the user did in doing this Task.
-	// It is to be weighted by Skillweights.
+	// It is to be weighted by SkillWeights.
 	Tasker int
 
 	Languages []string `datastore:",noindex"`
-
-	datastore.PropertyLoadSaver
 }
