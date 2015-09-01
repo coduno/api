@@ -91,7 +91,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	// Set the submission in stone.
-	if _, err = datastore.Put(ctx, submissionKey, submission); err != nil {
+	if _, err = datastore.Put(ctx, submissionKey, &submission); err != nil {
 		return http.StatusInternalServerError, err
 	}
 
