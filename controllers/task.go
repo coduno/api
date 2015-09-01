@@ -35,39 +35,38 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 		return http.StatusInternalServerError, nil
 	}
 
-	// User is a coder
-	if u.Company == nil {
+	if len(r.URL.Query()["result"]) > 0 {
 		rk, err := datastore.DecodeKey(r.URL.Query()["result"][0])
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
 
-		if !util.HasParent(p.User, rk) {
-			return http.StatusUnauthorized, nil
-		}
-
-		var result model.Result
-		if err = datastore.Get(ctx, rk, &result); err != nil {
-			return http.StatusInternalServerError, err
-		}
-
-		var challenge model.Challenge
-		if err = datastore.Get(ctx, result.Challenge, &challenge); err != nil {
-			return http.StatusInternalServerError, err
-		}
-
-		emptyTime := time.Time{}
-		updateResult := false
-		for i, val := range challenge.Tasks {
-			if taskKey.Equal(val) && result.StartTimes[i] == emptyTime {
-				result.StartTimes[i] = time.Now()
-				updateResult = true
-				break
-			}
-		}
-		if updateResult {
-			if _, err = result.Save(ctx, rk); err != nil {
+		if util.HasParent(p.User, rk) {
+			var result model.Result
+			if err = datastore.Get(ctx, rk, &result); err != nil {
 				return http.StatusInternalServerError, err
+			}
+
+			var challenge model.Challenge
+			if err = datastore.Get(ctx, result.Challenge, &challenge); err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			emptyTime := time.Time{}
+			updateResult := false
+			for i, val := range challenge.Tasks {
+				if taskKey.Equal(val) {
+					if result.StartTimes[i].Equal(emptyTime) {
+						result.StartTimes[i] = time.Now()
+						updateResult = true
+						break
+					}
+				}
+			}
+			if updateResult {
+				if _, err = result.Save(ctx, rk); err != nil {
+					return http.StatusInternalServerError, err
+				}
 			}
 		}
 	}
