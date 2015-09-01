@@ -114,7 +114,9 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return 0, nil
 }
 
-var gcsClient = new(http.Client)
+var gcsClient = &http.Client{
+	Transport: http.DefaultTransport,
+}
 
 func store(ctx context.Context, key *datastore.Key, code, language string) (model.StoredObject, error) {
 	o := model.StoredObject{}
