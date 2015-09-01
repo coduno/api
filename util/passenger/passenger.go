@@ -114,7 +114,7 @@ func (p *Passenger) HasScope(scope string) (has bool) {
 func (p *Passenger) Save(ctx context.Context) (*datastore.Key, error) {
 	now := time.Now()
 
-	key, err := p.Token.SaveWithParent(ctx, p.User)
+	key, err := p.Token.PutWithParent(ctx, p.User)
 	if err != nil {
 		return nil, err
 	}
@@ -223,25 +223,29 @@ func FromToken(ctx context.Context, Token string) (*Passenger, error) {
 	return p, p.check(raw)
 }
 
-func fromCache(ctx context.Context, key *datastore.Key) (p *Passenger, err error) {
+func fromCache(ctx context.Context, key *datastore.Key) (*Passenger, error) {
 	item, err := memcache.Get(ctx, key.Encode())
 	if err != nil {
 		return nil, err
 	}
-	p = new(Passenger)
-	err = gob.NewDecoder(bytes.NewReader(item.Value)).Decode(&p)
-	return
+	p := new(Passenger)
+	if err := gob.NewDecoder(bytes.NewReader(item.Value)).Decode(&p); err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
-func fromDatastore(ctx context.Context, key *datastore.Key) (p *Passenger, err error) {
-	p = new(Passenger)
-	if err = datastore.Get(ctx, key, p.Token); err != nil {
-		return
+func fromDatastore(ctx context.Context, key *datastore.Key) (*Passenger, error) {
+	p := &Passenger{
+		Token: &model.Token{},
+	}
+	if err := datastore.Get(ctx, key, p.Token); err != nil {
+		return nil, err
 	}
 	if p.User = key.Parent(); p.User == nil {
 		return nil, ErrTokenNotAssociated
 	}
-	return
+	return p, nil
 }
 
 // FromBasicAuth tries do identify a Passenger by the token he gave us.
@@ -256,7 +260,7 @@ func FromBasicAuth(ctx context.Context, username, pw string) (p *Passenger, err 
 		Next(&user)
 
 	if err != nil {
-		return
+		return nil, err
 	}
 	err = password.Check([]byte(pw), user.HashedPassword)
 
@@ -277,7 +281,7 @@ func FromBasicAuth(ctx context.Context, username, pw string) (p *Passenger, err 
 
 // FromRequest inspects the HTTP Authorization header of the given request
 // and tries to identify a passenger.
-func FromRequest(ctx context.Context, r *http.Request) (p *Passenger, err error) {
+func FromRequest(ctx context.Context, r *http.Request) (*Passenger, error) {
 	auth := ""
 	if auth = r.Header.Get("Authorization"); auth == "" {
 		return nil, ErrNoAuthHeader
@@ -292,8 +296,7 @@ func FromRequest(ctx context.Context, r *http.Request) (p *Passenger, err error)
 		return nil, ErrUnkAuthHeader
 	}
 
-	p, err = FromBasicAuth(ctx, username, password)
-	return
+	return FromBasicAuth(ctx, username, password)
 }
 
 // FromContext returns the Passenger value stored in ctx if any.

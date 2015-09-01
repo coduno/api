@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"time"
 
@@ -64,24 +63,19 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 				}
 			}
 			if updateResult {
-				if _, err = result.Save(ctx, rk); err != nil {
+				if _, err = result.Put(ctx, rk); err != nil {
 					return http.StatusInternalServerError, err
 				}
 			}
 		}
 	}
 
-	switch taskKey.Kind() {
-	case model.CodeTaskKind:
-		var task model.CodeTask
-		if err = datastore.Get(ctx, taskKey, &task); err != nil {
-			return http.StatusInternalServerError, err
-		}
-		json.NewEncoder(w).Encode(task.Key(taskKey))
-		return http.StatusOK, nil
-	default:
-		return http.StatusInternalServerError, errors.New("Not implemented")
+	var task model.Task
+	if err = datastore.Get(ctx, taskKey, &task); err != nil {
+		return http.StatusInternalServerError, err
 	}
+	json.NewEncoder(w).Encode(task.Key(taskKey))
+	return http.StatusOK, nil
 }
 
 func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
@@ -104,22 +98,14 @@ func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status 
 		return http.StatusUnauthorized, nil
 	}
 
-	var codeTasks model.CodeTasks
-	codeTaskKeys, err := model.NewQueryForCodeTask().
-		GetAll(ctx, &codeTasks)
+	var tasks model.Tasks
+	taskKeys, err := model.NewQueryForTask().
+		GetAll(ctx, &tasks)
 
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	tasks := make([]model.KeyedTask, len(codeTasks))
-	for i := range codeTasks {
-		tasks[i] = model.KeyedTask{
-			Task: &codeTasks[i].Task,
-			Key:  codeTaskKeys[i],
-		}
-	}
-
-	json.NewEncoder(w).Encode(tasks)
+	json.NewEncoder(w).Encode(tasks.Key(taskKeys))
 	return http.StatusOK, nil
 }

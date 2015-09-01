@@ -8,31 +8,25 @@ import (
 
 //go:generate generator
 
-// Submission is a form of result for some
-// Task.
+// Submission is a form of result for some Task.
 //
-// This type is very general and should be embedded in more
-// concrete types, so that it matches the expectations of the
-// Task it corresponds to. For example:
+// TODO(flowlo): As soon as we also store other submissions, implement a
+// PropertyLoadSaver similar to this:
 //
-//	type QuizSubmission struct {
-//		Submission
-//
-//		CorrectAnswers,
-//		TotalAnswers int
+//	func (s *Submission) Load(ps []datastore.Property) error {
+//		return datastore.LoadStruct(s, ps)
 //	}
 //
-// TODO(flowlo): Switching parent key from Task to Result
-// after completion of Task? Does that make sense?
-//
-//	if key.Parent().Kind() == "task" {
-//		// yay, task is still running
-//	} else if key.Parent().Kind() == "result" {
-//		// we can do fast lookup of the submission now, no problem
-//	} else {
-//		// error
+//	func (s *Submission) Save() ([]datastore.Property, error) {
+//		if s.Code.Name != "" && s.Answers != nil {
+//			return nil, errors.New("cannot save Code and Answers in one Submission")
+//		}
+//		return ...
 //	}
+//
 type Submission struct {
-	Time time.Time      `datastore:",index"`
-	Task *datastore.Key `datastore:",index"`
+	Time     time.Time
+	Task     *datastore.Key
+	Code     StoredObject
+	Language string
 }

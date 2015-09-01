@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/coduno/api/model"
+	"github.com/coduno/api/test"
 	"github.com/coduno/api/util/password"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
@@ -24,58 +25,73 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 	}
 	coduno := keys[0]
 
-	taskOne, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Hello, world!",
-				Description:  "This is the easiest program. It is the hello world of this challenge.",
-				Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	taskOne, err := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Hello, world!",
+			Description:  "This is the easiest program. It is the hello world of this challenge.",
+			Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 0, 0},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
-	}.Save(ctx, nil)
+		SkillWeights: model.SkillWeights{1, 0, 0},
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	taskTwo, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Sorting",
-				Description:  "This program will require some knowledge about algorithms.",
-				Instructions: "Implement a simple bubble sorter on numbers in a programming language of your choice.",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	_, err = model.Test{
+		Tester: int(test.Simple),
+		Name:   "Useless name",
+	}.PutWithParent(ctx, taskOne)
+	if err != nil {
+		panic(err)
+	}
+
+	taskTwo, err := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Sorting",
+			Description:  "This program will require some knowledge about algorithms.",
+			Instructions: "Implement a simple bubble sorter on numbers in a programming language of your choice.",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
-	}.Save(ctx, nil)
+		SkillWeights: model.SkillWeights{1, 2, 3},
+		Languages:    []string{"java", "py"},
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	taskThree, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Some task",
-				Description:  "Description of some task",
-				Instructions: "Instructions of some task",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	model.Test{
+		Tester: int(test.Simple),
+	}.PutWithParent(ctx, taskTwo)
+
+	taskThree, err := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Some task",
+			Description:  "Description of some task",
+			Instructions: "Instructions of some task",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
-	}.Save(ctx, nil)
+		SkillWeights: model.SkillWeights{1, 2, 3},
+		Languages:    []string{"java", "py"},
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	model.Challenge{
+	model.Test{
+		Tester: int(test.Simple),
+	}.PutWithParent(ctx, taskThree)
+
+	_, err = model.Challenge{
 		Assignment: model.Assignment{
 			Name:         "Sequential test",
 			Description:  "Description of sequential challenge",
@@ -86,22 +102,27 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		Tasks: []*datastore.Key{taskOne, taskTwo, taskThree},
-	}.SaveWithParent(ctx, coduno)
-
+	}.PutWithParent(ctx, coduno)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func Mock(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 	pw, _ := password.Hash([]byte("passwordpassword"))
 
-	coduno, _ := model.Company{
+	coduno, err := model.Company{
 		Address: mail.Address{
 			Name:    "Coduno",
 			Address: "team@cod.uno",
 		},
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	victor, _ := model.User{
+	victor, err := model.User{
 		Address: mail.Address{
 			Name:    "Victor Balan",
 			Address: "victor.balan@cod.uno",
@@ -109,9 +130,12 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Nick:           "vbalan",
 		HashedPassword: pw,
 		Company:        coduno,
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	paul, _ := model.User{
+	paul, err := model.User{
 		Address: mail.Address{
 			Name:    "Paul Bochis",
 			Address: "paul.bochis@cod.uno",
@@ -119,7 +143,10 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Nick:           "pbochis",
 		HashedPassword: pw,
 		Company:        coduno,
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
 	model.User{
 		Address: mail.Address{
@@ -128,9 +155,9 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Nick:           "amayer",
 		HashedPassword: pw,
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
 
-	lorenz, _ := model.User{
+	lorenz, err := model.User{
 		Address: mail.Address{
 			Name:    "Lorenz Leutgeb",
 			Address: "lorenz.leutgeb@cod.uno",
@@ -138,22 +165,25 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Nick:           "flowlo",
 		HashedPassword: pw,
 		Company:        coduno,
-	}.Save(ctx, nil)
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
 	model.Profile{
 		Skills:     model.Skills{12, 40, 1231},
 		LastUpdate: time.Now(),
-	}.SaveWithParent(ctx, victor)
+	}.PutWithParent(ctx, victor)
 
 	model.Profile{
 		Skills:     model.Skills{11, 1234, 14},
 		LastUpdate: time.Now(),
-	}.SaveWithParent(ctx, paul)
+	}.PutWithParent(ctx, paul)
 
 	model.Profile{
 		Skills:     model.Skills{154, 12, 1123},
 		LastUpdate: time.Now(),
-	}.SaveWithParent(ctx, lorenz)
+	}.PutWithParent(ctx, lorenz)
 
 	model.User{
 		Address: mail.Address{
@@ -162,73 +192,92 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Nick:           "admin",
 		HashedPassword: pw,
-	}.SaveWithParent(ctx, coduno)
+	}.PutWithParent(ctx, coduno)
 
-	taskOne, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Task one",
-				Description:  "Description of task one",
-				Instructions: "Instructions of task one",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "coding-task",
-				},
+	taskOne, err := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Task one",
+			Description:  "Description of task one",
+			Instructions: "Instructions of task one",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "coding-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
-	}.Save(ctx, nil)
+		Languages:    []string{"py", "c"},
+		SkillWeights: model.SkillWeights{1, 2, 3},
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	taskTwo, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Task two",
-				Description:  "Description of task two",
-				Instructions: "Instructions of task two",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	_, err = model.Test{
+		Tester: int(test.Simple),
+		Name:   "Useless name",
+	}.PutWithParent(ctx, taskOne)
+	if err != nil {
+		panic(err)
+	}
+
+	taskTwo, err := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Task two",
+			Description:  "Description of task two",
+			Instructions: "Instructions of task two",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
-	}.Save(ctx, nil)
+		SkillWeights: model.SkillWeights{1, 2, 3},
+		Languages:    []string{"java", "py"},
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	taskThree, _ := model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Task three",
-				Description:  "Description of task three",
-				Instructions: "Instructions of task three",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	model.Test{
+		Tester: int(test.Simple),
+	}.PutWithParent(ctx, taskTwo)
+
+	taskThree, err := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Task three",
+			Description:  "Description of task three",
+			Instructions: "Instructions of task three",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 2, 3},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py"},
-	}.Save(ctx, nil)
+		SkillWeights: model.SkillWeights{1, 2, 3},
+		Languages:    []string{"java", "py"},
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	model.Challenge{
+	model.Test{
+		Tester: int(test.Simple),
+	}.PutWithParent(ctx, taskThree)
+
+	_, err = model.Challenge{
 		Assignment: model.Assignment{
 			Name:         "Challenge one",
 			Description:  "Description of challenge one",
-			Instructions: "Instructions of challenge one",
+			Instructions: "Instructions of challenge one yay",
 			Duration:     time.Hour,
 			Endpoints: model.Endpoints{
 				WebInterface: "sequential-challenge",
 			},
 		},
 		Tasks: []*datastore.Key{taskThree},
-	}.SaveWithParent(ctx, coduno)
+	}.PutWithParent(ctx, coduno)
+	if err != nil {
+		panic(err)
+	}
 
-	model.Challenge{
+	_, err = model.Challenge{
 		Assignment: model.Assignment{
 			Name:         "Challenge two",
 			Description:  "Description of challenge two",
@@ -243,7 +292,10 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			taskTwo,
 			taskThree,
 		},
-	}.SaveWithParent(ctx, coduno)
+	}.PutWithParent(ctx, coduno)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func MockCoduno(w http.ResponseWriter, req *http.Request) {
@@ -259,20 +311,24 @@ func MockCoduno(w http.ResponseWriter, req *http.Request) {
 	}
 	coduno := keys[0]
 
-	model.CodeTask{
-		Task: model.Task{
-			Assignment: model.Assignment{
-				Name:         "Hello, world!",
-				Description:  "This is the easiest program. It is the hello world of this challenge.",
-				Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
-				Duration:     time.Hour,
-				Endpoints: model.Endpoints{
-					WebInterface: "simple-code-task",
-				},
+	task, err := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Hello, world!",
+			Description:  "This is the easiest program. It is the hello world of this challenge.",
+			Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "simple-code-task",
 			},
-			SkillWeights: model.SkillWeights{1, 0, 0},
 		},
-		Runner:    "simple",
-		Languages: []string{"java", "py", "c", "cpp"},
-	}.SaveWithParent(ctx, coduno)
+		Languages:    []string{"java", "py", "c", "cpp"},
+		SkillWeights: model.SkillWeights{1, 0, 0},
+	}.PutWithParent(ctx, coduno)
+	if err != nil {
+		panic(err)
+	}
+
+	model.Test{
+		Tester: int(test.Simple),
+	}.PutWithParent(ctx, task)
 }

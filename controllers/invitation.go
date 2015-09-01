@@ -102,12 +102,12 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		user = users[0]
 	} else {
 		user = model.User{Address: *address}
-		key, err = user.Save(ctx, nil)
+		key, err = user.Put(ctx, nil)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
 		profile := model.Profile{}
-		if _, err = profile.SaveWithParent(ctx, key); err != nil {
+		if _, err = profile.PutWithParent(ctx, key); err != nil {
 			return http.StatusInternalServerError, err
 		}
 	}
@@ -172,7 +172,7 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		return http.StatusInternalServerError, err
 	}
 
-	key, err = i.SaveWithParent(ctx, cKey)
+	key, err = i.PutWithParent(ctx, cKey)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}

@@ -110,7 +110,7 @@ func init() {
 		result.Skills = average.Div(weightSum)
 		result.Computed = time.Now()
 
-		_, err := result.Save(ctx, resultKey)
+		_, err := result.Put(ctx, resultKey)
 		return err
 	})
 }

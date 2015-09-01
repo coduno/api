@@ -1,86 +1,29 @@
 package runner
 
 import (
-	"bytes"
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
 	"net/url"
-	"strings"
-	"time"
 
-	"github.com/coduno/api/model"
-
-	"golang.org/x/net/context"
+	"github.com/fsouza/go-dockerclient"
 	"google.golang.org/appengine"
-	"google.golang.org/appengine/datastore"
 )
 
 var compute *url.URL
 
+var dc *docker.Client
+
 func init() {
 	var err error
 	if appengine.IsDevAppServer() {
-		compute, err = url.Parse("http://localhost:8081")
+		dc, err = docker.NewClientFromEnv()
 		if err != nil {
 			panic(err)
 		}
-		return
-	}
-
-	b, err := ioutil.ReadFile("credentials")
-	if err != nil {
-		panic(err)
-	}
-
-	credentials := strings.Trim(string(b), "\r\n ")
-	compute, err = url.Parse("https://" + credentials + "git.cod.uno")
-	if err != nil {
-		panic(err)
 	}
 }
 
-// Runner is the general runner interface wich will start a docker run and
-// save the results.
-type Runner interface {
-	Run(ctx context.Context, w http.ResponseWriter, r *http.Request, codeTask model.CodeTask, resultKey *datastore.Key) (status int, err error)
-}
-
-// HandleCodeSubmission starts the correct runner depending on the codeTask runner.
-func HandleCodeSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request, resultKey, taskKey *datastore.Key) (status int, err error) {
-	var codeTask model.CodeTask
-	if err = datastore.Get(ctx, taskKey, &codeTask); err != nil {
-		return http.StatusInternalServerError, err
-	}
-	var runner Runner
-	rawSubmission := model.Submission{Task: taskKey, Time: time.Now()}
-	switch codeTask.Runner {
-	case "simple":
-		submission := model.CodeSubmission{Submission: rawSubmission}
-		runner = &SimpleRunner{Submission: submission}
-	case "javaut":
-		submission := model.JunitSubmission{Submission: rawSubmission}
-		runner = &JunitRunner{Submission: submission}
-	case "outputtest":
-		submission := model.DiffSubmission{CodeSubmission: model.CodeSubmission{Submission: rawSubmission}}
-		runner = &DiffRunner{Submission: submission}
-	default:
-		return http.StatusBadRequest, nil
-	}
-	return runner.Run(ctx, w, r, codeTask, resultKey)
-}
-
-func run(codeTask model.CodeTask, language, code string) (r *http.Response, err error) {
-	var data = struct {
-		Flags, Code, Language string
-	}{
-		codeTask.Flags, code, language,
-	}
-
-	buf := new(bytes.Buffer)
-	if err = json.NewEncoder(buf).Encode(data); err != nil {
-		return
-	}
-
-	return http.Post(compute.String()+"/"+codeTask.Runner, "application/json;charset=utf-8", buf)
+// newImage returns the correct docker image name for a
+// specific language.
+func newImage(language string) string {
+	const imagePattern string = "coduno/fingerprint-"
+	return imagePattern + language
 }
