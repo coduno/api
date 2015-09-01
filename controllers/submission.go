@@ -113,6 +113,8 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return 0, nil
 }
 
+var gcsClient = new(http.Client)
+
 func store(ctx context.Context, key *datastore.Key, code, language string) (model.StoredObject, error) {
 	o := model.StoredObject{}
 
@@ -130,8 +132,10 @@ func store(ctx context.Context, key *datastore.Key, code, language string) (mode
 		Name:   nameObject(key) + "/Code/" + fn,
 	}
 
+	sctx := storage.NewContext(ctx, "coduno", gcsClient)
+
 	// Upload the code to GCS.
-	gcs := storage.NewWriter(ctx, o.Bucket, o.Name)
+	gcs := storage.NewWriter(sctx, o.Bucket, o.Name)
 	if gcs == nil {
 		return o, errors.New("cannot obtain writer to gcs")
 	}
