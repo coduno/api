@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
+	"google.golang.org/cloud"
 	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
@@ -132,7 +133,7 @@ func store(ctx context.Context, key *datastore.Key, code, language string) (mode
 		Name:   nameObject(key) + "/Code/" + fn,
 	}
 
-	sctx := storage.NewContext(ctx, "coduno", gcsClient)
+	sctx := cloud.WithContext(ctx, "coduno", gcsClient)
 
 	// Upload the code to GCS.
 	gcs := storage.NewWriter(sctx, o.Bucket, o.Name)
