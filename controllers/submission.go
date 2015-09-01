@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 	"google.golang.org/cloud"
@@ -111,7 +112,9 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	return 0, nil
+	// TODO(flowlo): Return something meaningful.
+
+	return http.StatusOK, nil
 }
 
 var gcsClient = &http.Client{
@@ -127,7 +130,11 @@ func store(ctx context.Context, key *datastore.Key, code, language string) (mode
 		return o, errors.New("language unknown")
 	}
 
-	const submissionBucket = "submissions"
+	submissionBucket := "coduno"
+
+	if appengine.IsDevAppServer() {
+		submissionBucket = "coduno-dev"
+	}
 
 	// Now, construct the object.
 	o = model.StoredObject{
