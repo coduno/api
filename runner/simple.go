@@ -3,7 +3,13 @@ package runner
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path"
 	"time"
+
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/log"
 
 	"github.com/coduno/api/model"
 	"github.com/fsouza/go-dockerclient"
@@ -14,7 +20,46 @@ type waitResult struct {
 	Err      error
 }
 
-func Simple(sub model.KeyedSubmission) (stdout, stderr *bytes.Buffer, err error) {
+func prepareImage(ctx context.Context, name string) error {
+	_, err := dc.InspectImage(name)
+
+	if err != nil {
+		return nil
+	}
+
+	if err != docker.ErrNoSuchImage {
+		return err
+	}
+
+	log.Warningf(ctx, "Missing image %s will be pulled. Expect severe delay!", name)
+
+	err = dc.PullImage(docker.PullImageOptions{
+		Repository:   name,
+		OutputStream: os.Stderr,
+	}, docker.AuthConfiguration{})
+
+	if err != nil {
+		log.Warningf(ctx, "Failed pulling image %s because of: %s", name, err)
+	}
+
+	return err
+}
+
+func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *bytes.Buffer, err error) {
+	image := newImage(sub.Language)
+
+	if err = prepareImage(ctx, image); err != nil {
+		return nil, nil, err
+	}
+
+	v, err := dc.CreateVolume(docker.CreateVolumeOptions{
+		Driver: "gcs",
+		Name:   sub.Code.Bucket,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
 	c, err := dc.CreateContainer(docker.CreateContainerOptions{
 		Config: &docker.Config{
 			Image: newImage(sub.Language),
@@ -22,7 +67,7 @@ func Simple(sub model.KeyedSubmission) (stdout, stderr *bytes.Buffer, err error)
 		HostConfig: &docker.HostConfig{
 			Privileged: false,
 			Memory:     0, // TODO(flowlo): Limit memory
-			Binds:      []string{"/tmp/submissions:/run"},
+			Binds:      []string{v.Name + "/" + path.Base(sub.Code.Name) + ":/run:ro"},
 		},
 	})
 	if err != nil {
