@@ -54,7 +54,7 @@ func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *byt
 
 	v, err := dc.CreateVolume(docker.CreateVolumeOptions{
 		Driver: "gcs",
-		Name:   sub.Code.Bucket,
+		Name:   sub.Code.Bucket + "/" + path.Dir(sub.Code.Name),
 	})
 	if err != nil {
 		return nil, nil, err
@@ -67,7 +67,7 @@ func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *byt
 		HostConfig: &docker.HostConfig{
 			Privileged: false,
 			Memory:     0, // TODO(flowlo): Limit memory
-			Binds:      []string{v.Name + "/" + path.Base(sub.Code.Name) + ":/run:ro"},
+			Binds:      []string{v.Name + ":/run"},
 		},
 	})
 	if err != nil {
@@ -98,6 +98,7 @@ func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *byt
 
 	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
 	err = dc.Logs(docker.LogsOptions{
+		Container:    c.ID,
 		OutputStream: stdout,
 		ErrorStream:  stderr,
 		Stdout:       true,
