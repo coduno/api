@@ -12,7 +12,8 @@ func init() {
 }
 
 func simple(ctx context.Context, params map[string]string, sub model.KeyedSubmission) error {
-	stdout, stderr, err := runner.Simple(sub)
+	log.Debugf(ctx, "Executing simple tester")
+	stdout, stderr, err := runner.Simple(ctx, sub)
 	log.Warningf(ctx, "%s %s %s", stdout, stderr, err)
 	return err
 }
