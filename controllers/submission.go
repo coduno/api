@@ -247,7 +247,9 @@ func nameObject(key *datastore.Key) string {
 		name = "/" + key.Kind() + "/" + id + name
 		key = key.Parent()
 	}
-	return name
+	// NOTE: The name of a GCS object must not be prefixed "/",
+	// this will give you a major headache.
+	return name[1:]
 }
 
 func defaultObjectAttrs(disposition string) storage.ObjectAttrs {
