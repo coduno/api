@@ -21,7 +21,6 @@ import (
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
-	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
 
@@ -30,31 +29,6 @@ var fileNames = map[string]string{
 	"c":    "app.c",
 	"cpp":  "app.cpp",
 	"java": "Application.java",
-}
-
-// NewCloudClient initializes a client that can be used to access Google Cloud APIs
-// (e.g. imported from "google.golang.org/cloud/...") such as the Google Cloud Storage
-// API. It expects a valid App Engine context, coming from appengine.NewContext and
-// a list of scopes, that are enabled for the returned client.
-// If no scopes are passed, NewCloudClient will attempt to read the scopes of the
-// currently active account and pass them on. This means the returned client will
-// have the same permissions as the logged in user.
-//
-// TODO(flowlo): Move this to some nicer place, like util or a standalone package.
-func NewCloudClient(ctx context.Context, scopes ...string) (*http.Client, error) {
-	if len(scopes) == 0 {
-		conf, err := google.NewSDKConfig("")
-		if err != nil {
-			return nil, err
-		}
-		scopes = conf.Scopes()
-	}
-
-	return &http.Client{
-		Transport: &oauth2.Transport{
-			Source: google.AppEngineTokenSource(ctx, scopes...),
-		},
-	}, nil
 }
 
 var cloudClient *http.Client
@@ -169,7 +143,7 @@ func store(ctx context.Context, key *datastore.Key, code, language string) (mode
 
 	if cloudClient == nil {
 		var err error
-		cloudClient, err = NewCloudClient(ctx)
+		cloudClient, err = google.DefaultClient(ctx, storage.ScopeFullControl)
 		if err != nil {
 			return o, err
 		}
