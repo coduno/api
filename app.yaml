@@ -19,6 +19,8 @@ health_check:
   restart_threshold: 60
 
 network:
+  forwarded_ports:
+    - 8090
   instance_tag: "mvm"
 
 resources:

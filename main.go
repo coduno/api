@@ -68,6 +68,8 @@ func main() {
 
 	r.HandleFunc("/whoami", setup(controllers.WhoAmI))
 
+	go ws()
+
 	http.Handle("/", r)
 	appengine.Main()
 }
