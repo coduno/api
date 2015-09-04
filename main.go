@@ -8,6 +8,7 @@ import (
 
 	"github.com/coduno/api/controllers"
 	"github.com/coduno/api/util/passenger"
+	"github.com/coduno/api/ws"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
@@ -23,6 +24,8 @@ import (
 type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
 
 func main() {
+	go http.ListenAndServe(":8090", http.HandlerFunc(ws.Handle))
+
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
 	http.HandleFunc("/cert", hsts(controllers.Certificate))
 	http.HandleFunc("/status", hsts(controllers.Status))
