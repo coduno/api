@@ -33,6 +33,23 @@ var fileNames = map[string]string{
 
 var cloudClient *http.Client
 
+func init() {
+	var err error
+	cloudClient, err = google.DefaultClient(context.Background())
+	if err != nil {
+		panic(err)
+	}
+}
+
+const projID = "coduno"
+
+func CloudContext(parent context.Context) context.Context {
+	if parent == nil {
+		return cloud.NewContext(projID, cloudClient)
+	}
+	return cloud.WithContext(parent, projID, cloudClient)
+}
+
 // PostSubmission creates a new submission.
 func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "POST" {
@@ -141,20 +158,10 @@ func store(ctx context.Context, key *datastore.Key, code, language string) (mode
 		Name:   nameObject(key) + "/Code/" + fn,
 	}
 
-	if cloudClient == nil {
-		var err error
-		cloudClient, err = google.DefaultClient(ctx, storage.ScopeFullControl)
-		if err != nil {
-			return o, err
-		}
-	}
-
-	sctx := cloud.WithContext(ctx, "coduno", cloudClient)
-
 	// Upload the code to GCS.
 	// TODO(flowlo): Limit this writer, or limit the uploaded code
 	// at some previous point.
-	gcs := storage.NewWriter(sctx, o.Bucket, o.Name)
+	gcs := storage.NewWriter(CloudContext(ctx), o.Bucket, o.Name)
 	if gcs == nil {
 		return o, errors.New("cannot obtain writer to gcs")
 	}
