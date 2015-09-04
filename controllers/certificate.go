@@ -18,7 +18,8 @@ func Certificate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/x-pem-file")
 
 	for _, cert := range certs {
-		w.Write([]byte("KeyName: \"" + cert.KeyName + "\""))
+		w.Write([]byte("KeyName: \"" + cert.KeyName + "\"\n"))
 		w.Write(cert.Data)
+		w.Write([]byte("\n"))
 	}
 }

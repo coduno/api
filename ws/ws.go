@@ -2,11 +2,10 @@ package ws
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"sync"
 	"time"
-
-	"log"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
