@@ -21,6 +21,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
+	"golang.org/x/oauth2/google"
 )
 
 var fileNames = map[string]string{
@@ -28,6 +29,25 @@ var fileNames = map[string]string{
 	"c":    "app.c",
 	"cpp":  "app.cpp",
 	"java": "Application.java",
+}
+
+var cloudClient *http.Client
+
+func init() {
+	var err error
+	cloudClient, err = google.DefaultClient(context.Background())
+	if err != nil {
+		panic(err)
+	}
+}
+
+const projID = "coduno"
+
+func CloudContext(parent context.Context) context.Context {
+	if parent == nil {
+		return cloud.NewContext(projID, cloudClient)
+	}
+	return cloud.WithContext(parent, projID, cloudClient)
 }
 
 // PostSubmission creates a new submission.
@@ -117,10 +137,6 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return http.StatusOK, nil
 }
 
-var gcsClient = &http.Client{
-	Transport: http.DefaultTransport,
-}
-
 func store(ctx context.Context, key *datastore.Key, code, language string) (model.StoredObject, error) {
 	o := model.StoredObject{}
 
@@ -142,10 +158,10 @@ func store(ctx context.Context, key *datastore.Key, code, language string) (mode
 		Name:   nameObject(key) + "/Code/" + fn,
 	}
 
-	sctx := cloud.WithContext(ctx, "coduno", gcsClient)
-
 	// Upload the code to GCS.
-	gcs := storage.NewWriter(sctx, o.Bucket, o.Name)
+	// TODO(flowlo): Limit this writer, or limit the uploaded code
+	// at some previous point.
+	gcs := storage.NewWriter(CloudContext(ctx), o.Bucket, o.Name)
 	if gcs == nil {
 		return o, errors.New("cannot obtain writer to gcs")
 	}
@@ -212,7 +228,9 @@ func nameObject(key *datastore.Key) string {
 		name = "/" + key.Kind() + "/" + id + name
 		key = key.Parent()
 	}
-	return name
+	// NOTE: The name of a GCS object must not be prefixed "/",
+	// this will give you a major headache.
+	return name[1:]
 }
 
 func defaultObjectAttrs(disposition string) storage.ObjectAttrs {
