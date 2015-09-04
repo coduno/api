@@ -8,6 +8,7 @@ import (
 
 	"github.com/coduno/api/controllers"
 	"github.com/coduno/api/util/passenger"
+	"github.com/coduno/api/ws"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
@@ -68,7 +69,7 @@ func main() {
 
 	r.HandleFunc("/whoami", setup(controllers.WhoAmI))
 
-	go ws()
+	go ws.InitWS()
 
 	http.Handle("/", r)
 	appengine.Main()
