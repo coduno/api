@@ -24,7 +24,7 @@ func ChallengeByKey(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
 	if err != nil {
-		return http.StatusInternalServerError, err
+		return http.StatusBadRequest, err
 	}
 
 	var challenge model.Challenge

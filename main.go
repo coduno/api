@@ -8,6 +8,7 @@ import (
 
 	"github.com/coduno/api/controllers"
 	"github.com/coduno/api/util/passenger"
+	"github.com/coduno/api/util/routing"
 	"github.com/coduno/api/ws"
 	"github.com/gorilla/mux"
 
@@ -18,13 +19,10 @@ import (
 	"google.golang.org/cloud/compute/metadata"
 )
 
-// ContextHandlerFunc is similar to a http.HandlerFunc, but also gets passed
-// the current context.
-// To ease error handling, a ContextHandleFunc must return a HTTP status
-// code and an error. Still, the handler is allowed to write a response.
-type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
-
 func main() {
+	controllers.InvitationTemplatePath = "./mail/template.invitation"
+	controllers.SubTemplatePath = "./mail/template.subscription"
+
 	go http.ListenAndServe(":8090", http.HandlerFunc(ws.Handle))
 
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
@@ -129,7 +127,7 @@ func cors(h http.HandlerFunc) http.HandlerFunc {
 }
 
 // auth is there to associate a user with the incoming request.
-func auth(h ContextHandlerFunc) ContextHandlerFunc {
+func auth(h routing.ContextHandlerFunc) routing.ContextHandlerFunc {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 		ctx, err = passenger.NewContextFromRequest(ctx, r)
 		if err != nil {
@@ -139,7 +137,7 @@ func auth(h ContextHandlerFunc) ContextHandlerFunc {
 	}
 }
 
-func guard(h ContextHandlerFunc) http.HandlerFunc {
+func guard(h routing.ContextHandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		status, err := h(appengine.NewContext(r), w, r)
 
@@ -153,7 +151,7 @@ func guard(h ContextHandlerFunc) http.HandlerFunc {
 
 // setup is the default wrapper for any ContextHandlerFunc that talks to
 // the outside. It will wrap h in scure, cors and auth.
-func setup(h ContextHandlerFunc) http.HandlerFunc {
+func setup(h routing.ContextHandlerFunc) http.HandlerFunc {
 	return hsts(cors(guard(auth(h))))
 }
 

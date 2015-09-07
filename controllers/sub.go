@@ -18,13 +18,18 @@ import (
 )
 
 var subscription *template.Template
+var SubTemplatePath string
 
-func init() {
-	var err error
-	subscription, err = template.ParseFiles("./mail/template.subscription")
-	if err != nil {
-		panic(err)
+func initSubTemplate() error {
+	if subscription != nil {
+		return nil
 	}
+	var err error
+	subscription, err = template.ParseFiles(SubTemplatePath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type Subscription struct {
@@ -157,6 +162,10 @@ func newToken() ([]byte, int, error) {
 }
 
 func subscribe(w http.ResponseWriter, r *http.Request) {
+	if err := initSubTemplate(); err != nil {
+		http.Error(w, "Something went wrong: "+err.Error(), 500)
+		return
+	}
 	c := appengine.NewContext(r)
 	address, err := mail.ParseAddress(r.FormValue("email"))
 
