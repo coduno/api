@@ -29,9 +29,17 @@ var upgrader = websocket.Upgrader{HandshakeTimeout: 10 * time.Second}
 
 var conns = struct {
 	sync.RWMutex
-	m map[*datastore.Key]*websocket.Conn
+	m map[id]*websocket.Conn
 }{
-	m: make(map[*datastore.Key]*websocket.Conn),
+	m: make(map[id]*websocket.Conn),
+}
+
+type id struct {
+	kind      string
+	stringID  string
+	intID     int64
+	appID     string
+	namespace string
 }
 
 func init() {
@@ -71,7 +79,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	conns.Lock()
-	conns.m[key] = conn
+	conns.m[ktoi(key)] = conn
 	conns.Unlock()
 
 	reader(conn)
@@ -108,7 +116,7 @@ func lookup(key *datastore.Key) *websocket.Conn {
 	defer conns.RUnlock()
 
 	for key != nil {
-		conn, ok := conns.m[key]
+		conn, ok := conns.m[ktoi(key)]
 		if ok {
 			return conn
 		}
@@ -116,4 +124,14 @@ func lookup(key *datastore.Key) *websocket.Conn {
 	}
 
 	return nil
+}
+
+func ktoi(key *datastore.Key) id {
+	return id{
+		kind:      key.Kind(),
+		stringID:  key.StringID(),
+		intID:     key.IntID(),
+		appID:     key.AppID(),
+		namespace: key.Namespace(),
+	}
 }
