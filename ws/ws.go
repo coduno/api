@@ -1,15 +1,16 @@
-package main
+package ws
 
 import (
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+var GlobalWs *websocket.Conn
 
 const (
 	// Time allowed to write the file to the client.
@@ -37,7 +38,7 @@ var (
 	}
 )
 
-func ws() {
+func InitWS() {
 	s := &http.Server{
 		Addr:           ":8090",
 		Handler:        http.HandlerFunc(handleWs),
@@ -49,8 +50,6 @@ func ws() {
 }
 
 func handleWs(w http.ResponseWriter, r *http.Request) {
-	log.Print("ws called")
-
 	log.Print(r.Header)
 
 	ws, err := upgrader.Upgrade(w, r, nil)
@@ -61,23 +60,14 @@ func handleWs(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 		return
 	}
-
+	GlobalWs = ws
 	log.Print("survived upgrade")
 
-	var lastMod time.Time
-	if n, err := strconv.ParseInt(r.FormValue("lastMod"), 16, 64); err != nil {
-		lastMod = time.Unix(0, n)
-	}
-
-	log.Print("calling me favs")
-
-	go writer(ws, lastMod)
-	reader(ws)
+	reader(GlobalWs)
 }
 
 func reader(ws *websocket.Conn) {
 	log.Print("reader(ws) called")
-	defer ws.Close()
 	ws.SetReadLimit(512)
 	ws.SetReadDeadline(time.Now().Add(pongWait))
 	ws.SetPongHandler(func(string) error { ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
@@ -86,6 +76,14 @@ func reader(ws *websocket.Conn) {
 		if err != nil {
 			break
 		}
+	}
+}
+
+func Write(ws *websocket.Conn, buf []byte) {
+	log.Print("writer(ws, buf) called")
+	ws.SetWriteDeadline(time.Now().Add(writeWait))
+	if err := ws.WriteMessage(websocket.TextMessage, buf); err != nil {
+		return
 	}
 }
 
