@@ -26,6 +26,5 @@ func simple(ctx context.Context, params map[string]string, sub model.KeyedSubmis
 		Stdout: stdout.String(),
 		Stderr: stderr.String(),
 	})
-	ws.Write(sub.Key, j)
-	return err
+	return ws.Write(sub.Key, j)
 }

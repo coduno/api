@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"log"
+
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/log"
 
 	"github.com/gorilla/websocket"
 )
@@ -36,13 +37,11 @@ var conns = struct {
 func init() {
 	if appengine.IsDevAppServer() {
 		upgrader.CheckOrigin = func(r *http.Request) bool {
-			ctx := appengine.BackgroundContext()
-			log.Debugf(ctx, "Allowing origin %s", r.Header["Origin"])
+			log.Printf("Allowing origin %s", r.Header["Origin"])
 			return true
 		}
 		upgrader.Error = func(w http.ResponseWriter, r *http.Request, status int, reason error) {
-			ctx := appengine.BackgroundContext()
-			log.Debugf(ctx, "WebSocket HTTP %d because of %s", status, reason)
+			log.Printf("WebSocket HTTP %d because of %s", status, reason)
 			http.Error(w, reason.Error(), status)
 		}
 	}
