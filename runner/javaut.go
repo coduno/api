@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
-	"log"
 	"path"
 	"strings"
 	"time"
@@ -81,39 +80,43 @@ func JUnit(ctx context.Context, params map[string]string, sub model.KeyedSubmiss
 	if err != nil {
 		return
 	}
-	var buf bytes.Buffer
+
+	pr, pw := io.Pipe()
+
 	err = dc.CopyFromContainer(docker.CopyFromContainerOptions{
 		Container:    c.ID,
 		Resource:     params["resultPath"],
-		OutputStream: &buf,
+		OutputStream: pw,
 	})
 	if err != nil {
 		return
 	}
 
-	tr := tar.NewReader(bytes.NewReader(buf.Bytes()))
-	content := new(bytes.Buffer)
+	tr := tar.NewReader(pr)
+	d := xml.NewDecoder(tr)
+	var h *tar.Header
 	for {
-		header, nextErr := tr.Next()
-		if nextErr == io.EOF {
+		h, err = tr.Next()
+		if err == io.EOF {
 			break
 		}
-		if !strings.HasSuffix(header.Name, ".xml") {
-			continue
+		if err != nil {
+			return
 		}
-		if _, err := io.Copy(content, tr); err != nil {
-			log.Fatal(err)
+		if !strings.HasSuffix(h.Name, ".xml") {
+			continue
 		}
 
 		var utr model.UnitTestResults
-		if err = xml.Unmarshal(content.Bytes(), &utr); err == nil {
-			testResults = append(testResults, utr)
+		if err = d.Decode(&utr); err != nil {
+			return
 		}
-		content.Reset()
+		testResults = append(testResults, utr)
 	}
 	// TODO(victorbalan, flowlo): Get a single result to have the correct
-	// start and end time when we will do different  runs for every file
-	// in the gcs bucket.
+	// start and end time when we will do different runs for every file
+	// in the GCS bucket.
+	// Also, datastore.PutMulti could be used to insert as batch here.
 	for _, val := range testResults {
 		jtr := model.JunitTestResult{
 			Stdout:  stdout.String(),
