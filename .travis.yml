@@ -24,5 +24,6 @@ deploy:
   default: true
   docker_build: local
   on:
+    tags: true
     condition: "$(git describe --tags) = prod"
     go: 1.5
