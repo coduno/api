@@ -59,7 +59,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 				WebInterface: "simple-code-task",
 			},
 		},
-		SkillWeights: model.SkillWeights{1, 2, 3},
+		SkillWeights: model.SkillWeights{.1, .2, .3},
 		Languages:    []string{"java", "py"},
 	}.Put(ctx, nil)
 	if err != nil {
@@ -80,7 +80,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 				WebInterface: "simple-code-task",
 			},
 		},
-		SkillWeights: model.SkillWeights{1, 2, 3},
+		SkillWeights: model.SkillWeights{.1, .2, .3},
 		Languages:    []string{"java", "py"},
 	}.Put(ctx, nil)
 	if err != nil {
@@ -171,17 +171,17 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	}
 
 	model.Profile{
-		Skills:     model.Skills{12, 40, 1231},
+		Skills:     model.Skills{1, .5, 1},
 		LastUpdate: time.Now(),
 	}.PutWithParent(ctx, victor)
 
 	model.Profile{
-		Skills:     model.Skills{11, 1234, 14},
+		Skills:     model.Skills{.5, 1, 1},
 		LastUpdate: time.Now(),
 	}.PutWithParent(ctx, paul)
 
 	model.Profile{
-		Skills:     model.Skills{154, 12, 1123},
+		Skills:     model.Skills{1, 1, .5},
 		LastUpdate: time.Now(),
 	}.PutWithParent(ctx, lorenz)
 
@@ -205,7 +205,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		Languages:    []string{"py", "c"},
-		SkillWeights: model.SkillWeights{1, 2, 3},
+		SkillWeights: model.SkillWeights{.1, .2, .3},
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -229,7 +229,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 				WebInterface: "simple-code-task",
 			},
 		},
-		SkillWeights: model.SkillWeights{1, 2, 3},
+		SkillWeights: model.SkillWeights{.1, .2, .3},
 		Languages:    []string{"java", "py"},
 	}.Put(ctx, nil)
 	if err != nil {
@@ -250,7 +250,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 				WebInterface: "simple-code-task",
 			},
 		},
-		SkillWeights: model.SkillWeights{1, 2, 3},
+		SkillWeights: model.SkillWeights{.1, .2, .3},
 		Languages:    []string{"java", "py"},
 	}.Put(ctx, nil)
 	if err != nil {
