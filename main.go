@@ -47,9 +47,7 @@ func main() {
 	r.HandleFunc("/companies/{key}/challenges", setup(controllers.GetChallengesForCompany))
 	r.HandleFunc("/companies/{key}/users", setup(controllers.GetUsersByCompany))
 
-	r.HandleFunc("/mock/coduno", controllers.MockCoduno)
-	r.HandleFunc("/mock/all", controllers.Mock)
-	r.HandleFunc("/mock/challenge", controllers.MockChallenge)
+	r.HandleFunc("/mock", controllers.Mock)
 
 	r.HandleFunc("/profiles/{key}", setup(controllers.GetProfileByKey))
 	r.HandleFunc("/profiles/{key}", setup(controllers.DeleteProfile))
