@@ -15,6 +15,8 @@ type TesterFunc func(ctx context.Context, params map[string]string, sub model.Ke
 const (
 	Simple Tester = 1 + iota
 	Junit
+	Diff
+	IO
 	maxTester
 )
 

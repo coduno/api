@@ -17,7 +17,7 @@ type waitResult struct {
 	Err      error
 }
 
-func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *bytes.Buffer, err error) {
+func Simple(ctx context.Context, sub model.KeyedSubmission) (testResult model.SimpleTestResult, err error) {
 	image := newImage(sub.Language)
 
 	if err = prepareImage(ctx, image); err != nil {
@@ -44,6 +44,7 @@ func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *byt
 		return
 	}
 
+	start := time.Now()
 	if err = dc.StartContainer(c.ID, c.HostConfig); err != nil {
 		return
 	}
@@ -58,14 +59,17 @@ func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *byt
 	select {
 	case res = <-waitc:
 	case <-time.After(time.Minute):
-		return nil, nil, errors.New("execution timed out")
+		err = errors.New("execution timed out")
+		return
 	}
 
 	if res.Err != nil {
-		return nil, nil, res.Err
+		err = res.Err
+		return
 	}
+	end := time.Now()
 
-	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	err = dc.Logs(docker.LogsOptions{
 		Container:    c.ID,
 		OutputStream: stdout,
@@ -75,6 +79,13 @@ func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *byt
 	})
 	if err != nil {
 		return
+	}
+
+	testResult = model.SimpleTestResult{
+		Stdout: stdout.String(),
+		Stderr: stderr.String(),
+		Start:  start,
+		End:    end,
 	}
 
 	return

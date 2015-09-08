@@ -16,15 +16,10 @@ func init() {
 
 func simple(ctx context.Context, params map[string]string, sub model.KeyedSubmission) error {
 	log.Debugf(ctx, "Executing simple tester")
-	stdout, stderr, err := runner.Simple(ctx, sub)
-	log.Warningf(ctx, "%s %s %s", stdout, stderr, err)
+	str, err := runner.Simple(ctx, sub)
+	log.Warningf(ctx, "%#v %s", str, err)
 
-	j, _ := json.Marshal(struct {
-		Stdout string
-		Stderr string
-	}{
-		Stdout: stdout.String(),
-		Stderr: stderr.String(),
-	})
+	// FIXME(victorbalan): Error handling
+	j, _ := json.Marshal(str)
 	return ws.Write(sub.Key, j)
 }
