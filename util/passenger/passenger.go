@@ -159,6 +159,8 @@ func (p *Passenger) check(raw []byte) error {
 func (p *Passenger) IssueToken(ctx context.Context, token *model.Token) (string, error) {
 	now := time.Now()
 
+	token.Creation = now
+
 	if token.Expiry == (time.Time{}) {
 		token.Expiry = now.Add(defaultValidity)
 	} else {
