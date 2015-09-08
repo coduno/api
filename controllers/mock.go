@@ -12,102 +12,6 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
-func MockChallenge(w http.ResponseWriter, req *http.Request) {
-	ctx := appengine.NewContext(req)
-	q := model.NewQueryForCompany().Filter("Name =", "Coduno").Limit(1).KeysOnly()
-
-	var companies []model.Company
-
-	keys, err := q.GetAll(ctx, companies)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	coduno := keys[0]
-
-	taskOne, err := model.Task{
-		Assignment: model.Assignment{
-			Name:         "Hello, world!",
-			Description:  "This is the easiest program. It is the hello world of this challenge.",
-			Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
-			Duration:     time.Hour,
-			Endpoints: model.Endpoints{
-				WebInterface: "javaut-task",
-			},
-		},
-		SkillWeights: model.SkillWeights{1, 0, 0},
-	}.Put(ctx, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = model.Test{
-		Tester: int64(test.Simple),
-		Name:   "Useless name",
-	}.PutWithParent(ctx, taskOne)
-	if err != nil {
-		panic(err)
-	}
-
-	taskTwo, err := model.Task{
-		Assignment: model.Assignment{
-			Name:         "Sorting",
-			Description:  "This program will require some knowledge about algorithms.",
-			Instructions: "Implement a simple bubble sorter on numbers in a programming language of your choice.",
-			Duration:     time.Hour,
-			Endpoints: model.Endpoints{
-				WebInterface: "simple-code-task",
-			},
-		},
-		SkillWeights: model.SkillWeights{.1, .2, .3},
-		Languages:    []string{"java", "py"},
-	}.Put(ctx, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	model.Test{
-		Tester: int64(test.Simple),
-	}.PutWithParent(ctx, taskTwo)
-
-	taskThree, err := model.Task{
-		Assignment: model.Assignment{
-			Name:         "Some task",
-			Description:  "Description of some task",
-			Instructions: "Instructions of some task",
-			Duration:     time.Hour,
-			Endpoints: model.Endpoints{
-				WebInterface: "simple-code-task",
-			},
-		},
-		SkillWeights: model.SkillWeights{.1, .2, .3},
-		Languages:    []string{"java", "py"},
-	}.Put(ctx, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	model.Test{
-		Tester: int64(test.Simple),
-	}.PutWithParent(ctx, taskThree)
-
-	_, err = model.Challenge{
-		Assignment: model.Assignment{
-			Name:         "Sequential test",
-			Description:  "Description of sequential challenge",
-			Instructions: "Instructions of sequential challenge",
-			Duration:     time.Hour,
-			Endpoints: model.Endpoints{
-				WebInterface: "sequential-challenge",
-			},
-		},
-		Tasks: []*datastore.Key{taskOne, taskTwo, taskThree},
-	}.PutWithParent(ctx, coduno)
-	if err != nil {
-		panic(err)
-	}
-}
-
 func Mock(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 	pw, _ := password.Hash([]byte("passwordpassword"))
@@ -148,15 +52,6 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	model.User{
-		Address: mail.Address{
-			Name:    "Alin Mayer",
-			Address: "alin.mayer@gmail.com",
-		},
-		Nick:           "amayer",
-		HashedPassword: pw,
-	}.Put(ctx, nil)
-
 	lorenz, err := model.User{
 		Address: mail.Address{
 			Name:    "Lorenz Leutgeb",
@@ -185,26 +80,17 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		LastUpdate: time.Now(),
 	}.PutWithParent(ctx, lorenz)
 
-	model.User{
-		Address: mail.Address{
-			Name:    "Admin",
-			Address: "admin@cod.uno",
-		},
-		Nick:           "admin",
-		HashedPassword: pw,
-	}.PutWithParent(ctx, coduno)
-
 	taskOne, err := model.Task{
 		Assignment: model.Assignment{
-			Name:         "Task one",
-			Description:  "Description of task one",
-			Instructions: "Instructions of task one",
+			Name:         "Hello, world!",
+			Description:  "This is a welcome task to our platform. It is the easiest one so you can learn the ui and the workflow.",
+			Instructions: "Create a program that outputs 'Hello, world!' in a language of your preference.",
 			Duration:     time.Hour,
 			Endpoints: model.Endpoints{
-				WebInterface: "coding-task",
+				WebInterface: "output-match-task",
 			},
 		},
-		Languages:    []string{"py", "c"},
+		Languages:    []string{"java", "py", "c", "cpp"},
 		SkillWeights: model.SkillWeights{.1, .2, .3},
 	}.Put(ctx, nil)
 	if err != nil {
@@ -213,7 +99,10 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 
 	_, err = model.Test{
 		Tester: int64(test.Simple),
-		Name:   "Useless name",
+		Name:   "Hello world test",
+		Params: map[string]string{
+			"tests": "coduno-tests/helloworld",
+		},
 	}.PutWithParent(ctx, taskOne)
 	if err != nil {
 		panic(err)
@@ -221,16 +110,20 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 
 	taskTwo, err := model.Task{
 		Assignment: model.Assignment{
-			Name:         "Task two",
-			Description:  "Description of task two",
-			Instructions: "Instructions of task two",
-			Duration:     time.Hour,
+			Name: "Fizzbuzz",
+			Description: `Fizz buzz is a group word game for children to teach them about division.
+			 Players take turns to count incrementally, replacing any number divisible by three with the word 'fizz',
+			 and any number divisible by five with the word 'buzz'.`,
+			Instructions: `Your job is to create the 'fizzbuzz(int n)' function.
+			The n parameter represents the max number to wich you need to generate the fizzbuzz data.
+			The output needs to be separated by '\n'.`,
+			Duration: time.Hour,
 			Endpoints: model.Endpoints{
-				WebInterface: "simple-code-task",
+				WebInterface: "output-match-task",
 			},
 		},
 		SkillWeights: model.SkillWeights{.1, .2, .3},
-		Languages:    []string{"java", "py"},
+		Languages:    []string{"java", "py", "c", "cpp"},
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -238,20 +131,51 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 
 	model.Test{
 		Tester: int64(test.Simple),
+		Params: map[string]string{
+			"tests": "coduno-tests/fizzbuzz",
+		},
 	}.PutWithParent(ctx, taskTwo)
 
 	taskThree, err := model.Task{
 		Assignment: model.Assignment{
-			Name:         "Task three",
-			Description:  "Description of task three",
-			Instructions: "Instructions of task three",
+			Name: "N-Gram",
+			Description: `In the fields of computational linguistics and probability, an n-gram is a contiguous sequence
+			of n items from a given sequence of text or speech. The items can be phonemes, syllables, letters, words or base
+			pairs according to the application. The n-grams typically are collected from a text or speech corpus.`,
+			Instructions: `Your job is to create a function with the signature ngram(String content, int len)
+			and outputs the number of ngrams of length len.`,
+			Duration: time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "javaut-task",
+			},
+		},
+		SkillWeights: model.SkillWeights{.1, .2, .3},
+		Languages:    []string{"javaut"},
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	model.Test{
+		Tester: int64(test.Junit),
+		Params: map[string]string{
+			"tests":      "coduno-tests/ngram",
+			"resultPath": "/run/build/test-results/",
+		},
+	}.PutWithParent(ctx, taskThree)
+
+	taskFour, err := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Simple code run test",
+			Description:  "This is a mocked task for testing the simple code run.",
+			Instructions: "This task will not be tested against anything.",
 			Duration:     time.Hour,
 			Endpoints: model.Endpoints{
 				WebInterface: "simple-code-task",
 			},
 		},
 		SkillWeights: model.SkillWeights{.1, .2, .3},
-		Languages:    []string{"java", "py"},
+		Languages:    []string{"java", "py", "c", "cpp"},
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -259,32 +183,19 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 
 	model.Test{
 		Tester: int64(test.Simple),
-	}.PutWithParent(ctx, taskThree)
+	}.PutWithParent(ctx, taskFour)
 
 	_, err = model.Challenge{
 		Assignment: model.Assignment{
-			Name:         "Challenge one",
-			Description:  "Description of challenge one",
-			Instructions: "Instructions of challenge one yay",
-			Duration:     time.Hour,
+			Name:        "Coduno hiring challenge",
+			Description: "This is a hiring challenge for the Coduno company.",
+			Instructions: `You can select your preffered language from the languages
+			dropdown at every run your code will be tested so be careful with what you run.
+			You can finish anytime and start the next task but keep in mind that you will not be
+			able to get back to the previous task. Good luck!`,
+			Duration: time.Hour,
 			Endpoints: model.Endpoints{
 				WebInterface: "sequential-challenge",
-			},
-		},
-		Tasks: []*datastore.Key{taskThree},
-	}.PutWithParent(ctx, coduno)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = model.Challenge{
-		Assignment: model.Assignment{
-			Name:         "Challenge two",
-			Description:  "Description of challenge two",
-			Instructions: "Instructions of challenge two",
-			Duration:     time.Hour,
-			Endpoints: model.Endpoints{
-				WebInterface: "paralel-challenge",
 			},
 		},
 		Tasks: []*datastore.Key{
@@ -296,43 +207,4 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func MockCoduno(w http.ResponseWriter, req *http.Request) {
-	ctx := appengine.NewContext(req)
-	q := model.NewQueryForCompany().Filter("Name =", "Coduno").Limit(1).KeysOnly()
-
-	var companies []model.Company
-
-	keys, err := q.GetAll(ctx, companies)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	coduno := keys[0]
-
-	task, err := model.Task{
-		Assignment: model.Assignment{
-			Name:         "Hello, world!",
-			Description:  "This is the easiest program. It is the hello world of this challenge.",
-			Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
-			Duration:     time.Hour,
-			Endpoints: model.Endpoints{
-				WebInterface: "javaut-task",
-			},
-		},
-		Languages:    []string{"java", "py", "c", "cpp"},
-		SkillWeights: model.SkillWeights{1, 0, 0},
-	}.PutWithParent(ctx, coduno)
-	if err != nil {
-		panic(err)
-	}
-
-	model.Test{
-		Tester: int64(test.Junit),
-		Params: map[string]string{
-			"tests":      "coduno-tests/" + task.Encode(),
-			"resultPath": "/run/build/test-results/",
-		},
-	}.PutWithParent(ctx, task)
 }
