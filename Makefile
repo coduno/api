@@ -9,7 +9,7 @@ all: test
 	@go version
 
 	go build -x -v -o ${OUTPUT} \
-		-ldflags "-X main.Version '${VERSION}' -X main.BuildTime '${NOW}'"
+		-ldflags "-X main.Version='${VERSION}' -X main.BuildTime='${NOW}'"
 
 test: get
 	go test -v
