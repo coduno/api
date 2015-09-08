@@ -32,7 +32,7 @@ func MockChallenge(w http.ResponseWriter, req *http.Request) {
 			Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
 			Duration:     time.Hour,
 			Endpoints: model.Endpoints{
-				WebInterface: "simple-code-task",
+				WebInterface: "javaut-task",
 			},
 		},
 		SkillWeights: model.SkillWeights{1, 0, 0},
@@ -318,7 +318,7 @@ func MockCoduno(w http.ResponseWriter, req *http.Request) {
 			Instructions: "Implement a program that outputs \"Hello, world!\" in a programming language of your choice.",
 			Duration:     time.Hour,
 			Endpoints: model.Endpoints{
-				WebInterface: "simple-code-task",
+				WebInterface: "javaut-task",
 			},
 		},
 		Languages:    []string{"java", "py", "c", "cpp"},
@@ -329,6 +329,10 @@ func MockCoduno(w http.ResponseWriter, req *http.Request) {
 	}
 
 	model.Test{
-		Tester: int64(test.Simple),
+		Tester: int64(test.Junit),
+		Params: map[string]string{
+			"tests":      "coduno-tests/" + task.Encode(),
+			"resultPath": "/run/build/test-results/",
+		},
 	}.PutWithParent(ctx, task)
 }

@@ -3,13 +3,10 @@ package runner
 import (
 	"bytes"
 	"errors"
-	"os"
 	"path"
 	"time"
 
 	"golang.org/x/net/context"
-
-	"google.golang.org/appengine/log"
 
 	"github.com/coduno/api/model"
 	"github.com/fsouza/go-dockerclient"
@@ -20,47 +17,20 @@ type waitResult struct {
 	Err      error
 }
 
-func prepareImage(ctx context.Context, name string) error {
-	_, err := dc.InspectImage(name)
-
-	if err != nil {
-		return nil
-	}
-
-	if err != docker.ErrNoSuchImage {
-		return err
-	}
-
-	log.Warningf(ctx, "Missing image %s will be pulled. Expect severe delay!", name)
-
-	err = dc.PullImage(docker.PullImageOptions{
-		Repository:   name,
-		OutputStream: os.Stderr,
-	}, docker.AuthConfiguration{})
-
-	if err != nil {
-		log.Warningf(ctx, "Failed pulling image %s because of: %s", name, err)
-	}
-
-	return err
-}
-
 func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *bytes.Buffer, err error) {
 	image := newImage(sub.Language)
 
 	if err = prepareImage(ctx, image); err != nil {
-		return nil, nil, err
+		return
 	}
 
-	v, err := dc.CreateVolume(docker.CreateVolumeOptions{
-		Driver: "gcs",
-		Name:   sub.Code.Bucket + "/" + path.Dir(sub.Code.Name),
-	})
-	if err != nil {
-		return nil, nil, err
+	var v *docker.Volume
+	if v, err = createDockerVolume(sub.Code.Bucket + "/" + path.Dir(sub.Code.Name)); err != nil {
+		return
 	}
 
-	c, err := dc.CreateContainer(docker.CreateContainerOptions{
+	var c *docker.Container
+	c, err = dc.CreateContainer(docker.CreateContainerOptions{
 		Config: &docker.Config{
 			Image: newImage(sub.Language),
 		},
@@ -71,12 +41,11 @@ func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *byt
 		},
 	})
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	err = dc.StartContainer(c.ID, c.HostConfig)
-	if err != nil {
-		return nil, nil, err
+	if err = dc.StartContainer(c.ID, c.HostConfig); err != nil {
+		return
 	}
 
 	waitc := make(chan waitResult)
@@ -105,7 +74,7 @@ func Simple(ctx context.Context, sub model.KeyedSubmission) (stdout, stderr *byt
 		Stderr:       true,
 	})
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
 	return
