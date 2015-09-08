@@ -194,6 +194,8 @@ func (p *Passenger) IssueToken(ctx context.Context, token *model.Token) (string,
 	}
 	token.Digest = crypto.Hash(token.Hash).New().Sum(raw[:])
 
+	// TODO(flowlo): Set token.RemoteAddr.
+
 	clone := Passenger{
 		User:  p.User,
 		Token: token,
