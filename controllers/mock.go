@@ -7,14 +7,12 @@ import (
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/test"
-	"github.com/coduno/api/util/password"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 )
 
 func Mock(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
-	pw, _ := password.Hash([]byte("passwordpassword"))
 
 	coduno, err := model.Company{
 		Address: mail.Address{
@@ -32,7 +30,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Address: "victor.balan@cod.uno",
 		},
 		Nick:           "vbalan",
-		HashedPassword: pw,
+		HashedPassword: []byte{0x24, 0x32, 0x61, 0x24, 0x31, 0x30, 0x24, 0x42, 0x2e, 0x79, 0x5a, 0x2f, 0x4f, 0x6e, 0x41, 0x4d, 0x47, 0x71, 0x6f, 0x51, 0x76, 0x41, 0x61, 0x39, 0x49, 0x53, 0x79, 0x38, 0x2e, 0x5a, 0x4d, 0x2e, 0x38, 0x6d, 0x31, 0x41, 0x70, 0x4a, 0x45, 0x46, 0x48, 0x4c, 0x70, 0x5a, 0x75, 0x59, 0x6f, 0x56, 0x48, 0x67, 0x6e, 0x63, 0x34, 0x50, 0x6b, 0x42, 0x70, 0x47, 0x78, 0x4b},
 		Company:        coduno,
 	}.Put(ctx, nil)
 	if err != nil {
@@ -45,7 +43,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Address: "paul.bochis@cod.uno",
 		},
 		Nick:           "pbochis",
-		HashedPassword: pw,
+		HashedPassword: []byte{0x24, 0x32, 0x61, 0x24, 0x31, 0x30, 0x24, 0x5a, 0x6c, 0x6f, 0x4e, 0x57, 0x46, 0x6d, 0x6a, 0x6a, 0x73, 0x76, 0x71, 0x35, 0x55, 0x6b, 0x44, 0x36, 0x4f, 0x6e, 0x74, 0x49, 0x2e, 0x47, 0x75, 0x47, 0x49, 0x33, 0x6f, 0x6e, 0x43, 0x53, 0x59, 0x53, 0x56, 0x6c, 0x36, 0x6e, 0x59, 0x50, 0x70, 0x4c, 0x55, 0x71, 0x61, 0x6e, 0x53, 0x77, 0x37, 0x70, 0x64, 0x4b, 0x37, 0x53},
 		Company:        coduno,
 	}.Put(ctx, nil)
 	if err != nil {
@@ -58,7 +56,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Address: "lorenz.leutgeb@cod.uno",
 		},
 		Nick:           "flowlo",
-		HashedPassword: pw,
+		HashedPassword: []byte{0x24, 0x32, 0x61, 0x24, 0x31, 0x30, 0x24, 0x78, 0x4a, 0x2f, 0x4a, 0x65, 0x57, 0x74, 0x46, 0x33, 0x55, 0x72, 0x2e, 0x36, 0x59, 0x75, 0x35, 0x6f, 0x38, 0x52, 0x77, 0x47, 0x75, 0x32, 0x4a, 0x35, 0x47, 0x69, 0x58, 0x67, 0x55, 0x4b, 0x72, 0x68, 0x51, 0x4d, 0x4d, 0x61, 0x72, 0x75, 0x47, 0x65, 0x36, 0x2e, 0x69, 0x34, 0x73, 0x39, 0x73, 0x7a, 0x54, 0x70, 0x63, 0x79},
 		Company:        coduno,
 	}.Put(ctx, nil)
 	if err != nil {
@@ -66,17 +64,17 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	}
 
 	model.Profile{
-		Skills:     model.Skills{1, .5, 1},
+		Skills:     model.Skills{},
 		LastUpdate: time.Now(),
 	}.PutWithParent(ctx, victor)
 
 	model.Profile{
-		Skills:     model.Skills{.5, 1, 1},
+		Skills:     model.Skills{},
 		LastUpdate: time.Now(),
 	}.PutWithParent(ctx, paul)
 
 	model.Profile{
-		Skills:     model.Skills{1, 1, .5},
+		Skills:     model.Skills{},
 		LastUpdate: time.Now(),
 	}.PutWithParent(ctx, lorenz)
 
@@ -90,8 +88,12 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 				WebInterface: "output-match-task",
 			},
 		},
-		Languages:    []string{"java", "py", "c", "cpp"},
-		SkillWeights: model.SkillWeights{.1, .2, .3},
+		Languages: []string{"java", "py", "c", "cpp"},
+		SkillWeights: model.SkillWeights{
+			Algorithmics: 0,
+			Readability:  0,
+			Security:     0,
+		},
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -110,7 +112,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 
 	taskTwo, err := model.Task{
 		Assignment: model.Assignment{
-			Name: "Fizzbuzz",
+			Name: "Fizz Buzz",
 			Description: `Fizz buzz is a group word game for children to teach them about division.
 			 Players take turns to count incrementally, replacing any number divisible by three with the word 'fizz',
 			 and any number divisible by five with the word 'buzz'.`,
@@ -122,8 +124,12 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 				WebInterface: "output-match-task",
 			},
 		},
-		SkillWeights: model.SkillWeights{.1, .2, .3},
-		Languages:    []string{"java", "py", "c", "cpp"},
+		SkillWeights: model.SkillWeights{
+			Algorithmics: 0.2,
+			Readability:  0.3,
+			Security:     0,
+		},
+		Languages: []string{"java", "py", "c", "cpp"},
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -142,15 +148,18 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Description: `In the fields of computational linguistics and probability, an n-gram is a contiguous sequence
 			of n items from a given sequence of text or speech. The items can be phonemes, syllables, letters, words or base
 			pairs according to the application. The n-grams typically are collected from a text or speech corpus.`,
-			Instructions: `Your job is to create a function with the signature ngram(String content, int len)
-			and outputs the number of ngrams of length len.`,
-			Duration: time.Hour,
+			Instructions: "Your job is to create a function with the signature `int ngram(String text, int len)` and outputs the number of n-grams of length `len`.",
+			Duration:     time.Hour,
 			Endpoints: model.Endpoints{
 				WebInterface: "javaut-task",
 			},
 		},
-		SkillWeights: model.SkillWeights{.1, .2, .3},
-		Languages:    []string{"javaut"},
+		SkillWeights: model.SkillWeights{
+			Algorithmics: 0.3,
+			Readability:  0.2,
+			Security:     0,
+		},
+		Languages: []string{"java"},
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -159,8 +168,9 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	model.Test{
 		Tester: int64(test.Junit),
 		Params: map[string]string{
-			"tests":      "coduno-tests/ngram",
-			"resultPath": "/run/build/test-results/",
+			"tests":       "coduno-tests/ngram",
+			"resultPath":  "/run/build/test-results/",
+			"imageSuffix": "javaut",
 		},
 	}.PutWithParent(ctx, taskThree)
 
@@ -174,7 +184,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 				WebInterface: "simple-code-task",
 			},
 		},
-		SkillWeights: model.SkillWeights{.1, .2, .3},
+		SkillWeights: model.SkillWeights{},
 		Languages:    []string{"java", "py", "c", "cpp"},
 	}.Put(ctx, nil)
 	if err != nil {

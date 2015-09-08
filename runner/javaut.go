@@ -16,7 +16,10 @@ import (
 )
 
 func JUnit(ctx context.Context, params map[string]string, sub model.KeyedSubmission) (stdout, stderr *bytes.Buffer, testResults []model.UnitTestResults, err error) {
-	image := newImage("javaut")
+	image, ok := params["imageSuffix"]
+	if !ok {
+		image = newImage("javaut")
+	}
 
 	if err = prepareImage(ctx, image); err != nil {
 		return nil, nil, []model.UnitTestResults{}, err
