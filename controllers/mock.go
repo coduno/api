@@ -100,10 +100,12 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	}
 
 	_, err = model.Test{
-		Tester: int64(test.Simple),
+		Tester: int64(test.Diff),
 		Name:   "Hello world test",
 		Params: map[string]string{
-			"tests": "coduno-tests/helloworld",
+			// TODO(victorbalan): Extract params in constants
+			"bucket": "coduno-tests",
+			"tests":  "helloworld/helloworld",
 		},
 	}.PutWithParent(ctx, taskOne)
 	if err != nil {
@@ -136,9 +138,11 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	}
 
 	model.Test{
-		Tester: int64(test.Simple),
+		Tester: int64(test.IO),
 		Params: map[string]string{
-			"tests": "coduno-tests/fizzbuzz",
+			"bucket": "coduno-tests",
+			"input":  "fizzbuzz/fizzbuzin10^2 fizzbuzz/fizzbuzzin10^3 fizzbuzz/fizzbuzzin10^4",
+			"output": "fizzbuzz/fizzbuzz10^2 fizzbuzz/fizzbuzz10^3 fizzbuzz/fizzbuzz10^4",
 		},
 	}.PutWithParent(ctx, taskTwo)
 
@@ -168,7 +172,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	model.Test{
 		Tester: int64(test.Junit),
 		Params: map[string]string{
-			"tests":       "coduno-tests/ngram",
+			"tests":       "coduno-tests/ngram/AppTests.java",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 		},

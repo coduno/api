@@ -19,6 +19,7 @@ func junit(ctx context.Context, params map[string]string, sub model.KeyedSubmiss
 	stdout, stderr, utr, err := runner.JUnit(ctx, params, sub)
 	log.Warningf(ctx, "%s %s %s", stdout, stderr, err)
 
+	// FIXME(victorbalan): Error handling
 	j, _ := json.Marshal(struct {
 		Stdout  string
 		Stderr  string
