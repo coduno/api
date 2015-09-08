@@ -19,9 +19,12 @@ func init() {
 	var err error
 	if appengine.IsDevAppServer() {
 		dc, err = docker.NewClientFromEnv()
-		if err != nil {
-			panic(err)
-		}
+	} else {
+		// FIXME(flowlo)
+		dc, err = docker.NewClient("tcp://10.240.10.141:2375")
+	}
+	if err != nil {
+		panic(err)
 	}
 }
 
