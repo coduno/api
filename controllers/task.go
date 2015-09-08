@@ -79,17 +79,13 @@ func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (sta
 }
 
 func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if r.Method != "GET" {
-		return http.StatusMethodNotAllowed, nil
-	}
-
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, nil
 	}
 
 	var u model.User
-	if err = datastore.Get(ctx, p.User, &u); err != nil {
+	if err := datastore.Get(ctx, p.User, &u); err != nil {
 		return http.StatusInternalServerError, nil
 	}
 
@@ -98,6 +94,31 @@ func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status 
 		return http.StatusUnauthorized, nil
 	}
 
+	if r.Method == "GET" {
+		return getAllTasks(ctx, w, r)
+	}
+	if r.Method == "POST" {
+		return createTask(ctx, w, r)
+	}
+	return http.StatusMethodNotAllowed, nil
+}
+
+func createTask(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	var task model.Task
+
+	if err = json.NewDecoder(r.Body).Decode(&task); err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	key, err := task.Put(ctx, nil)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	json.NewEncoder(w).Encode(task.Key(key))
+	return http.StatusOK, nil
+}
+
+func getAllTasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	var tasks model.Tasks
 	taskKeys, err := model.NewQueryForTask().
 		GetAll(ctx, &tasks)
