@@ -18,6 +18,9 @@ before_install:
 
 deploy:
   provider: gae
+  edge:
+    source: flowlo/dpl
+    branch: gae-exp
   default: true
   docker_build: local
   on:
