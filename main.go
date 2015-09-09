@@ -33,7 +33,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/subscriptions", hsts(controllers.Subscriptions))
 
-	r.HandleFunc("/code/download", hsts(guard(controllers.Template)))
+	r.HandleFunc("/code/download/{name}/{language}", setup(controllers.Template))
 	r.HandleFunc("/invitations", setup(controllers.Invitation))
 
 	r.HandleFunc("/tokens", setup(controllers.Tokens))

@@ -8,10 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
-	"google.golang.org/cloud"
 	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
@@ -21,34 +19,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
-	"golang.org/x/oauth2/google"
 )
-
-var fileNames = map[string]string{
-	"py":   "app.py",
-	"c":    "app.c",
-	"cpp":  "app.cpp",
-	"java": "Application.java",
-}
-
-var cloudClient *http.Client
-
-func init() {
-	var err error
-	cloudClient, err = google.DefaultClient(context.Background())
-	if err != nil {
-		panic(err)
-	}
-}
-
-const projID = "coduno"
-
-func CloudContext(parent context.Context) context.Context {
-	if parent == nil {
-		return cloud.NewContext(projID, cloudClient)
-	}
-	return cloud.WithContext(parent, projID, cloudClient)
-}
 
 // PostSubmission creates a new submission.
 func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
@@ -141,16 +112,12 @@ func store(ctx context.Context, key *datastore.Key, code, language string) (mode
 	o := model.StoredObject{}
 
 	// We'll be storing code, so check what name the file should have in GCS.
-	fn, ok := fileNames[language]
+	fn, ok := util.FileNames[language]
 	if !ok {
 		return o, errors.New("language unknown")
 	}
 
-	submissionBucket := "coduno"
-
-	if appengine.IsDevAppServer() {
-		submissionBucket = "coduno-dev"
-	}
+	submissionBucket := util.SubmissionBucket()
 
 	// Now, construct the object.
 	o = model.StoredObject{
@@ -161,7 +128,7 @@ func store(ctx context.Context, key *datastore.Key, code, language string) (mode
 	// Upload the code to GCS.
 	// TODO(flowlo): Limit this writer, or limit the uploaded code
 	// at some previous point.
-	gcs := storage.NewWriter(CloudContext(ctx), o.Bucket, o.Name)
+	gcs := storage.NewWriter(util.CloudContext(ctx), o.Bucket, o.Name)
 	if gcs == nil {
 		return o, errors.New("cannot obtain writer to gcs")
 	}
