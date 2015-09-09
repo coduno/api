@@ -18,11 +18,8 @@ before_install:
 
 deploy:
   provider: gae
-  edge:
-    source: flowlo/dpl
-    branch: gae
   default: true
   docker_build: local
   on:
-    condition: "$(git describe --tags) = prod"
+    all_branches: true
     go: 1.5
