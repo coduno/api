@@ -12,6 +12,7 @@ import (
 	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
+	"github.com/coduno/api/util"
 	"github.com/fsouza/go-dockerclient"
 	"golang.org/x/net/context"
 )
@@ -102,7 +103,7 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 	}
 
 	var stdin io.ReadCloser
-	stdin, err = storage.NewReader(ctx, "coduno-tests", in)
+	stdin, err = storage.NewReader(util.CloudContext(ctx), "coduno-tests", in)
 	if err != nil {
 		return
 	}
@@ -164,7 +165,7 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 	}
 
 	var want io.ReadCloser
-	want, err = storage.NewReader(ctx, "coduno-tests", out)
+	want, err = storage.NewReader(util.CloudContext(ctx), "coduno-tests", out)
 	if err != nil {
 		return
 	}
@@ -193,7 +194,7 @@ func OutMatchDiffRun(ctx context.Context, params map[string]string, sub model.Ke
 	}
 
 	var want io.ReadCloser
-	want, err = storage.NewReader(ctx, params["bucket"], params["tests"])
+	want, err = storage.NewReader(util.CloudContext(ctx), params["bucket"], params["tests"])
 	if err != nil {
 		return
 	}
