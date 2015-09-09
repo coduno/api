@@ -85,8 +85,8 @@ func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status 
 	}
 
 	var u model.User
-	if err := datastore.Get(ctx, p.User, &u); err != nil {
-		return http.StatusInternalServerError, nil
+	if err = datastore.Get(ctx, p.User, &u); err != nil {
+		return http.StatusInternalServerError, err
 	}
 
 	// User is a coder
@@ -94,13 +94,14 @@ func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status 
 		return http.StatusUnauthorized, nil
 	}
 
-	if r.Method == "GET" {
+	switch r.Method {
+	case "GET":
 		return getAllTasks(ctx, w, r)
-	}
-	if r.Method == "POST" {
+	case "POST":
 		return createTask(ctx, w, r)
+	default:
+		return http.StatusMethodNotAllowed, nil
 	}
-	return http.StatusMethodNotAllowed, nil
 }
 
 func createTask(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
@@ -110,8 +111,8 @@ func createTask(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		return http.StatusBadRequest, err
 	}
 
-	key, err := task.Put(ctx, nil)
-	if err != nil {
+	var key *datastore.Key
+	if key, err = task.Put(ctx, nil); err != nil {
 		return http.StatusInternalServerError, err
 	}
 	json.NewEncoder(w).Encode(task.Key(key))
