@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"errors"
+	"io"
 	"io/ioutil"
 	"path"
 	"strings"
@@ -70,6 +71,7 @@ func diffRunner(ctx context.Context, test *model.Test, sub model.KeyedSubmission
 	// TODO(flowlo): Save result.
 	return nil
 }
+
 func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (testResult model.DiffTestResult, err error) {
 	image := newImage(sub.Language)
 
@@ -85,7 +87,9 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 	var c *docker.Container
 	c, err = dc.CreateContainer(docker.CreateContainerOptions{
 		Config: &docker.Config{
-			Image: newImage(sub.Language),
+			Image:     newImage(sub.Language),
+			OpenStdin: true,
+			StdinOnce: true,
 		},
 		HostConfig: &docker.HostConfig{
 			Privileged: false,
@@ -97,8 +101,8 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 		return
 	}
 
-	var input string
-	input, err = readStringFromGCS(ctx, "coduno-tests", in)
+	var stdin io.ReadCloser
+	stdin, err = storage.NewReader(ctx, "coduno-tests", in)
 	if err != nil {
 		return
 	}
@@ -110,7 +114,7 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 
 	err = dc.AttachToContainer(docker.AttachToContainerOptions{
 		Container:   c.ID,
-		InputStream: bytes.NewReader([]byte(input)),
+		InputStream: stdin,
 		Stdin:       true,
 		Stream:      true,
 	})
@@ -159,12 +163,17 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 		},
 	}
 
-	var testFile string
-	testFile, err = readStringFromGCS(ctx, "coduno-tests", out)
+	var want io.ReadCloser
+	want, err = storage.NewReader(ctx, "coduno-tests", out)
 	if err != nil {
 		return
 	}
-	diffLines, ok := diffLines(strings.Split(testFile, "\n"), strings.Split(testResult.Stdout, "\n"))
+
+	have := strings.NewReader(testResult.Stdout)
+	diffLines, ok, err := compare(want, have)
+	if err != nil {
+		return
+	}
 	if !ok {
 		return
 	}
@@ -183,12 +192,17 @@ func OutMatchDiffRun(ctx context.Context, params map[string]string, sub model.Ke
 		SimpleTestResult: str,
 	}
 
-	var testFile string
-	testFile, err = readStringFromGCS(ctx, params["bucket"], params["tests"])
+	var want io.ReadCloser
+	want, err = storage.NewReader(ctx, params["bucket"], params["tests"])
 	if err != nil {
 		return
 	}
-	diffLines, ok := diffLines(strings.Split(testFile, "\n"), strings.Split(str.Stdout, "\n"))
+
+	have := strings.NewReader(testResult.Stdout)
+	diffLines, ok, err := compare(want, have)
+	if err != nil {
+		return
+	}
 	if !ok {
 		return
 	}
@@ -196,29 +210,28 @@ func OutMatchDiffRun(ctx context.Context, params map[string]string, sub model.Ke
 	return
 }
 
-func diffLines(test, out []string) ([]int, bool) {
-	if len(test) != len(out) {
-		return []int{}, false
+func compare(want, have io.Reader) ([]int, bool, error) {
+	w, err := ioutil.ReadAll(want)
+	if err != nil {
+		return nil, false, err
+	}
+	h, err := ioutil.ReadAll(have)
+	if err != nil {
+		return nil, false, err
+	}
+	wb := bytes.Split(w, []byte("\n"))
+	hb := bytes.Split(h, []byte("\n"))
+
+	if len(wb) != len(hb) {
+		return nil, false, nil
 	}
 
 	var diff []int
-	for i := 0; i < len(out); i++ {
-		if out[i] != test[i] {
+	for i := 0; i < len(wb); i++ {
+		if bytes.Compare(wb[i], hb[i]) != 0 {
 			diff = append(diff, i)
 		}
 	}
-	return diff, true
-}
 
-func readStringFromGCS(ctx context.Context, bucket, file string) (string, error) {
-	rc, err := storage.NewReader(ctx, bucket, file)
-	if err != nil {
-		return "", err
-	}
-	buf, err := ioutil.ReadAll(rc)
-	rc.Close()
-	if err != nil {
-		return "", err
-	}
-	return string(buf), nil
+	return diff, true, nil
 }
