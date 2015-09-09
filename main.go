@@ -24,7 +24,18 @@ import (
 type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
 
 func main() {
-	go http.ListenAndServe(":8090", http.HandlerFunc(ws.Handle))
+	// FIXME(flowlo): Ultra hack.
+	go func(addr string, h http.Handler) {
+		var err error
+		if appengine.IsDevAppServer() {
+			err = http.ListenAndServe(addr, h)
+		} else {
+			err = http.ListenAndServeTLS(addr, "cod.uno.crt.pem", "cod.uno.key.pem", h)
+		}
+		if err != nil {
+			log.Warningf(context.Background(), "ws: %s", err)
+		}
+	}(":8090", http.HandlerFunc(ws.Handle))
 
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
 	http.HandleFunc("/cert", hsts(controllers.Certificate))
