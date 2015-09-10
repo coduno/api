@@ -97,9 +97,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	for _, t := range tests {
-		// TODO(flowlo): Make this execute concurrently and/or plumb
-		// all testers.
-		if err := test.Tester(t.Tester).Call(ctx, w, r, t.Params, *submission.Key(submissionKey)); err != nil {
+		if err := test.Tester(t.Tester).Call(ctx, t.Params, *submission.Key(submissionKey)); err != nil {
 			log.Warningf(ctx, "%s", err)
 			continue
 		}

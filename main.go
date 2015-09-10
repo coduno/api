@@ -8,6 +8,7 @@ import (
 
 	"github.com/coduno/api/controllers"
 	"github.com/coduno/api/util/passenger"
+	"github.com/coduno/api/ws"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
@@ -23,6 +24,19 @@ import (
 type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
 
 func main() {
+	// FIXME(flowlo): Ultra hack.
+	go func(addr string, h http.Handler) {
+		var err error
+		if appengine.IsDevAppServer() {
+			err = http.ListenAndServe(addr, h)
+		} else {
+			err = http.ListenAndServeTLS(addr, "cod.uno.crt.pem", "cod.uno.key.pem", h)
+		}
+		if err != nil {
+			log.Warningf(context.Background(), "ws: %s", err)
+		}
+	}(":8090", http.HandlerFunc(ws.Handle))
+
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
 	http.HandleFunc("/cert", hsts(controllers.Certificate))
 	http.HandleFunc("/status", hsts(controllers.Status))

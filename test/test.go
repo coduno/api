@@ -1,7 +1,6 @@
 package test
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/coduno/api/model"
@@ -11,7 +10,7 @@ import (
 
 type Tester int
 
-type TesterFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, params map[string]string, sub model.KeyedSubmission) error
+type TesterFunc func(ctx context.Context, params map[string]string, sub model.KeyedSubmission) error
 
 const (
 	Simple Tester = 1 + iota
@@ -31,11 +30,11 @@ func RegisterTester(t Tester, f TesterFunc) {
 }
 
 // Call looks up a registered Resulter and calls it.
-func (t Tester) Call(ctx context.Context, w http.ResponseWriter, r *http.Request, params map[string]string, sub model.KeyedSubmission) error {
+func (t Tester) Call(ctx context.Context, params map[string]string, sub model.KeyedSubmission) error {
 	if t > 0 && t < maxTester {
 		f := testers[t]
 		if f != nil {
-			return f(ctx, w, r, params, sub)
+			return f(ctx, params, sub)
 		}
 	}
 	panic("test: requested tester function #" + strconv.Itoa(int(t)) + " is unavailable")
