@@ -9,9 +9,9 @@ import "net/mail"
 // TODO(flowlo, victorbalan): In the future, the company
 // may point at Users to enable role based authentication.
 type Company struct {
-	mail.Address `datastore:",index"`
+	mail.Address `datastore:",index",json:",omitempty"`
 
 	// Unique name for this user, like analogous to @google
 	// on GitHub/Twitter/...
-	Nick string `datastore:",index"`
+	Nick string `datastore:",index",json:",omitempty"`
 }

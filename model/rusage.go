@@ -25,5 +25,5 @@ type Rusage struct {
 	Msgrcv,
 	Nsignals,
 	Nvcsw,
-	Nivcsw int64
+	Nivcsw int64 `json:",omitempty"`
 }

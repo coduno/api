@@ -18,14 +18,14 @@ type User struct {
 	// Datastore will split this into two properties
 	// called Name and Address, where Address must be
 	// guaranteed to be unique.
-	mail.Address `datastore:",index"`
+	mail.Address `datastore:",index",json:",omitempty"`
 
 	// Unique name for this user, like analogous to @flowlo
 	// on GitHub/Twitter/...
-	Nick string `datastore:",index"`
+	Nick string `datastore:",index",json:",omitempty"`
 
 	// Points to the company a user works for, if any.
-	Company *datastore.Key `datastore:",index"`
+	Company *datastore.Key `datastore:",index",json:",omitempty"`
 
 	// Hashed and salted password to be accessed by
 	// corresponding helpers in util.

@@ -23,10 +23,10 @@ type Challenge struct {
 	// affects the rendering of this Challenge with
 	// respect to the user. Therefore it must be
 	// guaranteed to be stable.
-	Tasks []*datastore.Key `datastore:",noindex"`
+	Tasks []*datastore.Key `datastore:",noindex",json:",omitempty"`
 
 	// The Resulter to use to compute skills (and
 	// therefore a Result) from the outcome of
 	// the Submissions to Tasks.
-	Resulter int `datastore:",noindex"`
+	Resulter int `datastore:",noindex",json:",omitempty"`
 }
