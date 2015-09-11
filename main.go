@@ -15,6 +15,7 @@ import (
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
+	"google.golang.org/cloud/compute/metadata"
 )
 
 // ContextHandlerFunc is similar to a http.HandlerFunc, but also gets passed
@@ -24,22 +25,12 @@ import (
 type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
 
 func main() {
-	// FIXME(flowlo): Ultra hack.
-	go func(addr string, h http.Handler) {
-		var err error
-		if appengine.IsDevAppServer() {
-			err = http.ListenAndServe(addr, h)
-		} else {
-			err = http.ListenAndServeTLS(addr, "cod.uno.crt.pem", "cod.uno.key.pem", h)
-		}
-		if err != nil {
-			log.Warningf(context.Background(), "ws: %s", err)
-		}
-	}(":8090", http.HandlerFunc(ws.Handle))
+	go http.ListenAndServe(":8090", http.HandlerFunc(ws.Handle))
 
 	http.HandleFunc("/_ah/mail/", controllers.ReceiveMail)
 	http.HandleFunc("/cert", hsts(controllers.Certificate))
 	http.HandleFunc("/status", hsts(controllers.Status))
+	http.HandleFunc("/ip", hsts(ip))
 
 	r := mux.NewRouter()
 	r.HandleFunc("/subscriptions", hsts(controllers.Subscriptions))
@@ -163,4 +154,16 @@ func guard(h ContextHandlerFunc) http.HandlerFunc {
 // the outside. It will wrap h in scure, cors and auth.
 func setup(h ContextHandlerFunc) http.HandlerFunc {
 	return hsts(cors(guard(auth(h))))
+}
+
+func ip(w http.ResponseWriter, r *http.Request) {
+	ip := "127.0.0.1"
+	if metadata.OnGCE() {
+		var err error
+		ip, err = metadata.ExternalIP()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+	w.Write([]byte(ip))
 }
