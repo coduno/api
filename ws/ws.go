@@ -2,7 +2,6 @@ package ws
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -44,13 +43,15 @@ type id struct {
 func init() {
 	if appengine.IsDevAppServer() {
 		upgrader.CheckOrigin = func(r *http.Request) bool {
-			log.Printf("Allowing origin %s", r.Header["Origin"])
 			return true
 		}
-		upgrader.Error = func(w http.ResponseWriter, r *http.Request, status int, reason error) {
-			log.Printf("WebSocket HTTP %d because of %s", status, reason)
-			http.Error(w, reason.Error(), status)
+	}
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		origin, ok := r.Header["Origin"]
+		if !ok {
+			return false
 		}
+		return origin[0] == "https://app.cod.uno"
 	}
 }
 
