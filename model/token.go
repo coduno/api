@@ -24,27 +24,27 @@ type Token struct {
 	//
 	//	hash := crypto.Hash(Token.Hash)
 	//
-	Hash int `datastore:",noindex"`
+	Hash int `datastore:",noindex",json:",omitempty"`
 
 	// The digest of this Token after hashing with above hash.
-	Digest []byte `datastore:",noindex"`
+	Digest []byte `datastore:",noindex",json:",omitempty"`
 
 	// If a User is authenticated using an Token, authorization
 	// can be granted to only a subset of possible actions. This slice
 	// acts as a filter and should list allowed scopes, i.e. permissions.
-	Scopes []string `datastore:",noindex"`
+	Scopes []string `datastore:",noindex",json:",omitempty"`
 
 	// Arbitrary string describing the use of this token. It can be
 	// automatically generated or set by the user.
-	Description string `datastore:",noindex"`
+	Description string `datastore:",noindex",json:",omitempty"`
 
 	// Time of creation.
-	Creation time.Time `datastore:",noindex"`
+	Creation time.Time `datastore:",noindex",json:",omitempty"`
 
 	// If an Token is seen after Expiry, it is to be deleted. This property
 	// is indexed to enable for grabage collection of expired Tokens.
-	Expiry time.Time `datastore:",index"`
+	Expiry time.Time `datastore:",index",json:",omitempty"`
 
 	// Address of the client that created this Token.
-	RemoteAddr string `datastore:",noindex"`
+	RemoteAddr string `datastore:",noindex",json:",omitempty"`
 }

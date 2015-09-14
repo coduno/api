@@ -22,6 +22,6 @@ import "time"
 // entity to User, so keys pointing to a Profile
 // can be used to obtain the user they represent.
 type Profile struct {
-	Skills     `datastore:",index"`
-	LastUpdate time.Time `datastore:",index"`
+	Skills     `datastore:",index",json:",omitempty"`
+	LastUpdate time.Time `datastore:",index",json:",omitempty"`
 }

@@ -7,7 +7,7 @@ package model
 type Skills struct {
 	Readability,
 	Security,
-	Algorithmics float64
+	Algorithmics float64 `json:",omitempty"`
 }
 
 // SkillWeights can be used to express what impact or

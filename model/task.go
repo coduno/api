@@ -20,7 +20,7 @@ type Task struct {
 	// of this task and produces a set of skills that
 	// represent how well the user did in doing this Task.
 	// It is to be weighted by SkillWeights.
-	Tasker    int
-	Template  string
-	Languages []string `datastore:",noindex"`
+	Tasker    int      `json:-`
+	Template  string   `json:",omitempty"`
+	Languages []string `datastore:",noindex",json:",omitempty"`
 }
