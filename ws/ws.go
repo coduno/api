@@ -26,79 +26,11 @@ const (
 
 var upgrader = websocket.Upgrader{HandshakeTimeout: 10 * time.Second}
 
-type conn struct {
-	ws   *websocket.Conn
-	send chan []byte
-}
-
-func newConn(ws *websocket.Conn) *conn {
-	return &conn{
-		ws:   ws,
-		send: make(chan []byte),
-	}
-}
-
-func (c *conn) writeMessage(data []byte) {
-	c.send <- data
-}
-
-func (c *conn) handlePong(_ string) error {
-	return c.ws.SetReadDeadline(time.Now().Add(pongWait))
-}
-
-func (c *conn) readLoop() {
-	defer c.ws.Close()
-	c.ws.SetReadLimit(512)
-	c.handlePong("")
-	c.ws.SetPongHandler(c.handlePong)
-	for {
-		_, _, err := c.ws.ReadMessage()
-		if err != nil {
-			// Ignore all incoming messages.
-			return
-		}
-	}
-}
-
-func (c *conn) write(messageType int, data []byte) error {
-	if err := c.ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-		return err
-	}
-	return c.ws.WriteMessage(messageType, data)
-}
-
-func (c *conn) writeLoop() {
-	defer c.ws.Close()
-
-	ticker := time.NewTicker(pingPeriod)
-	// Make sure ticker is stopped if we end writing for some reason.
-	defer ticker.Stop()
-
-	for {
-		select {
-		case message, ok := <-c.send:
-			if !ok {
-				m := []byte("Upstream channel was closed.")
-				c.write(websocket.CloseMessage, m)
-				return
-			}
-			if err := c.write(websocket.TextMessage, message); err != nil {
-				return
-			}
-		case t := <-ticker.C:
-			m := []byte(fmt.Sprintf("Tick %s", t.Format(time.RFC3339)))
-			if err := c.write(websocket.PingMessage, m); err != nil {
-				return
-			}
-		}
-	}
-}
-
 var conns = struct {
 	sync.RWMutex
-	m map[id]*conn
+	m map[id]*websocket.Conn
 }{
-	m: make(map[id]*conn),
+	m: make(map[id]*websocket.Conn),
 }
 
 type id struct {
@@ -148,42 +80,89 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn := newConn(ws)
+	id := ktoi(key)
 
 	conns.Lock()
-	conns.m[ktoi(key)] = conn
+	conns.m[ktoi(key)] = ws
 	conns.Unlock()
 
-	go conn.writeLoop()
-	conn.readLoop()
+	go ping(ws, id)
+
+	h := func(_ string) error {
+		return ws.SetReadDeadline(time.Now().Add(pongWait))
+	}
+
+	ws.SetReadLimit(512)
+	h("")
+	ws.SetPongHandler(h)
+	for {
+		// Ignore all incoming messages.
+		_, _, err := ws.ReadMessage()
+		if err != nil {
+			die(id)
+			return
+		}
+	}
+}
+
+func ping(ws *websocket.Conn, id id) {
+	for t := range time.Tick(pingPeriod) {
+		m := []byte(fmt.Sprint("Tick", t))
+		ws.SetWriteDeadline(time.Now().Add(writeWait))
+		if err := ws.WriteMessage(websocket.PingMessage, m); err != nil {
+			die(id)
+			return
+		}
+	}
 }
 
 // Write picks the right WebSocket to communicate with the user owning
 // the entity references by the passed key and writes data to the socket.
 func Write(key *datastore.Key, buf []byte) error {
-	conn := lookup(key)
+	id := ktoi(key)
+	ws := lookup(id)
 
-	if conn == nil {
+	if ws == nil {
 		return errors.New("ws: could not find associated WebSocket")
 	}
 
-	conn.writeMessage(buf)
-	return nil
-}
+	if err := ws.SetReadDeadline(time.Now().Add(writeWait)); err != nil {
+		die(id)
+		return err
+	}
 
-func lookup(key *datastore.Key) *conn {
-	conns.RLock()
-	defer conns.RUnlock()
-
-	for key != nil {
-		conn, ok := conns.m[ktoi(key)]
-		if ok {
-			return conn
-		}
-		key = key.Parent()
+	if err := ws.WriteMessage(websocket.TextMessage, buf); err != nil {
+		die(id)
+		return err
 	}
 
 	return nil
+}
+
+func Close(key *datastore.Key) error {
+	id := ktoi(key)
+	ws := lookup(id)
+
+	if ws == nil {
+		return errors.New("ws: could not find associated WebSocket")
+	}
+
+	die(id)
+
+	return ws.WriteMessage(websocket.CloseMessage, []byte{})
+}
+
+func lookup(id id) *websocket.Conn {
+	conns.RLock()
+	ws := conns.m[id]
+	conns.RUnlock()
+	return ws
+}
+
+func die(id id) {
+	conns.Lock()
+	delete(conns.m, id)
+	conns.Unlock()
 }
 
 func ktoi(key *datastore.Key) id {
