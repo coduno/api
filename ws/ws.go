@@ -45,6 +45,7 @@ func init() {
 		upgrader.CheckOrigin = func(r *http.Request) bool {
 			return true
 		}
+		return
 	}
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		origin, ok := r.Header["Origin"]
@@ -99,7 +100,6 @@ func Write(key *datastore.Key, buf []byte) error {
 }
 
 func reader(ws *websocket.Conn) {
-	defer ws.Close()
 	ws.SetReadLimit(512)
 	ws.SetReadDeadline(time.Now().Add(pongWait))
 	ws.SetPongHandler(func(string) error { ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
