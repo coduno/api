@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"io"
+	"io/ioutil"
 	"path"
 	"strings"
 	"time"
@@ -15,7 +16,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func JUnit(ctx context.Context, testFle string, sub model.KeyedSubmission) (testResults model.JunitTestResult, err error) {
+func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission) (testResults model.JunitTestResult, err error) {
 	image := newImage("javaut")
 
 	if err = prepareImage(image); err != nil {
@@ -28,11 +29,11 @@ func JUnit(ctx context.Context, testFle string, sub model.KeyedSubmission) (test
 	}
 
 	var testV *docker.Volume
-	if testV, err = createDockerVolume(util.TestsBucket + "/" + testFle); err != nil {
+	if testV, err = createDockerVolume(util.TestsBucket + "/" + testFile); err != nil {
 		return
 	}
 
-	binds := []string{v.Name + ":/run/src/main/java", testV.Name + ":/run/src/test/java"}
+	binds := []string{v.Name + ":/run/src/main/java", testV.Name + ":/run/src/test/java/" + testFile}
 	var c *docker.Container
 	if c, err = createDockerContainer(image, binds); err != nil {
 		return
@@ -47,28 +48,41 @@ func JUnit(ctx context.Context, testFle string, sub model.KeyedSubmission) (test
 		return
 	}
 	end := time.Now()
+
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	if stdout, stderr, err = getLogs(c.ID); err != nil {
 		return
 	}
 
+	errc := make(chan error)
 	pr, pw := io.Pipe()
 
-	err = dc.CopyFromContainer(docker.CopyFromContainerOptions{
-		Container:    c.ID,
-		Resource:     util.JUnitResultsPath,
-		OutputStream: pw,
-	})
+	go func() {
+		errc <- dc.DownloadFromContainer(c.ID, docker.DownloadFromContainerOptions{
+			Path:         util.JUnitResultsPath,
+			OutputStream: pw,
+		})
+	}()
+
+	// TODO(flowlo): encoding/xml can only parse XML 1.0, but JUnit
+	// reports are XML 1.1. It appears the reports are valid XML 1.0
+	// too, so this replaces the version attribute.
+	// As soon as encoding/xml can parse XML 1.1 we can remove this
+	// and directly stream without buffering.
+	var buf []byte
+	buf, err = ioutil.ReadAll(pr)
 	if err != nil {
 		return
 	}
+	buf = bytes.Replace(buf, []byte(`version="1.1"`), []byte(`version="1.0"`), 1)
 
-	tr := tar.NewReader(pr)
+	tr := tar.NewReader(bytes.NewReader(buf))
 	d := xml.NewDecoder(tr)
 	var h *tar.Header
 	for {
 		h, err = tr.Next()
 		if err == io.EOF {
+			err = nil
 			break
 		}
 		if err != nil {
@@ -90,5 +104,6 @@ func JUnit(ctx context.Context, testFle string, sub model.KeyedSubmission) (test
 			End:     end}
 	}
 
+	err = <-errc
 	return
 }
