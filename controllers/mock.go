@@ -5,6 +5,7 @@ import (
 	"net/mail"
 	"time"
 
+	"github.com/coduno/api/logic"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/test"
 	"google.golang.org/appengine"
@@ -164,6 +165,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Security:     0,
 		},
 		Languages: []string{"java"},
+		Tasker:    int64(logic.JunitTasker),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -172,7 +174,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	model.Test{
 		Tester: int64(test.Junit),
 		Params: map[string]string{
-			"tests":       "coduno-tests/ngram/AppTests.java",
+			"tests":       "ngram/AppTests.java",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 		},
@@ -217,6 +219,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			taskTwo,
 			taskThree,
 		},
+		Resulter: int64(logic.Average),
 	}.PutWithParent(ctx, coduno)
 	if err != nil {
 		panic(err)

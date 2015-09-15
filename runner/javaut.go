@@ -4,25 +4,22 @@ import (
 	"archive/tar"
 	"bytes"
 	"encoding/xml"
-	"errors"
 	"io"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/coduno/api/model"
+	"github.com/coduno/api/util"
 	"github.com/fsouza/go-dockerclient"
 	"golang.org/x/net/context"
 )
 
-func JUnit(ctx context.Context, params map[string]string, sub model.KeyedSubmission) (stdout, stderr *bytes.Buffer, testResults []model.UnitTestResults, err error) {
-	image, ok := params["imageSuffix"]
-	if !ok {
-		image = newImage("javaut")
-	}
+func JUnit(ctx context.Context, testFle string, sub model.KeyedSubmission) (testResults model.JunitTestResult, err error) {
+	image := newImage("javaut")
 
-	if err = prepareImage(ctx, image); err != nil {
-		return nil, nil, []model.UnitTestResults{}, err
+	if err = prepareImage(image); err != nil {
+		return
 	}
 
 	var v *docker.Volume
@@ -31,22 +28,13 @@ func JUnit(ctx context.Context, params map[string]string, sub model.KeyedSubmiss
 	}
 
 	var testV *docker.Volume
-	if testV, err = createDockerVolume(params["tests"]); err != nil {
+	if testV, err = createDockerVolume(util.TestsBucket + "/" + testFle); err != nil {
 		return
 	}
 
+	binds := []string{v.Name + ":/run/src/main/java", testV.Name + ":/run/src/test/java"}
 	var c *docker.Container
-	c, err = dc.CreateContainer(docker.CreateContainerOptions{
-		Config: &docker.Config{
-			Image: image,
-		},
-		HostConfig: &docker.HostConfig{
-			Privileged: false,
-			Memory:     0, // TODO(flowlo): Limit memory
-			Binds:      []string{v.Name + ":/run/src/main/java", testV.Name + ":/run/src/test/java"},
-		},
-	})
-	if err != nil {
+	if c, err = createDockerContainer(image, binds); err != nil {
 		return
 	}
 
@@ -55,32 +43,12 @@ func JUnit(ctx context.Context, params map[string]string, sub model.KeyedSubmiss
 		return
 	}
 
-	waitc := make(chan waitResult)
-	go func() {
-		exitCode, err := dc.WaitContainer(c.ID)
-		waitc <- waitResult{exitCode, err}
-	}()
-
-	var res waitResult
-	select {
-	case res = <-waitc:
-	case <-time.After(time.Minute):
-		return nil, nil, []model.UnitTestResults{}, errors.New("execution timed out")
+	if err = waitForContainer(c.ID); err != nil {
+		return
 	}
-
-	if res.Err != nil {
-		return nil, nil, []model.UnitTestResults{}, res.Err
-	}
-
-	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-	err = dc.Logs(docker.LogsOptions{
-		Container:    c.ID,
-		OutputStream: stdout,
-		ErrorStream:  stderr,
-		Stdout:       true,
-		Stderr:       true,
-	})
-	if err != nil {
+	end := time.Now()
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	if stdout, stderr, err = getLogs(c.ID); err != nil {
 		return
 	}
 
@@ -88,7 +56,7 @@ func JUnit(ctx context.Context, params map[string]string, sub model.KeyedSubmiss
 
 	err = dc.CopyFromContainer(docker.CopyFromContainerOptions{
 		Container:    c.ID,
-		Resource:     params["resultPath"],
+		Resource:     util.JUnitResultsPath,
 		OutputStream: pw,
 	})
 	if err != nil {
@@ -114,22 +82,12 @@ func JUnit(ctx context.Context, params map[string]string, sub model.KeyedSubmiss
 		if err = d.Decode(&utr); err != nil {
 			return
 		}
-		testResults = append(testResults, utr)
-	}
-	// TODO(victorbalan, flowlo): Get a single result to have the correct
-	// start and end time when we will do different runs for every file
-	// in the GCS bucket.
-	// Also, datastore.PutMulti could be used to insert as batch here.
-	for _, val := range testResults {
-		jtr := model.JunitTestResult{
+		testResults = model.JunitTestResult{
 			Stdout:  stdout.String(),
-			Results: val,
+			Results: utr,
 			Stderr:  stderr.String(),
 			Start:   start,
-			End:     time.Now()}
-		if _, err = jtr.Put(ctx, nil); err != nil {
-			return
-		}
+			End:     end}
 	}
 
 	return

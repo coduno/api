@@ -28,5 +28,5 @@ type Challenge struct {
 	// The Resulter to use to compute skills (and
 	// therefore a Result) from the outcome of
 	// the Submissions to Tasks.
-	Resulter int `datastore:",noindex",json:",omitempty"`
+	Resulter int64 `datastore:",noindex",json:",omitempty"`
 }

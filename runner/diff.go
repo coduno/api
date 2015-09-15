@@ -2,7 +2,6 @@ package runner
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"io/ioutil"
 	"path"
@@ -76,7 +75,7 @@ func diffRunner(ctx context.Context, test *model.Test, sub model.KeyedSubmission
 func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (testResult model.DiffTestResult, err error) {
 	image := newImage(sub.Language)
 
-	if err = prepareImage(ctx, image); err != nil {
+	if err = prepareImage(image); err != nil {
 		return
 	}
 
@@ -86,24 +85,12 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 	}
 
 	var c *docker.Container
-	c, err = dc.CreateContainer(docker.CreateContainerOptions{
-		Config: &docker.Config{
-			Image:     newImage(sub.Language),
-			OpenStdin: true,
-			StdinOnce: true,
-		},
-		HostConfig: &docker.HostConfig{
-			Privileged: false,
-			Memory:     0, // TODO(flowlo): Limit memory
-			Binds:      []string{v.Name + ":/run"},
-		},
-	})
-	if err != nil {
+	if c, err = createDockerContainer(image, []string{v.Name + ":/run"}); err != nil {
 		return
 	}
 
 	var stdin io.ReadCloser
-	stdin, err = storage.NewReader(util.CloudContext(ctx), "coduno-tests", in)
+	stdin, err = storage.NewReader(util.CloudContext(ctx), util.TestsBucket, in)
 	if err != nil {
 		return
 	}
@@ -123,35 +110,13 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 		return
 	}
 
-	waitc := make(chan waitResult)
-	go func() {
-		exitCode, err := dc.WaitContainer(c.ID)
-		waitc <- waitResult{exitCode, err}
-	}()
-
-	var res waitResult
-	select {
-	case res = <-waitc:
-	case <-time.After(time.Minute):
-		err = errors.New("execution timed out")
-		return
-	}
-
-	if res.Err != nil {
-		err = res.Err
+	if err = waitForContainer(c.ID); err != nil {
 		return
 	}
 	end := time.Now()
 
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	err = dc.Logs(docker.LogsOptions{
-		Container:    c.ID,
-		OutputStream: stdout,
-		ErrorStream:  stderr,
-		Stdout:       true,
-		Stderr:       true,
-	})
-	if err != nil {
+	if stdout, stderr, err = getLogs(c.ID); err != nil {
 		return
 	}
 
@@ -165,7 +130,7 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 	}
 
 	var want io.ReadCloser
-	want, err = storage.NewReader(util.CloudContext(ctx), "coduno-tests", out)
+	want, err = storage.NewReader(util.CloudContext(ctx), util.TestsBucket, out)
 	if err != nil {
 		return
 	}

@@ -9,7 +9,11 @@ var FileNames = map[string]string{
 	"java": "Application.java",
 }
 
-const TemplateBucket = "coduno-templates"
+const (
+	TemplateBucket   = "coduno-templates"
+	TestsBucket      = "coduno-tests"
+	JUnitResultsPath = "/run/build/test-results/"
+)
 
 func SubmissionBucket() string {
 	if appengine.IsDevAppServer() {
