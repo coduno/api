@@ -7,6 +7,7 @@ package model
 type Skills struct {
 	Readability,
 	Security,
+	CodingSpeed,
 	Algorithmics float64 `json:",omitempty"`
 }
 
@@ -19,6 +20,7 @@ func (s Skills) Add(skills Skills) Skills {
 		Readability:  skills.Readability + s.Readability,
 		Security:     skills.Security + s.Security,
 		Algorithmics: skills.Algorithmics + s.Algorithmics,
+		CodingSpeed:  skills.CodingSpeed + s.CodingSpeed,
 	}
 }
 
@@ -27,6 +29,7 @@ func (s Skills) Mul(skills Skills) Skills {
 		Readability:  skills.Readability * s.Readability,
 		Security:     skills.Security * s.Security,
 		Algorithmics: skills.Algorithmics * s.Algorithmics,
+		CodingSpeed:  skills.CodingSpeed * s.CodingSpeed,
 	}
 }
 
@@ -35,5 +38,6 @@ func (s Skills) Div(skills Skills) Skills {
 		Readability:  skills.Readability / s.Readability,
 		Security:     skills.Security / s.Security,
 		Algorithmics: skills.Algorithmics / s.Algorithmics,
+		CodingSpeed:  skills.CodingSpeed / s.CodingSpeed,
 	}
 }
