@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/log"
 	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
@@ -97,10 +96,10 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	for _, t := range tests {
-		if err := test.Tester(t.Tester).Call(ctx, t.Params, *submission.Key(submissionKey)); err != nil {
-			log.Warningf(ctx, "%s", err)
-			continue
-		}
+		go func() {
+			// TODO(victorbalan, flowlo): Error handling
+			test.Tester(t.Tester).Call(ctx, t.Params, *submission.Key(submissionKey))
+		}()
 	}
 
 	// TODO(flowlo): Return something meaningful.
