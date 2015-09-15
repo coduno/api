@@ -174,7 +174,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	model.Test{
 		Tester: int64(test.Junit),
 		Params: map[string]string{
-			"tests":       "ngram/AppTests.java",
+			"tests":       "ngram",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 		},

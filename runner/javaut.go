@@ -32,7 +32,7 @@ func JUnit(ctx context.Context, testFle string, sub model.KeyedSubmission) (test
 		return
 	}
 
-	binds := []string{v.Name + ":/run/src/main/java", testV.Name + ":/run/src/test/java"}
+	binds := []string{testV.Name + ":/run/src/test/java", v.Name + ":/run/src/main/java/"}
 	var c *docker.Container
 	if c, err = createDockerContainer(image, binds); err != nil {
 		return
@@ -42,11 +42,11 @@ func JUnit(ctx context.Context, testFle string, sub model.KeyedSubmission) (test
 	if err = dc.StartContainer(c.ID, c.HostConfig); err != nil {
 		return
 	}
-
 	if err = waitForContainer(c.ID); err != nil {
 		return
 	}
 	end := time.Now()
+
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	if stdout, stderr, err = getLogs(c.ID); err != nil {
 		return
@@ -54,14 +54,13 @@ func JUnit(ctx context.Context, testFle string, sub model.KeyedSubmission) (test
 
 	pr, pw := io.Pipe()
 
-	err = dc.CopyFromContainer(docker.CopyFromContainerOptions{
-		Container:    c.ID,
-		Resource:     util.JUnitResultsPath,
-		OutputStream: pw,
-	})
-	if err != nil {
-		return
-	}
+	go func() {
+		dc.CopyFromContainer(docker.CopyFromContainerOptions{
+			Container:    c.ID,
+			Resource:     util.JUnitResultsPath,
+			OutputStream: pw,
+		})
+	}()
 
 	tr := tar.NewReader(pr)
 	d := xml.NewDecoder(tr)
@@ -69,6 +68,7 @@ func JUnit(ctx context.Context, testFle string, sub model.KeyedSubmission) (test
 	for {
 		h, err = tr.Next()
 		if err == io.EOF {
+			err = nil
 			break
 		}
 		if err != nil {
