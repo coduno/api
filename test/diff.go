@@ -15,17 +15,23 @@ func init() {
 	RegisterTester(Diff, diff)
 }
 
-func diff(ctx context.Context, params map[string]string, sub model.KeyedSubmission) error {
+func diff(ctx context.Context, params map[string]string, sub model.KeyedSubmission) (err error) {
 	log.Debugf(ctx, "Executing diff tester")
 	if !checkDiffParams(params) {
 		return errors.New("params missing")
 	}
-	tr, err := runner.OutMatchDiffRun(ctx, params, sub)
-	log.Warningf(ctx, "%#v %s", tr, err)
-
-	// FIXME(victorbalan): Error handling
-	j, _ := json.Marshal(tr)
-	return ws.Write(sub.Key, j)
+	var tr model.DiffTestResult
+	if tr, err = runner.OutMatchDiffRun(ctx, params, sub); err != nil {
+		return
+	}
+	if _, err = tr.Put(ctx, nil); err != nil {
+		return
+	}
+	var body []byte
+	if body, err = json.Marshal(tr); err != nil {
+		return
+	}
+	return ws.Write(sub.Key, body)
 }
 
 func checkDiffParams(params map[string]string) (ok bool) {

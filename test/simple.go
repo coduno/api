@@ -14,12 +14,16 @@ func init() {
 	RegisterTester(Simple, simple)
 }
 
-func simple(ctx context.Context, params map[string]string, sub model.KeyedSubmission) error {
+func simple(ctx context.Context, params map[string]string, sub model.KeyedSubmission) (err error) {
 	log.Debugf(ctx, "Executing simple tester")
-	str, err := runner.Simple(ctx, sub)
-	log.Warningf(ctx, "%#v %s", str, err)
+	var str model.SimpleTestResult
+	if str, err = runner.Simple(ctx, sub); err != nil {
+		return
+	}
 
-	// FIXME(victorbalan): Error handling
-	j, _ := json.Marshal(str)
-	return ws.Write(sub.Key, j)
+	var body []byte
+	if body, err = json.Marshal(str); err != nil {
+		return
+	}
+	return ws.Write(sub.Key, body)
 }

@@ -166,8 +166,11 @@ func FinalSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return http.StatusInternalServerError, err
 	}
 
+	if len(r.URL.Query()["submissionKey"]) == 0 {
+		return http.StatusOK, nil
+	}
 	var submissionKey *datastore.Key
-	if submissionKey, err = datastore.DecodeKey(mux.Vars(r)["submissionKey"]); err != nil {
+	if submissionKey, err = datastore.DecodeKey(r.URL.Query()["submissionKey"][0]); err != nil {
 		return http.StatusInternalServerError, err
 	}
 

@@ -45,6 +45,7 @@ func init() {
 		upgrader.CheckOrigin = func(r *http.Request) bool {
 			return true
 		}
+		return
 	}
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		origin, ok := r.Header["Origin"]

@@ -140,7 +140,7 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 		return http.StatusInternalServerError, nil
 	}
 
-	if u.Company == nil && !util.HasParent(resultKey, p.User) {
+	if u.Company == nil && !util.HasParent(p.User, resultKey) {
 		return http.StatusUnauthorized, nil
 	}
 
