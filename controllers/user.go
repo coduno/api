@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/mail"
+	"time"
 
 	"encoding/json"
 
@@ -149,56 +150,52 @@ func getUsers(p *passenger.Passenger, ctx context.Context, w http.ResponseWriter
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
-
-	cckeys, err := model.NewQueryForChallenge().Ancestor(u.Company).KeysOnly().GetAll(ctx, nil)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	var resultKeys []*datastore.Key
-	for _, val := range cckeys {
-		rkeys, err := model.NewQueryForResult().Filter("Challenge =", val).KeysOnly().GetAll(ctx, nil)
-		if err != nil {
+	var state string
+	invitedUsers := make(map[*datastore.Key]string)
+	for _, invitation := range invitations {
+		if state, err = getUserState(ctx, invitation); err != nil {
 			return http.StatusInternalServerError, err
 		}
-		resultKeys = append(resultKeys, rkeys...)
+		invitedUsers[invitation.User] = state
 	}
 
-	var users model.Users
-	keys, err := model.NewQueryForUser().GetAll(ctx, &users)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
+	var usersWithState []keyedUserWithState
+	var user model.User
+	for key, state := range invitedUsers {
 
-	finishedUsers := make([]*datastore.Key, len(resultKeys))
-	for i := range resultKeys {
-		finishedUsers[i] = resultKeys[i].Parent().Parent()
-	}
-
-	// TODO(victorbalan): Don`t load invited users that have an result.
-	invitedUsers := make([]*datastore.Key, len(invitations))
-	for i, val := range invitations {
-		invitedUsers[i] = val.User
-	}
-	mappedStates := make(map[string]string)
-	for _, val := range invitedUsers {
-		mappedStates[val.Encode()] = "invited"
-	}
-	for _, val := range finishedUsers {
-		mappedStates[val.Encode()] = "coding"
-	}
-
-	usersWithState := make([]keyedUserWithState, len(users))
-	for i := range users {
-		usersWithState[i] = keyedUserWithState{
-			KeyedUser: &model.KeyedUser{
-				User: &users[i], Key: keys[i],
-			},
-			State: mappedStates[keys[i].Encode()],
+		if err = datastore.Get(ctx, key, &user); err != nil {
+			return http.StatusInternalServerError, err
 		}
+		usersWithState = append(usersWithState, keyedUserWithState{
+			KeyedUser: &model.KeyedUser{
+				User: &user,
+				Key:  key,
+			},
+			State: state,
+		})
 	}
 	json.NewEncoder(w).Encode(usersWithState)
 	return http.StatusOK, nil
+}
+
+func getUserState(ctx context.Context, invitation model.Invitation) (string, error) {
+	var profiles model.Profiles
+	var results model.Results
+	keys, err := model.NewQueryForProfile().Ancestor(invitation.User).GetAll(ctx, &profiles)
+	// Profile should have been created when the user was invited to perform the challenge.
+	if err != nil || len(keys) != 1 {
+		return "", err
+	}
+	if _, err := model.NewQueryForResult().Ancestor(keys[0]).GetAll(ctx, &results); err != nil {
+		return "", err
+	}
+	if len(results) == 0 {
+		return "invited", nil
+	}
+	if results[0].Started.Before(time.Now()) && results[0].Finished.IsZero() {
+		return "coding", nil
+	}
+	return "finished", nil
 }
 
 func alreadyExists(ctx context.Context, property, value string) (exists bool, err error) {
