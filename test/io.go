@@ -1,11 +1,12 @@
 package test
 
 import (
+	"encoding/json"
 	"errors"
-	"strings"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/runner"
+	"github.com/coduno/api/ws"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/log"
 )
@@ -14,19 +15,21 @@ func init() {
 	RegisterTester(IO, io)
 }
 
-func io(ctx context.Context, params map[string]string, sub model.KeyedSubmission) error {
+func io(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err error) {
 	log.Debugf(ctx, "Executing io tester")
-	if !checkIoParams(params) {
+	if !checkIoParams(t.Params) {
 		return errors.New("params missing")
 	}
-	in := strings.Split(params["input"], " ")
-	out := strings.Split(params["input"], " ")
-	for i := range in {
-		tr, err := runner.IODiffRun(ctx, in[i], out[i], sub)
-		log.Warningf(ctx, "%#v %s", tr, err)
-		// TODO(victorbalan, flowlo): pass back the results through ws
+	var ts model.TestStats
+	if ts, err = runner.IODiffRun(ctx, t, sub); err != nil {
+		return
 	}
-	return nil
+
+	var body []byte
+	if body, err = json.Marshal(ts); err != nil {
+		return err
+	}
+	return ws.Write(sub.Key, body)
 }
 
 func checkIoParams(params map[string]string) (ok bool) {

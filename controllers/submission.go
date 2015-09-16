@@ -88,7 +88,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	var tests model.Tests
-	_, err = model.NewQueryForTest().
+	testKeys, err := model.NewQueryForTest().
 		Ancestor(taskKey).
 		GetAll(ctx, &tests)
 
@@ -96,8 +96,8 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusInternalServerError, err
 	}
 
-	for _, t := range tests {
-		if err := test.Tester(t.Tester).Call(ctx, t.Params, *submission.Key(submissionKey)); err != nil {
+	for i, t := range tests {
+		if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey)); err != nil {
 			log.Warningf(ctx, "%s", err)
 			continue
 		}

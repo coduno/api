@@ -105,8 +105,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Name:   "Hello world test",
 		Params: map[string]string{
 			// TODO(victorbalan): Extract params in constants
-			"bucket": "coduno-tests",
-			"tests":  "helloworld/helloworld",
+			"tests": "helloworld/helloworld",
 		},
 	}.PutWithParent(ctx, taskOne)
 	if err != nil {
@@ -142,8 +141,26 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Tester: int64(test.IO),
 		Params: map[string]string{
 			"bucket": "coduno-tests",
-			"input":  "fizzbuzz/fizzbuzin10^2 fizzbuzz/fizzbuzzin10^3 fizzbuzz/fizzbuzzin10^4",
-			"output": "fizzbuzz/fizzbuzz10^2 fizzbuzz/fizzbuzz10^3 fizzbuzz/fizzbuzz10^4",
+			"input":  "fizzbuzz/fizzbuzzin10^2",
+			"output": "fizzbuzz/fizzbuzz10^2",
+		},
+	}.PutWithParent(ctx, taskTwo)
+
+	model.Test{
+		Tester: int64(test.IO),
+		Params: map[string]string{
+			"bucket": "coduno-tests",
+			"input":  "fizzbuzz/fizzbuzzin10^3",
+			"output": "fizzbuzz/fizzbuzz10^3",
+		},
+	}.PutWithParent(ctx, taskTwo)
+
+	model.Test{
+		Tester: int64(test.IO),
+		Params: map[string]string{
+			"bucket": "coduno-tests",
+			"input":  "fizzbuzz/fizzbuzzin10^4",
+			"output": "fizzbuzz/fizzbuzz10^4",
 		},
 	}.PutWithParent(ctx, taskTwo)
 
@@ -166,6 +183,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Languages: []string{"java"},
 		Tasker:    int64(logic.JunitTasker),
+		Template:  "ngram",
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -174,7 +192,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	model.Test{
 		Tester: int64(test.Junit),
 		Params: map[string]string{
-			"tests":       "ngram/AppTests.java",
+			"test":        "ngram/AppTests.java",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 		},

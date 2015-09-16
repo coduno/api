@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/appengine/datastore"
 	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
@@ -16,63 +17,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func diffRunner(ctx context.Context, test *model.Test, sub model.KeyedSubmission) error {
-	c, err := dc.CreateContainer(docker.CreateContainerOptions{
-		Config: &docker.Config{
-			// TODO(flowlo): Check if the language is known.
-			Image: newImage(sub.Language),
-		},
-		HostConfig: &docker.HostConfig{
-			Privileged: false,
-			Memory:     0, // TODO(flowlo): Limit memory
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	err = dc.StartContainer(c.ID, c.HostConfig)
-	if err != nil {
-		return err
-	}
-
-	stdout, stderr, stdin := new(bytes.Buffer), new(bytes.Buffer), new(bytes.Buffer)
-
-	err = dc.AttachToContainer(docker.AttachToContainerOptions{
-		Container:    c.ID,
-		OutputStream: stdout,
-		Stdout:       true,
-		Stream:       true,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = dc.AttachToContainer(docker.AttachToContainerOptions{
-		Container:    c.ID,
-		OutputStream: stderr,
-		Stderr:       true,
-		Stream:       true,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = dc.AttachToContainer(docker.AttachToContainerOptions{
-		Container:    c.ID,
-		OutputStream: stdin,
-		Stdin:        true,
-		Stream:       true,
-	})
-	if err != nil {
-		return err
-	}
-
-	// TODO(flowlo): Save result.
-	return nil
-}
-
-func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (testResult model.DiffTestResult, err error) {
+func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (ts model.TestStats, err error) {
 	image := newImage(sub.Language)
 
 	if err = prepareImage(image); err != nil {
@@ -85,12 +30,24 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 	}
 
 	var c *docker.Container
-	if c, err = createDockerContainer(image, []string{v.Name + ":/run"}); err != nil {
+	c, err = dc.CreateContainer(docker.CreateContainerOptions{
+		Config: &docker.Config{
+			Image:     image,
+			OpenStdin: true,
+			StdinOnce: true,
+		},
+		HostConfig: &docker.HostConfig{
+			Privileged: false,
+			Memory:     0, // TODO(flowlo): Limit memory
+			Binds:      []string{v.Name + ":/run"},
+		},
+	})
+	if err != nil {
 		return
 	}
 
 	var stdin io.ReadCloser
-	stdin, err = storage.NewReader(util.CloudContext(ctx), util.TestsBucket, in)
+	stdin, err = storage.NewReader(util.CloudContext(ctx), util.TestsBucket, t.Params["input"])
 	if err != nil {
 		return
 	}
@@ -120,7 +77,7 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 		return
 	}
 
-	testResult = model.DiffTestResult{
+	tr := model.DiffTestResult{
 		SimpleTestResult: model.SimpleTestResult{
 			Stdout: stdout.String(),
 			Stderr: stderr.String(),
@@ -129,50 +86,43 @@ func IODiffRun(ctx context.Context, in, out string, sub model.KeyedSubmission) (
 		},
 	}
 
-	var want io.ReadCloser
-	want, err = storage.NewReader(util.CloudContext(ctx), util.TestsBucket, out)
-	if err != nil {
-		return
-	}
-
-	have := strings.NewReader(testResult.Stdout)
-	diffLines, ok, err := compare(want, have)
-	if err != nil {
-		return
-	}
-	if !ok {
-		return
-	}
-	testResult.DiffLines = diffLines
-
-	return
+	return processDiffResults(ctx, tr, util.TestsBucket, t.Params["output"], t.Key)
 }
 
-func OutMatchDiffRun(ctx context.Context, params map[string]string, sub model.KeyedSubmission) (testResult model.DiffTestResult, err error) {
+func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (ts model.TestStats, err error) {
 	var str model.SimpleTestResult
 	str, err = Simple(ctx, sub)
 	if err != nil {
 		return
 	}
-	testResult = model.DiffTestResult{
+	tr := model.DiffTestResult{
 		SimpleTestResult: str,
 	}
 
+	return processDiffResults(ctx, tr, util.TestsBucket, t.Params["tests"], t.Key)
+}
+
+func processDiffResults(ctx context.Context, tr model.DiffTestResult, bucket, testFile string, test *datastore.Key) (ts model.TestStats, err error) {
 	var want io.ReadCloser
-	want, err = storage.NewReader(util.CloudContext(ctx), params["bucket"], params["tests"])
+	want, err = storage.NewReader(util.CloudContext(ctx), bucket, testFile)
 	if err != nil {
 		return
 	}
 
-	have := strings.NewReader(testResult.Stdout)
+	have := strings.NewReader(tr.Stdout)
 	diffLines, ok, err := compare(want, have)
 	if err != nil {
 		return
 	}
-	if !ok {
-		return
+	tr.DiffLines = diffLines
+
+	ts = model.TestStats{
+		Stdout: tr.Stdout,
+		Stderr: tr.Stderr,
+		Test:   test,
+		Failed: !ok,
 	}
-	testResult.DiffLines = diffLines
+	_, err = tr.Put(ctx, nil)
 	return
 }
 
