@@ -29,7 +29,7 @@ func diff(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (er
 	if body, err = json.Marshal(ts); err != nil {
 		return err
 	}
-	return ws.Write(sub.Key, body)
+	return ws.Write(sub.Key.Parent(), body)
 }
 
 func checkDiffParams(params map[string]string) (ok bool) {
