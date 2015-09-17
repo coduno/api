@@ -25,5 +25,5 @@ func simple(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (
 	if body, err = json.Marshal(str); err != nil {
 		return
 	}
-	return ws.Write(sub.Key, body)
+	return ws.Write(sub.Key.Parent(), body)
 }

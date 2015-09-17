@@ -31,7 +31,7 @@ func junit(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (e
 	if body, err = json.Marshal(tr); err != nil {
 		return
 	}
-	return ws.Write(sub.Key, body)
+	return ws.Write(sub.Key.Parent(), body)
 }
 
 func checkJunitParams(params map[string]string) (ok bool) {

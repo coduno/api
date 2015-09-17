@@ -29,7 +29,7 @@ func io(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err 
 	if body, err = json.Marshal(ts); err != nil {
 		return err
 	}
-	return ws.Write(sub.Key, body)
+	return ws.Write(sub.Key.Parent(), body)
 }
 
 func checkIoParams(params map[string]string) (ok bool) {
