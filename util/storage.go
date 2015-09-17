@@ -10,9 +10,11 @@ var FileNames = map[string]string{
 }
 
 const (
-	TemplateBucket   = "coduno-templates"
-	TestsBucket      = "coduno-tests"
-	JUnitResultsPath = "/run/build/test-results/"
+	TemplateBucket = "coduno-templates"
+	TestsBucket    = "coduno-tests"
+	// TODO(victorbalan): Add param in the test struct to not hardcode
+	// the result file name.
+	JUnitResultsPath = "/run/build/test-results/TEST-Tests.xml"
 )
 
 func SubmissionBucket() string {

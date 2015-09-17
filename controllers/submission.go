@@ -97,10 +97,12 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	for i, t := range tests {
-		if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey)); err != nil {
-			log.Warningf(ctx, "%s", err)
-			continue
-		}
+		go func() {
+			// TODO(victorbalan, flowlo): Error handling
+			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey)); err != nil {
+				log.Warningf(ctx, "%s", err)
+			}
+		}()
 	}
 
 	// TODO(flowlo): Return something meaningful.
