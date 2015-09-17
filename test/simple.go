@@ -14,7 +14,7 @@ func init() {
 	RegisterTester(Simple, simple)
 }
 
-func simple(ctx context.Context, params map[string]string, sub model.KeyedSubmission) (err error) {
+func simple(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err error) {
 	log.Debugf(ctx, "Executing simple tester")
 	var str model.SimpleTestResult
 	if str, err = runner.Simple(ctx, sub); err != nil {
