@@ -67,6 +67,7 @@ func main() {
 	r.HandleFunc("/users/{key}/profile", setup(controllers.GetProfileForUser))
 
 	r.HandleFunc("/tasks/{key}", setup(controllers.TaskByKey))
+	r.HandleFunc("/tasks/{key}/tests", setup(controllers.TestsByTaskKey))
 	r.HandleFunc("/tasks", setup(controllers.Tasks))
 
 	r.HandleFunc("/whoami", setup(controllers.WhoAmI))
