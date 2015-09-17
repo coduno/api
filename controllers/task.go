@@ -104,6 +104,31 @@ func Tasks(ctx context.Context, w http.ResponseWriter, r *http.Request) (status 
 	}
 }
 
+func TestsByTaskKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	_, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
+	taskKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	var tests model.Tests
+	var testKeys []*datastore.Key
+	if testKeys, err = model.NewQueryForTest().Ancestor(taskKey).GetAll(ctx, &tests); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	json.NewEncoder(w).Encode(tests.Key(testKeys))
+	return http.StatusOK, nil
+}
+
 func createTask(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	var task model.Task
 
