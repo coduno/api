@@ -1,8 +1,8 @@
 package ws
 
 import (
+	"crypto/rand"
 	"errors"
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -25,12 +25,12 @@ const (
 	// is declared dead and removed from the global pool.
 	pongWait = 30 * time.Second
 
-	// Send pings to client with this period. Must be less than pongWait.
+	// Send pings to client with this period. Must be less than pongWait to
+	// allow for a full roundtrip.
 	pingPeriod = (pongWait * 9) / 10
 )
 
-// ErrNoSocket is returned if there could be no WebSocket found for some
-// key.
+// ErrNoSocket is returned if there could be no WebSocket found for some key.
 var ErrNoSocket = errors.New("ws: could not find associated WebSocket")
 
 var upgrader = websocket.Upgrader{HandshakeTimeout: 10 * time.Second}
@@ -98,17 +98,24 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	conns.m[ktoi(key)] = ws
 	conns.Unlock()
 
+	// Advance deadline if we receive a pong.
+	// TODO(flowlo): maybe check whether the contents of the
+	// message actually match those of a pending ping.
+	ws.SetPongHandler(func(_ string) error {
+		return ws.SetReadDeadline(time.Now().Add(pongWait))
+	})
+
+	// Periodically ping the client, so the pong handler will
+	// advance the read deadline.
 	go ping(ws, id)
 
-	h := func(_ string) error {
-		return ws.SetReadDeadline(time.Now().Add(pongWait))
-	}
-
-	ws.SetReadLimit(512)
-	h("")
-	ws.SetPongHandler(h)
+	// Read infinitely. This is needed because otherwise
+	// our pong handler will never be triggered.
+	// Although we discard all application messages,
+	// errors need to be handled, i.e. in case the
+	// connection dies and times out, because no pong
+	// was reveived within pongWait.
 	for {
-		// Ignore all incoming messages.
 		_, _, err := ws.ReadMessage()
 		if err != nil {
 			die(id, err)
@@ -117,30 +124,36 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ping will loop infinitely and send ping messages over ws. If a write takes longer than
-// writeWait, it will remove ws from the connection pool.
+// ping will loop infinitely and send ping messages over ws. If a write takes
+// longer than writeWait, it will remove ws from the connection pool.
 func ping(ws *websocket.Conn, id id) {
-	for t := range time.Tick(pingPeriod) {
-		m := []byte(fmt.Sprint("Tick", t))
-		ws.SetWriteDeadline(time.Now().Add(writeWait))
-		if err := ws.WriteMessage(websocket.PingMessage, m); err != nil {
+	b := make([]byte, 2)
+	for range time.Tick(pingPeriod) {
+		rand.Read(b)
+		deadline := time.Now().Add(writeWait)
+		if err := ws.WriteControl(websocket.PingMessage, b, deadline); err != nil {
 			die(id, err)
 			return
 		}
+		log.Debugf(appengine.BackgroundContext(), "ws: ping %x for %v sent", b, id)
 	}
 }
 
 // lookup is a shorthand for synchronized read access on conns.m.
-func lookup(id id) *websocket.Conn {
+func lookup(id id) (*websocket.Conn, bool) {
 	conns.RLock()
-	ws := conns.m[id]
+	ws, ok := conns.m[id]
 	conns.RUnlock()
-	return ws
+	return ws, ok
 }
 
 // die removes the WebSocket references by id from the global pool and logs
-// that it did so.
+// that it did so. If there is no such WebSocket, it does nothing.
 func die(id id, err error) {
+	if _, ok := lookup(id); !ok {
+		return
+	}
+
 	log.Debugf(appengine.BackgroundContext(), "ws: connection for %v died: %s", id, err)
 	conns.Lock()
 	delete(conns.m, id)
@@ -162,13 +175,13 @@ func ktoi(key *datastore.Key) id {
 // the entity references by the passed key and writes data to the socket.
 func Write(key *datastore.Key, buf []byte) error {
 	id := ktoi(key)
-	ws := lookup(id)
+	ws, ok := lookup(id)
 
-	if ws == nil {
+	if !ok {
 		return ErrNoSocket
 	}
 
-	if err := ws.SetReadDeadline(time.Now().Add(writeWait)); err != nil {
+	if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 		die(id, err)
 		return err
 	}
@@ -183,18 +196,16 @@ func Write(key *datastore.Key, buf []byte) error {
 
 // Close closes the WebSocket associated with the given key. It does not take care of
 // messages currently being sent, and just roughly closes the underlying connection.
+// If the connection is already gone it will do nothing.
 func Close(key *datastore.Key) error {
 	id := ktoi(key)
-	ws := lookup(id)
-
-	if ws == nil {
-		return ErrNoSocket
+	ws, ok := lookup(id)
+	if !ok {
+		return nil
 	}
 
-	if err := ws.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-		die(id, err)
-		return err
-	}
+	err := ws.WriteMessage(websocket.CloseMessage, []byte{})
 
-	return nil
+	die(id, err)
+	return err
 }
