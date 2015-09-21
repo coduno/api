@@ -14,6 +14,11 @@ import (
 	"google.golang.org/appengine/log"
 )
 
+func init() {
+	router.HandleFunc("/tokens", setup(Tokens))
+	router.HandleFunc("/tokens/collect", setup(CollectTokens))
+}
+
 // Tokens will create new Tokens for the user.
 func Tokens(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "POST" {

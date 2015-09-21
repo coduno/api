@@ -6,6 +6,10 @@ import (
 	"google.golang.org/appengine"
 )
 
+func init() {
+	router.Handle("/cert", hsts(Certificate))
+}
+
 // Certificate will return all public certificates assigned by App Engine in PEM format.
 func Certificate(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
