@@ -20,6 +20,10 @@ import (
 var subscription *template.Template
 var SubTemplatePath string
 
+func init() {
+	router.HandleFunc("/subscriptions", hsts(Subscriptions))
+}
+
 func initSubTemplate() error {
 	if subscription != nil {
 		return nil

@@ -22,6 +22,10 @@ import (
 var invitation *template.Template
 var InvitationTemplatePath string
 
+func init() {
+	router.HandleFunc("/invitations", setup(Invitation))
+}
+
 func initInvitationTemplate() error {
 	if invitation != nil {
 		return nil

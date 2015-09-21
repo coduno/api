@@ -16,6 +16,10 @@ import (
 
 var echoMailFunc = delay.Func("echoMail", echoMail)
 
+func init() {
+	router.HandleFunc("/_ah/mail/", ReceiveMail)
+}
+
 func echoMail(ctx context.Context, m mail.Message) {
 	from, err := m.Header.AddressList("From")
 	if err != nil {

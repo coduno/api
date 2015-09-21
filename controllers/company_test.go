@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"encoding/json"
+	"net/http"
 	"net/mail"
 	"testing"
 
 	"github.com/coduno/api/model"
-	"github.com/coduno/api/tests/testUtils"
 
 	"google.golang.org/appengine/datastore"
 )
@@ -19,21 +19,20 @@ func TestPostCompany(t *testing.T) {
 		},
 	}
 
-	req, w := requestAndResponse(t, "POST", "/companies", company)
-	ctx = testUtils.LoginAsCompanyUser(t, ctx, req)
-	r.ServeHTTP(w, req)
-	testRequestStatusAndError(t, 200, nil)
+	r, err := http.NewRequest("POST", "/companies", requestBody(t, company))
+	if err != nil {
+		t.Fatal(err)
+	}
+	loginAsCompanyUser(r)
+	rr := record(t, r)
+	testRequestStatus(t, rr, 200, "Should be okay.")
 
 	// Check the entity the client recieves was indeed saved in the datastore.
 	var companyResponse = struct {
-		Name,
-		Address,
-		Nick,
-		Key string
+		Name, Address, Nick, Key string
 	}{}
-	var err error
 
-	if err = json.NewDecoder(w.Body).Decode(&companyResponse); err != nil {
+	if err = json.NewDecoder(rr.Body).Decode(&companyResponse); err != nil {
 		t.Fatal(err)
 	}
 
@@ -42,6 +41,8 @@ func TestPostCompany(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	ctx := backgroundContext()
 
 	var savedCompany model.Company
 
@@ -55,5 +56,4 @@ func TestPostCompany(t *testing.T) {
 	}
 
 	datastore.Delete(ctx, key)
-	ctx = testUtils.Logout(ctx)
 }

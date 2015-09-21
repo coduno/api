@@ -21,6 +21,15 @@ type keyedUserWithState struct {
 	State string
 }
 
+func init() {
+	router.HandleFunc("/user/company", setup(GetCompanyByUser))
+	router.HandleFunc("/user", setup(WhoAmI))
+	router.HandleFunc("/users", setup(User))
+	router.HandleFunc("/users/{key}", setup(GetUser))
+	router.HandleFunc("/users/{key}/profile", setup(GetProfileForUser))
+	router.HandleFunc("/whoami", setup(WhoAmI))
+}
+
 func User(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	p, ok := passenger.FromContext(ctx)
 	if !ok {

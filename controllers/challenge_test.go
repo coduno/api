@@ -1,31 +1,35 @@
 package controllers
 
 import (
+	"net/http"
 	"testing"
-
-	"github.com/coduno/api/tests/testUtils"
 )
 
 func TestGetChallengeByKey(t *testing.T) {
-	key := testUtils.ChallengeKey.Encode()
-	req, w := requestAndResponse(t, "GET", "/challenges/"+key, nil)
-	ctx = testUtils.LoginAsCompanyUser(t, ctx, req)
-	r.ServeHTTP(w, req)
-	testRequestStatus(t, 200, "Could not get challenge by key")
-	ctx = testUtils.Logout(ctx)
+	key := challengeKey.Encode()
+	r, err := http.NewRequest("GET", "/challenges/"+key, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loginAsCompanyUser(r)
+	rr := record(t, r)
+	testRequestStatus(t, rr, 200, "Could not get challenge by key")
 }
 
 func TestGetChallengeByKeyUnauthorized(t *testing.T) {
-	key := testUtils.ChallengeKey.Encode()
-	req, w := requestAndResponse(t, "GET", "/challenges/"+key, nil)
-	r.ServeHTTP(w, req)
-	testRequestStatus(t, 401, "Not logged in user should not be allowed query challenge")
+	key := challengeKey.Encode()
+	r := recordRequest(t, "GET", "/challenges/"+key, nil)
+	testRequestStatus(t, r, 401, "Not logged in user should not be allowed query challenge")
 }
 
 func TestGetChallengeByKeyBadKey(t *testing.T) {
-	key := "thisShouldDeffinetlyNotWork"
-	req, w := requestAndResponse(t, "GET", "/challenges/"+key, nil)
-	ctx = testUtils.LoginAsCompanyUser(t, ctx, req)
-	r.ServeHTTP(w, req)
-	testRequestStatus(t, 400, "That key should deffinetly not have been accepted")
+	key := "invalidKey"
+	r, err := http.NewRequest("GET", "/challenges/"+key, nil)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	loginAsCompanyUser(r)
+	rr := record(t, r)
+	testRequestStatus(t, rr, 400, "That key should definitely not have been accepted")
 }
