@@ -17,6 +17,7 @@ const (
 	Junit
 	Diff
 	IO
+	Robot
 	maxTester
 )
 

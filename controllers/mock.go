@@ -5,6 +5,8 @@ import (
 	"net/mail"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/coduno/api/logic"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/test"
@@ -236,6 +238,69 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			taskOne,
 			taskTwo,
 			taskThree,
+		},
+		Resulter: int64(logic.Average),
+	}.PutWithParent(ctx, coduno)
+	if err != nil {
+		panic(err)
+	}
+	MockFrequentisChallenge(ctx, coduno, w, req)
+}
+
+func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.ResponseWriter, req *http.Request) {
+	taskOne, err := model.Task{
+		Assignment: model.Assignment{
+			Name:        "CoinBot",
+			Description: "CoinBot is a simple remote-controlled robot. He is placed in a big hall, that contains coins. His task is to collect all coins and return to the position he started from.",
+			Instructions: `You are given an overview of the hall that ConBot is placed in.
+			  	Furthermore, you'll controll him by issuing simple commands. You can tell CoinBot to move forward, by using the "move n"
+			   	command where n is the number of fields he should move. Also, you can make him turn left or right
+		 			by using the commands "left" and "right" respectively. If CoinBot is at the location of a coin, you need to
+		 			instruct him to pick up the coin with the command "pick". You can make CoinBot carry out your commands by hitting the arrow.
+				 	If you do this repeatedly, it will cause a reset of the game, so that you always start with the same environment.
+			 		Once CoinBot has fulfilled his mission, you will automatically advance to the next task.`,
+			Duration: time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "canvas-game-task",
+			},
+		},
+		SkillWeights: model.SkillWeights{
+			Algorithmics: 0,
+			Readability:  0,
+			Security:     0,
+		},
+		Template: "robot",
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = model.Test{
+		Tester: int64(test.Robot),
+		Name:   "Robot test",
+		Params: map[string]string{
+			"tests": "robot/robot.json",
+		},
+	}.PutWithParent(ctx, taskOne)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = model.Challenge{
+		Assignment: model.Assignment{
+			Name:        "Frequentis hiring challenge",
+			Description: "This is a hiring challenge for the Frequentis company.",
+			Instructions: `You can select your preffered language from the languages
+			dropdown at every run your code will be tested so be careful with what you run.
+			You can finish anytime and start the next task but keep in mind that you will not be
+			able to get back to the previous task. Good luck!`,
+			Duration: time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "sequential-challenge",
+			},
+		},
+		Tasks: []*datastore.Key{
+			taskOne,
 		},
 		Resulter: int64(logic.Average),
 	}.PutWithParent(ctx, coduno)

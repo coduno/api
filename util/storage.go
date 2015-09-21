@@ -3,10 +3,11 @@ package util
 import "google.golang.org/appengine"
 
 var FileNames = map[string]string{
-	"py":   "app.py",
-	"c":    "app.c",
-	"cpp":  "app.cpp",
-	"java": "Application.java",
+	"py":    "app.py",
+	"c":     "app.c",
+	"cpp":   "app.cpp",
+	"java":  "Application.java",
+	"robot": "robot.json",
 }
 
 const (
