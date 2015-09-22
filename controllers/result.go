@@ -146,14 +146,14 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 
 	if result.Finished.Equal(time.Time{}) {
 		if util.HasParent(p.User, resultKey) {
-			return createFinalResult(ctx, w, resultKey, result)
+			return createFinalResult(ctx, w, *result.Key(resultKey))
 		}
 		var challenge model.Challenge
 		if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
 			return http.StatusInternalServerError, err
 		}
 		if u.Company != nil && result.Started.Add(challenge.Duration).Before(time.Now()) {
-			return createFinalResult(ctx, w, resultKey, result)
+			return createFinalResult(ctx, w, *result.Key(resultKey))
 		}
 	}
 
@@ -161,7 +161,7 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 	return http.StatusOK, nil
 }
 
-func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *datastore.Key, result model.Result) (int, error) {
+func createFinalResult(ctx context.Context, w http.ResponseWriter, result model.KeyedResult) (int, error) {
 	var challenge model.Challenge
 	if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
 		return http.StatusInternalServerError, nil
@@ -170,19 +170,19 @@ func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *da
 	result.Finished = time.Now()
 
 	for i, taskKey := range challenge.Tasks {
-		key, err := getLatestSubmissionKey(ctx, resultKey, taskKey)
+		key, err := getLatestSubmissionKey(ctx, result.Key, taskKey)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
 		result.FinalSubmissions[i] = key
 	}
-	key, err := result.Put(ctx, resultKey)
+	_, err := result.Put(ctx, result.Key)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
-	json.NewEncoder(w).Encode(result.Key(key))
+	json.NewEncoder(w).Encode(result)
 
-	go computeFinalScore(ctx, challenge, result, resultKey)
+	go computeFinalScore(ctx, result, challenge)
 
 	return http.StatusOK, nil
 }
@@ -204,8 +204,8 @@ func getLatestSubmissionKey(ctx context.Context, resultKey, taskKey *datastore.K
 	return keys[0], nil
 }
 
-func computeFinalScore(ctx context.Context, challenge model.Challenge, result model.Result, resultKey *datastore.Key) {
-	if err := logic.Resulter(challenge.Resulter).Call(ctx, resultKey); err != nil {
+func computeFinalScore(ctx context.Context, result model.KeyedResult, challenge model.Challenge) {
+	if err := logic.Resulter(challenge.Resulter).Call(ctx, result, challenge); err != nil {
 		log.Warningf(ctx, "resulter failed: %s", err.Error())
 	}
 }

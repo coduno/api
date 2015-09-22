@@ -3,9 +3,9 @@ package logic
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	"golang.org/x/net/context"
-	"google.golang.org/appengine/datastore"
 
 	"github.com/coduno/api/model"
 )
@@ -15,14 +15,14 @@ type Resulter int
 
 // ResulterFunc is a function that will compute skills for the referenced
 // Result. It will call Taskers of encapsulated tasks on demand.
-type ResulterFunc func(ctx context.Context, resultKey *datastore.Key) error
+type ResulterFunc func(ctx context.Context, result model.KeyedResult, challenge model.Challenge) error
 
 // Tasker is a reference to a unique implementation of a TaskerFunc.
 type Tasker int
 
 // TaskerFunc is a function that will compute task results for the given Task
 // and User.
-type TaskerFunc func(ctx context.Context, task, result, user *datastore.Key) (model.Skills, error)
+type TaskerFunc func(ctx context.Context, result model.KeyedResult, task model.KeyedTask, user model.User, startTime time.Time) (model.Skills, error)
 
 const (
 	// Average computes the weighted average over all task results. It is included
@@ -35,6 +35,7 @@ const (
 	// JunitTasker computes the skills for a specific task. It iterates
 	// over all the submissions.
 	JunitTasker Tasker = 1 + iota
+	DiffTasker
 	maxTasker
 )
 
@@ -60,22 +61,22 @@ func RegisterTasker(t Tasker, f TaskerFunc) {
 }
 
 // Call looks up a registered Resulter and calls it.
-func (r Resulter) Call(ctx context.Context, resultKey *datastore.Key) error {
+func (r Resulter) Call(ctx context.Context, result model.KeyedResult, challenge model.Challenge) error {
 	if r > 0 && r < maxResulter {
 		f := resulters[r]
 		if f != nil {
-			return f(ctx, resultKey)
+			return f(ctx, result, challenge)
 		}
 	}
 	panic("logic: requested resulter function #" + strconv.Itoa(int(r)) + " is unavailable")
 }
 
 // Call looks up a registered Tasker and calls it.
-func (t Tasker) Call(ctx context.Context, task, result, user *datastore.Key) (model.Skills, error) {
+func (t Tasker) Call(ctx context.Context, result model.KeyedResult, task model.KeyedTask, user model.User, startTime time.Time) (model.Skills, error) {
 	if t > 0 && t < maxTasker {
 		f := taskers[t]
 		if f != nil {
-			return f(ctx, task, result, user)
+			return f(ctx, result, task, user, startTime)
 		}
 	}
 	return model.Skills{}, errors.New("logic: requested tasker function #" + strconv.Itoa(int(t)) + " is unavailable")
