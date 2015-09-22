@@ -22,25 +22,27 @@ func averageResulter(ctx context.Context, resultKey *datastore.Key) error {
 	if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
 		return err
 	}
-
-	var tasks model.Tasks
-	if err := datastore.GetMulti(ctx, challenge.Tasks, &tasks); err != nil {
+	tasks := make([]model.Task, len(challenge.Tasks))
+	if err := datastore.GetMulti(ctx, challenge.Tasks, tasks); err != nil {
 		return err
 	}
 
-	weightSum := model.Skills{} // this could be SkillWeights, but would need more conversions
 	average := model.Skills{}
+
+	var nrOfComputations float64
 
 	for i, task := range tasks {
 		taskResult, err := Tasker(task.Tasker).Call(ctx, challenge.Tasks[i], resultKey, resultKey.Parent().Parent())
 		if err != nil {
-			return err
+			// TODO: ignore error for now. We`ll treat it after we have all the taskers available
+			//return err
+		} else {
+			average = average.Add(taskResult)
+			nrOfComputations++
 		}
-		average = average.Add(taskResult.Mul(model.Skills(task.SkillWeights)))
-		weightSum = weightSum.Add(model.Skills(task.SkillWeights))
 	}
 
-	result.Skills = average.Div(weightSum)
+	result.Skills = average.DivBy(nrOfComputations)
 	result.Computed = time.Now()
 
 	_, err := result.Put(ctx, resultKey)

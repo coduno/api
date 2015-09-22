@@ -13,7 +13,7 @@ import (
 func codingSpeed(submissions []model.Submission, task model.Task, startTime time.Time) (cs float64, err error) {
 	// TODO(victorbalan): Load it from the params map
 	nrOfTests := 5
-	userCodingTime := submissions[len(submissions)].Time.Sub(startTime)
+	userCodingTime := submissions[len(submissions)-1].Time.Sub(startTime)
 
 	var oldCode io.Reader
 	oldCode, err = readFromGCS(submissions[0].Code)

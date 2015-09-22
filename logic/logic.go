@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"errors"
 	"strconv"
 
 	"golang.org/x/net/context"
@@ -77,5 +78,5 @@ func (t Tasker) Call(ctx context.Context, task, result, user *datastore.Key) (mo
 			return f(ctx, task, result, user)
 		}
 	}
-	panic("logic: requested tasker function #" + strconv.Itoa(int(t)) + " is unavailable")
+	return model.Skills{}, errors.New("logic: requested tasker function #" + strconv.Itoa(int(t)) + " is unavailable")
 }
