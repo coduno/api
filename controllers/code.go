@@ -27,6 +27,8 @@ func Template(ctx context.Context, w http.ResponseWriter, r *http.Request) (int,
 		return http.StatusBadRequest, errors.New("template name missing")
 	}
 
+	// TODO(victorbalan): pass the template file and not just the folder
+	// so we can be more flexible with templates.
 	language := mux.Vars(r)["language"]
 	fileName, ok := util.FileNames[language]
 
