@@ -144,8 +144,8 @@ func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 		return http.StatusUnauthorized, nil
 	}
 
-	if result.Finished == (time.Time{}) {
-		if util.HasParent(resultKey, p.User) {
+	if result.Finished.Equal(time.Time{}) {
+		if util.HasParent(p.User, resultKey) {
 			return createFinalResult(ctx, w, resultKey, result)
 		}
 		var challenge model.Challenge
@@ -188,7 +188,7 @@ func createFinalResult(ctx context.Context, w http.ResponseWriter, resultKey *da
 }
 
 func getLatestSubmissionKey(ctx context.Context, resultKey, taskKey *datastore.Key) (*datastore.Key, error) {
-	keys, err := datastore.NewQuery("").
+	keys, err := model.NewQueryForSubmission().
 		Ancestor(resultKey).
 		Filter("Task =", taskKey).
 		Order("-Time").
@@ -199,7 +199,7 @@ func getLatestSubmissionKey(ctx context.Context, resultKey, taskKey *datastore.K
 		return nil, err
 	}
 	if len(keys) != 1 {
-		return nil, errors.New("found wrong number of final submissions")
+		return nil, nil
 	}
 	return keys[0], nil
 }

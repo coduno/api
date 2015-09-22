@@ -15,8 +15,8 @@ func junitTasker(ctx context.Context, taskKey, resultKey, userKey *datastore.Key
 	_, err = model.NewQueryForSubmission().
 		Ancestor(resultKey).
 		Filter("Task =", taskKey).
-		Order("Start").
-		GetAll(ctx, submissions)
+		Order("Time").
+		GetAll(ctx, &submissions)
 	if err != nil {
 		return
 	}
@@ -37,9 +37,11 @@ func junitTasker(ctx context.Context, taskKey, resultKey, userKey *datastore.Key
 	}
 
 	var cs float64
-	cs, err = codingSpeed(submissions, task, result.StartTimes[getTaskIndex(challenge, taskKey)])
-	if err != nil {
-		return
+	if len(submissions) > 0 {
+		cs, err = codingSpeed(submissions, task, result.StartTimes[getTaskIndex(challenge, taskKey)])
+		if err != nil {
+			return
+		}
 	}
 
 	skills.CodingSpeed = cs
