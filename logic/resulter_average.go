@@ -12,27 +12,22 @@ func init() {
 	RegisterResulter(Average, averageResulter)
 }
 
-func averageResulter(ctx context.Context, resultKey *datastore.Key) error {
-	var result model.Result
-	if err := datastore.Get(ctx, resultKey, &result); err != nil {
-		return err
-	}
-
-	var challenge model.Challenge
-	if err := datastore.Get(ctx, result.Challenge, &challenge); err != nil {
-		return err
-	}
+func averageResulter(ctx context.Context, result model.KeyedResult, challenge model.Challenge) error {
 	tasks := make([]model.Task, len(challenge.Tasks))
 	if err := datastore.GetMulti(ctx, challenge.Tasks, tasks); err != nil {
 		return err
 	}
 
-	average := model.Skills{}
+	var user model.User
+	if err := datastore.Get(ctx, result.Key.Parent().Parent(), &user); err != nil {
+		return err
+	}
 
 	var nrOfComputations float64
+	average := model.Skills{}
 
 	for i, task := range tasks {
-		taskResult, err := Tasker(task.Tasker).Call(ctx, challenge.Tasks[i], resultKey, resultKey.Parent().Parent())
+		taskResult, err := Tasker(task.Tasker).Call(ctx, result, *task.Key(challenge.Tasks[i]), user, result.StartTimes[getTaskIndex(challenge, challenge.Tasks[i])])
 		if err != nil {
 			// TODO: ignore error for now. We`ll treat it after we have all the taskers available
 			//return err
@@ -45,6 +40,6 @@ func averageResulter(ctx context.Context, resultKey *datastore.Key) error {
 	result.Skills = average.DivBy(nrOfComputations)
 	result.Computed = time.Now()
 
-	_, err := result.Put(ctx, resultKey)
+	_, err := result.Put(ctx, result.Key)
 	return err
 }

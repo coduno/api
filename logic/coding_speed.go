@@ -1,60 +1,9 @@
 package logic
 
 import (
-	"bytes"
 	"errors"
-	"io"
-	"io/ioutil"
 	"time"
-
-	"github.com/coduno/api/model"
 )
-
-func codingSpeed(submissions []model.Submission, task model.Task, startTime time.Time) (cs float64, err error) {
-	// TODO(victorbalan): Load it from the params map
-	nrOfTests := 5
-	userCodingTime := submissions[len(submissions)-1].Time.Sub(startTime)
-
-	var oldCode io.Reader
-	oldCode, err = readFromGCS(submissions[0].Code)
-	if err != nil {
-		return
-	}
-	var initialCode []byte
-	if initialCode, err = ioutil.ReadAll(oldCode); err != nil {
-		return
-	}
-	insDel := &InsDel{len(bytes.Split(initialCode, []byte("\n"))), 0}
-	// Iterate all submissions
-	for i := 1; i < len(submissions); i++ {
-		var newCode io.Reader
-		newCode, err = readFromGCS(submissions[i].Code)
-		if err != nil {
-			return
-		}
-		var id InsDel
-		if id, err = computeInsertedDeletedLines(newCode, oldCode); err != nil {
-			return
-		}
-		insDel.Add(id)
-
-		// TODO(victorbalan, flowlo): Take in account the nr of green/red tests
-		// var testResultKeys []*datastore.Key
-		// testResultKeys, err = model.NewQueryForJunitTestResult().
-		// 	Ancestor(submissionKeys[i]).
-		// 	Order("Start").
-		// 	GetAll(ctx, nil)
-		// if err != nil {
-		// 	return
-		// }
-		oldCode = newCode
-	}
-
-	return codingSpeedValue(len(submissions), nrOfTests,
-		userCodingTime, task.Assignment.Duration,
-		insDel.Inserted, insDel.Deleted,
-		0.4, 0.3, 0.3)
-}
 
 func codingSpeedValue(userSubmissions, nrOfTests int,
 	userCodingTime, maxCodingTime time.Duration,
@@ -79,6 +28,9 @@ func codingSpeedValue(userSubmissions, nrOfTests int,
 func nOfSubmissionsTest(s, t int) (x float64) {
 	if s == 1 {
 		return 1
+	}
+	if s == 0 || t == 0 {
+		return 0
 	}
 	x = 1 - float64(s)/(float64(t)*10)
 	if x < 0 {

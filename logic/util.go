@@ -21,6 +21,34 @@ func (id *InsDel) Add(insDel InsDel) {
 	id.Deleted += insDel.Deleted
 }
 
+func getInsertedDeleted(submissions []model.KeyedSubmission) (insDel *InsDel, err error) {
+	var oldCode io.Reader
+	oldCode, err = readFromGCS(submissions[0].Code)
+	if err != nil {
+		return
+	}
+	var initialCode []byte
+	if initialCode, err = ioutil.ReadAll(oldCode); err != nil {
+		return
+	}
+	insDel = &InsDel{len(bytes.Split(initialCode, []byte("\n"))), 0}
+	// Iterate all submissions
+	for i := 1; i < len(submissions); i++ {
+		var newCode io.Reader
+		newCode, err = readFromGCS(submissions[i].Code)
+		if err != nil {
+			return
+		}
+		var id InsDel
+		if id, err = computeInsertedDeletedLines(newCode, oldCode); err != nil {
+			return
+		}
+		insDel.Add(id)
+		oldCode = newCode
+	}
+	return
+}
+
 func computeInsertedDeletedLines(oldCodeR, newCodeR io.Reader) (id InsDel, err error) {
 	var i, d int
 	// TODO(flowlo): get rid of ReadAll

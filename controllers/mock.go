@@ -97,6 +97,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Readability:  0,
 			Security:     0,
 		},
+		Tasker: int64(logic.DiffTasker),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -134,6 +135,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 			Security:     0,
 		},
 		Languages: []string{"java", "py", "c", "cpp"},
+		Tasker:    int64(logic.DiffTasker),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
