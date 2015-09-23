@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/coduno/api/logic"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
@@ -122,6 +123,7 @@ func CreateChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	challenge := model.Challenge{
 		Assignment: body.Assignment,
+		Resulter:   int64(logic.Average),
 		Tasks:      keys,
 	}
 

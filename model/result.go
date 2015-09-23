@@ -21,7 +21,7 @@ type Result struct {
 	// Calculated by logic from the Challenge. If
 	// it is missing an average over all FinalSubmissions
 	// will be computed at best effort.
-	Skills `datastore:",index",json:",omitempty"`
+	Skills Skills `datastore:",index",json:",omitempty"`
 
 	// Challenge refers to the challenge that this
 	// result provides data for.
