@@ -16,6 +16,7 @@ const (
 	// TODO(victorbalan): Add param in the test struct to not hardcode
 	// the result file name.
 	JUnitResultsPath = "/run/build/test-results/TEST-Tests.xml"
+	StatsPath        = "/run/stats.log"
 )
 
 func SubmissionBucket() string {
