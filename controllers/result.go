@@ -91,6 +91,48 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 	return http.StatusOK, nil
 }
 
+func GetResultForUserChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
+	}
+	userKey, err := datastore.DecodeKey(mux.Vars(r)["userKey"])
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+	challengeKey, err := datastore.DecodeKey(mux.Vars(r)["challengeKey"])
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	keys, err := model.NewQueryForProfile().
+		Ancestor(userKey).
+		Limit(1).
+		KeysOnly().
+		GetAll(ctx, nil)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	if len(keys) != 1 {
+		return http.StatusNotFound, nil
+	}
+
+	var results model.Results
+	resultKeys, err := model.NewQueryForResult().
+		Filter("Challenge =", challengeKey).
+		Ancestor(keys[0]).
+		Limit(1).
+		GetAll(ctx, &results)
+
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	if len(resultKeys) != 1 {
+		return http.StatusNotFound, nil
+	}
+	json.NewEncoder(w).Encode(results[0].Key(resultKeys[0]))
+	return http.StatusOK, nil
+}
+
 // GetResultsByChallenge queries the results for a certain challenge to be reviewed by a company.
 func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Method != "GET" {
