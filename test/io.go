@@ -12,10 +12,10 @@ import (
 )
 
 func init() {
-	RegisterTester(IO, io)
+	RegisterTester(IO, iot)
 }
 
-func io(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err error) {
+func iot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err error) {
 	log.Debugf(ctx, "Executing io tester")
 	if !checkIoParams(t.Params) {
 		return errors.New("params missing")

@@ -3,18 +3,18 @@ package test
 import (
 	"encoding/json"
 	"errors"
-	goio "io"
+	"io"
 	"io/ioutil"
 	"path"
 	"strconv"
 	"strings"
 
+	"github.com/coduno/api/cache"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
 	"github.com/coduno/api/ws"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/log"
-	"google.golang.org/cloud/storage"
 )
 
 func init() {
@@ -23,12 +23,13 @@ func init() {
 
 func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err error) {
 	log.Debugf(ctx, "Executing robot tester")
-	var testMap, stdin goio.ReadCloser
-	if testMap, err = storage.NewReader(util.CloudContext(ctx), util.TemplateBucket, t.Params["tests"]); err != nil {
+	cctx := util.CloudContext(ctx)
+	var testMap, stdin io.Reader
+	if testMap, err = cache.PutGCS(cctx, util.TemplateBucket, t.Params["tests"]); err != nil {
 		return
 	}
 
-	if stdin, err = storage.NewReader(util.CloudContext(ctx), sub.Code.Bucket, path.Dir(sub.Code.Name)+"/"+util.FileNames["robot"]); err != nil {
+	if stdin, err = cache.PutGCS(cctx, sub.Code.Bucket, path.Dir(sub.Code.Name)+"/"+util.FileNames["robot"]); err != nil {
 		return
 	}
 	var testMapBytes, stdinBytes []byte
