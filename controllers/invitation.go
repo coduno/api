@@ -23,7 +23,7 @@ var invitation *template.Template
 var InvitationTemplatePath string
 
 func init() {
-	router.HandleFunc("/invitations", setup(Invitation))
+	router.Handle("/invitations", ContextHandlerFunc(Invitation))
 }
 
 func initInvitationTemplate() error {
@@ -32,10 +32,7 @@ func initInvitationTemplate() error {
 	}
 	var err error
 	invitation, err = template.ParseFiles(InvitationTemplatePath)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Invitation handles the creation of a new invitation and sends an e-mail to

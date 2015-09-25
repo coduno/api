@@ -22,12 +22,12 @@ type keyedUserWithState struct {
 }
 
 func init() {
-	router.HandleFunc("/user/company", setup(GetCompanyByUser))
-	router.HandleFunc("/user", setup(WhoAmI))
-	router.HandleFunc("/users", setup(User))
-	router.HandleFunc("/users/{key}", setup(GetUser))
-	router.HandleFunc("/users/{key}/profile", setup(GetProfileForUser))
-	router.HandleFunc("/whoami", setup(WhoAmI))
+	router.Handle("/user/company", ContextHandlerFunc(GetCompanyByUser))
+	router.Handle("/user", ContextHandlerFunc(WhoAmI))
+	router.Handle("/users", ContextHandlerFunc(User))
+	router.Handle("/users/{key}", ContextHandlerFunc(GetUser))
+	router.Handle("/users/{key}/profile", ContextHandlerFunc(GetProfileForUser))
+	router.Handle("/whoami", ContextHandlerFunc(WhoAmI))
 }
 
 func User(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {

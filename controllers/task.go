@@ -14,9 +14,9 @@ import (
 )
 
 func init() {
-	router.HandleFunc("/tasks/{key}", setup(TaskByKey))
-	router.HandleFunc("/tasks/{key}/tests", setup(TestsByTaskKey))
-	router.HandleFunc("/tasks", setup(Tasks))
+	router.Handle("/tasks/{key}", ContextHandlerFunc(TaskByKey))
+	router.Handle("/tasks/{key}/tests", ContextHandlerFunc(TestsByTaskKey))
+	router.Handle("/tasks", ContextHandlerFunc(Tasks))
 }
 
 // TaskByKey loads a task by key.

@@ -22,8 +22,8 @@ import (
 )
 
 func init() {
-	router.HandleFunc("/results/{resultKey}/tasks/{taskKey}/submissions", setup(PostSubmission))
-	router.HandleFunc("/results/{resultKey}/finalSubmissions/{index}", setup(FinalSubmission))
+	router.Handle("/results/{resultKey}/tasks/{taskKey}/submissions", ContextHandlerFunc(PostSubmission))
+	router.Handle("/results/{resultKey}/finalSubmissions/{index}", ContextHandlerFunc(FinalSubmission))
 }
 
 // PostSubmission creates a new submission.

@@ -41,7 +41,7 @@ var initTime time.Time
 
 func init() {
 	initTime = time.Now()
-	router.HandleFunc("/status", hsts(Status))
+	router.HandleFunc("/status", Status)
 }
 
 // Status gathers a quick overview of the system state

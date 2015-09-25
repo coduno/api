@@ -15,8 +15,8 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/coduno/api/model"
+	"github.com/coduno/api/util/passenger"
 	"github.com/coduno/api/util/password"
-	"github.com/coduno/engine/passenger"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/aetest"
 	"google.golang.org/appengine/datastore"

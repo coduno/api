@@ -8,7 +8,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/delay"
 	"google.golang.org/appengine/log"
 	appmail "google.golang.org/appengine/mail"
@@ -17,7 +16,7 @@ import (
 var echoMailFunc = delay.Func("echoMail", echoMail)
 
 func init() {
-	router.HandleFunc("/_ah/mail/", ReceiveMail)
+	router.Handle("/_ah/mail/", ContextHandlerFunc(ReceiveMail))
 }
 
 func echoMail(ctx context.Context, m mail.Message) {
@@ -43,24 +42,24 @@ func echoMail(ctx context.Context, m mail.Message) {
 }
 
 // ReceiveMail will receive an e-mail and echo it back to the sender.
-func ReceiveMail(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
+func ReceiveMail(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
 	m, err := mail.ReadMessage(r.Body)
 	if err != nil {
 		log.Errorf(ctx, "Failed reading a mail!")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	err = echoMailFunc.Call(ctx, m)
 	if err != nil {
 		log.Errorf(ctx, "Failed enqueing handler for a mail!")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
-	io.WriteString(w, "OK")
+	if _, err = io.WriteString(w, "OK"); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusOK, nil
 
 	// TODO(flowlo):
 	//  1. Check whether range m.Header.AddressList("From")

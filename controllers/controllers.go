@@ -1,17 +1,27 @@
 package controllers
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"runtime"
 	"strings"
 	"time"
 
-	"github.com/coduno/engine/passenger"
+	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine"
-	"google.golang.org/appengine/log"
 )
+
+// Holds routes to all controllers' handlers.
+var router = mux.NewRouter()
+
+func Handler() http.Handler {
+	return router
+}
 
 // ContextHandlerFunc is similar to a http.HandlerFunc, but also gets passed
 // the current context.
@@ -19,20 +29,49 @@ import (
 // code and an error. Still, the handler is allowed to write a response.
 type ContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request) (int, error)
 
-var router = mux.NewRouter()
+func (h ContextHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if p := recover(); p != nil {
+			deal(nil, w, r, http.StatusInternalServerError, errors.New(fmt.Sprint(p)))
+		}
+	}()
 
-func Handler() http.Handler {
-	return router
-}
-
-// hsts is a basic wrapper that takes care of tightly timed HSTS for all requests.
-// All outbound flows should be wrapped.
-func hsts(h http.HandlerFunc) http.HandlerFunc {
-	if appengine.IsDevAppServer() {
-		return h
+	ctx := appengine.NewContext(r)
+	hsts(w)
+	if !cors(w, r) {
+		return
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// Add authentication metadata.
+	ctx, err := passenger.NewContextFromRequest(ctx, r)
+
+	buf := bufferedResponseWriter{
+		b: new(bytes.Buffer),
+		w: w,
+		s: 0,
+	}
+
+	status, err := h(ctx, buf, r)
+
+	if status == 0 {
+		status = buf.s
+	}
+
+	// No error and a low status code means
+	// everything went well.
+	if err == nil && status < 400 {
+		if status == 0 {
+			status = http.StatusOK
+		}
+		buf.flush(status)
+		return
+	}
+
+	deal(ctx, w, r, status, err)
+}
+
+func hsts(w http.ResponseWriter) {
+	if !appengine.IsDevAppServer() {
 		// Protect against HTTP downgrade attacks by explicitly telling
 		// clients to use HTTPS.
 		// max-age is computed to match the expiration date of our TLS
@@ -42,66 +81,132 @@ func hsts(h http.HandlerFunc) http.HandlerFunc {
 		invalidity := time.Date(2017, time.July, 15, 8, 30, 21, 0, time.UTC)
 		maxAge := invalidity.Sub(time.Now()).Seconds()
 		w.Header().Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d", int(maxAge)))
-		h(w, r)
-	})
+	}
 }
 
 // Rudimentary CORS checking. See
 // https://developer.mozilla.org/docs/Web/HTTP/Access_control_CORS
-func cors(h http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
+func cors(w http.ResponseWriter, r *http.Request) bool {
+	origin := r.Header.Get("Origin")
 
-		if !appengine.IsDevAppServer() {
-			if origin == "" {
-				h(w, r)
-				return
-			}
-
-			if !strings.HasPrefix(origin, "https://app.cod.uno") {
-				http.Error(w, "Invalid CORS request", http.StatusUnauthorized)
-				return
-			}
-		}
-		w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-
-		if r.Method == "OPTIONS" {
-			w.Write([]byte("OK"))
-			return
-		}
-
-		h(w, r)
-	})
-}
-
-// auth is there to associate a user with the incoming request.
-func auth(h ContextHandlerFunc) ContextHandlerFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-		ctx, err = passenger.NewContextFromRequest(ctx, r)
-		if err != nil {
-			log.Warningf(ctx, "auth: "+err.Error())
-		}
-		return h(ctx, w, r)
+	// If the client has not provided it's origin, the
+	// request will be answered in any case.
+	if origin == "" {
+		return true
 	}
+
+	// Only allow our own origin if not on development server.
+	if !appengine.IsDevAppServer() && origin != "https://app.cod.uno" {
+		http.Error(w, "Invalid Origin", http.StatusUnauthorized)
+		return false
+	}
+
+	// We have a nice CORS established, so set appropriate headers.
+	// TODO(flowlo): Figure out how to send correct methods.
+	w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+
+	// If this is an OPTIONS request, we answer it
+	// immediately and do not bother higher level handlers.
+	if r.Method == "OPTIONS" {
+		w.Write([]byte("OK"))
+		return false
+	}
+
+	return true
 }
 
-func guard(h ContextHandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		status, err := h(appengine.NewContext(r), w, r)
-
-		if err != nil {
-			http.Error(w, err.Error(), status)
-		} else if status >= 400 {
-			http.Error(w, http.StatusText(status), status)
-		}
-	})
+type bufferedResponseWriter struct {
+	b *bytes.Buffer
+	w http.ResponseWriter
+	s int
 }
 
-// setup is the default wrapper for any ContextHandlerFunc that talks to
-// the outside. It will wrap h in scure, cors and auth.
-func setup(h ContextHandlerFunc) http.HandlerFunc {
-	return hsts(cors(guard(auth(h))))
+func (w bufferedResponseWriter) flush(status int) {
+	w.w.WriteHeader(status)
+	io.Copy(w.w, w.b)
+}
+
+func (w bufferedResponseWriter) WriteHeader(status int) {
+	w.s = status
+}
+
+func (w bufferedResponseWriter) Write(p []byte) (n int, err error) {
+	return w.b.Write(p)
+}
+
+func (w bufferedResponseWriter) Header() http.Header {
+	return w.w.Header()
+}
+
+type trace struct {
+	e error
+	t []byte
+}
+
+func (t trace) Error() string {
+	return fmt.Sprintf("%s\n%s", t.e, t.t)
+}
+
+// tracable wraps the passed error and generates a new error that will
+// expand into a full stack trace. Be aware that this is expensive,
+// as it will stop the world to collect the trace, and should be
+// used with caution!
+func tracable(err error) error {
+	r := trace{
+		e: err,
+		t: make([]byte, 4096),
+	}
+	runtime.Stack(r.t, false)
+	return r
+}
+
+// deal makes the response in error cases somewhat nicer. It will try
+// to figure out what actually went wrong and inform the user.
+// It should not be called if the request went fine. If status is below
+// 400, and err is not nil, it will assume an internal server error.
+// Generally, if you pass a nil error, don't expect deal to do anything
+// useful.
+func deal(ctx context.Context, w http.ResponseWriter, r *http.Request, status int, err error) {
+	// Getting an error and a status code blow 400 is somewhat paradox.
+	// Also, if the status is the zero value, assume that we're dealing
+	// with an internal server error.
+	if err != nil && status < 400 || status == 0 {
+		status = http.StatusInternalServerError
+	}
+
+	msg := "Sorry, Coduno encountered an error: " + http.StatusText(status) + "\n\n"
+	msg += "If you think this is a bug, please consider filing\n"
+	msg += "it at https://github.com/coduno/api/issues\n\n"
+
+	if ctx != nil {
+		msg += "Your request ID is " + appengine.RequestID(ctx) + " (important to track down what went wrong)\n\n"
+	}
+
+	// If we don't have an error it's really hard to make sense.
+	if err == nil {
+		w.WriteHeader(status)
+		w.Write([]byte(msg))
+		return
+	}
+
+	if t, ok := err.(trace); ok {
+		msg += "Trace:\n"
+		msg += strings.Replace(string(t.t), "\n", "\n\t", -1)
+		msg += "\n"
+		err = t.e
+	}
+
+	if appengine.IsOverQuota(err) {
+		msg += "Reason: Over Quota"
+	} else if appengine.IsTimeoutError(err) {
+		msg += "Reason: Timeout Error"
+	} else {
+		msg += fmt.Sprintf("Reason: %s", err)
+	}
+
+	w.WriteHeader(status)
+	w.Write([]byte(msg))
 }

@@ -314,11 +314,6 @@ func NewContext(ctx context.Context, p *Passenger) context.Context {
 	return context.WithValue(ctx, passengerKey, p)
 }
 
-// ClearContext returns a new Context that carries no passenger.
-func ClearContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, passengerKey, nil)
-}
-
 // NewContextFromRequest wraps FromRequest and NewContext.
 func NewContextFromRequest(ctx context.Context, r *http.Request) (context.Context, error) {
 	p, err := FromRequest(ctx, r)

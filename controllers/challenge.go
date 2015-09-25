@@ -13,9 +13,9 @@ import (
 )
 
 func init() {
-	router.HandleFunc("/challenges", setup(CreateChallenge))
-	router.HandleFunc("/challenges/{key}", setup(ChallengeByKey))
-	router.HandleFunc("/challenges/{key}/results", setup(GetResultsByChallenge))
+	router.Handle("/challenges", ContextHandlerFunc(CreateChallenge))
+	router.Handle("/challenges/{key}", ContextHandlerFunc(ChallengeByKey))
+	router.Handle("/challenges/{key}/results", ContextHandlerFunc(GetResultsByChallenge))
 }
 
 // ChallengeByKey loads a challenge by key.

@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	router.HandleFunc("/code/download/{name}/{language}", setup(Template))
+	router.Handle("/code/download/{name}/{language}", ContextHandlerFunc(Template))
 }
 
 // Template serves the contents of a static file to a client.

@@ -18,9 +18,9 @@ import (
 )
 
 func init() {
-	router.HandleFunc("/results", setup(CreateResult))
-	router.HandleFunc("/results/{resultKey}", setup(GetResult))
-	router.HandleFunc("/results/user/{userKey}/challenge/{challengeKey}", setup(GetResultForUserChallenge))
+	router.Handle("/results", ContextHandlerFunc(CreateResult))
+	router.Handle("/results/{resultKey}", ContextHandlerFunc(GetResult))
+	router.Handle("/results/user/{userKey}/challenge/{challengeKey}", ContextHandlerFunc(GetResultForUserChallenge))
 }
 
 // CreateResult saves a new result when a coder starts a challenge.

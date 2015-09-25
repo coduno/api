@@ -13,9 +13,9 @@ import (
 )
 
 func init() {
-	router.HandleFunc("/companies", setup(PostCompany))
-	router.HandleFunc("/companies/{key}/challenges", setup(GetChallengesForCompany))
-	router.HandleFunc("/companies/{key}/users", setup(GetUsersByCompany))
+	router.Handle("/companies", ContextHandlerFunc(PostCompany))
+	router.Handle("/companies/{key}/challenges", ContextHandlerFunc(GetChallengesForCompany))
+	router.Handle("/companies/{key}/users", ContextHandlerFunc(GetUsersByCompany))
 }
 
 // PostCompany creates a new company after validating by key.

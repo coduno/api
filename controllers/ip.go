@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	http.HandleFunc("/ip", hsts(ip))
+	http.HandleFunc("/ip", ip)
 }
 
 func ip(w http.ResponseWriter, r *http.Request) {

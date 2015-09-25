@@ -21,7 +21,7 @@ var subscription *template.Template
 var SubTemplatePath string
 
 func init() {
-	router.HandleFunc("/subscriptions", hsts(Subscriptions))
+	router.HandleFunc("/subscriptions", Subscriptions)
 }
 
 func initSubTemplate() error {
@@ -30,10 +30,7 @@ func initSubTemplate() error {
 	}
 	var err error
 	subscription, err = template.ParseFiles(SubTemplatePath)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 type Subscription struct {

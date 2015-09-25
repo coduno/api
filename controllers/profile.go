@@ -16,9 +16,9 @@ import (
 )
 
 func init() {
-	router.HandleFunc("/profiles/{key}", setup(GetProfileByKey))
-	router.HandleFunc("/profiles/{key}", setup(DeleteProfile))
-	router.HandleFunc("/profiles/{key}/challenges", setup(GetChallengesForProfile))
+	router.Handle("/profiles/{key}", ContextHandlerFunc(GetProfileByKey))
+	router.Handle("/profiles/{key}", ContextHandlerFunc(DeleteProfile))
+	router.Handle("/profiles/{key}/challenges", ContextHandlerFunc(GetChallengesForProfile))
 }
 
 func GetProfileByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {

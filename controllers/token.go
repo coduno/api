@@ -15,8 +15,8 @@ import (
 )
 
 func init() {
-	router.HandleFunc("/tokens", setup(Tokens))
-	router.HandleFunc("/tokens/collect", setup(CollectTokens))
+	router.Handle("/tokens", ContextHandlerFunc(Tokens))
+	router.Handle("/tokens/collect", ContextHandlerFunc(CollectTokens))
 }
 
 // Tokens will create new Tokens for the user.
