@@ -17,6 +17,12 @@ import (
 	"golang.org/x/net/context"
 )
 
+func init() {
+	router.Handle("/results", ContextHandlerFunc(CreateResult))
+	router.Handle("/results/{resultKey}", ContextHandlerFunc(GetResult))
+	router.Handle("/results/user/{userKey}/challenge/{challengeKey}", ContextHandlerFunc(GetResultForUserChallenge))
+}
+
 // CreateResult saves a new result when a coder starts a challenge.
 func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Method != "POST" {

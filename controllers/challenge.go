@@ -12,6 +12,12 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+func init() {
+	router.Handle("/challenges", ContextHandlerFunc(CreateChallenge))
+	router.Handle("/challenges/{key}", ContextHandlerFunc(ChallengeByKey))
+	router.Handle("/challenges/{key}/results", ContextHandlerFunc(GetResultsByChallenge))
+}
+
 // ChallengeByKey loads a challenge by key.
 func ChallengeByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "GET" {
@@ -25,7 +31,7 @@ func ChallengeByKey(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
 	if err != nil {
-		return http.StatusInternalServerError, err
+		return http.StatusBadRequest, err
 	}
 
 	var challenge model.Challenge

@@ -14,6 +14,10 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+func init() {
+	router.HandleFunc("/mock", Mock)
+}
+
 func Mock(w http.ResponseWriter, req *http.Request) {
 	ctx := appengine.NewContext(req)
 

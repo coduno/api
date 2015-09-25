@@ -21,6 +21,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+func init() {
+	router.Handle("/results/{resultKey}/tasks/{taskKey}/submissions", ContextHandlerFunc(PostSubmission))
+	router.Handle("/results/{resultKey}/finalSubmissions/{index}", ContextHandlerFunc(FinalSubmission))
+}
+
 // PostSubmission creates a new submission.
 func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "POST" {

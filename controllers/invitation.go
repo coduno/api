@@ -20,13 +20,19 @@ import (
 )
 
 var invitation *template.Template
+var InvitationTemplatePath string
 
 func init() {
-	var err error
-	invitation, err = template.ParseFiles("./mail/template.invitation")
-	if err != nil {
-		panic(err)
+	router.Handle("/invitations", ContextHandlerFunc(Invitation))
+}
+
+func initInvitationTemplate() error {
+	if invitation != nil {
+		return nil
 	}
+	var err error
+	invitation, err = template.ParseFiles(InvitationTemplatePath)
+	return err
 }
 
 // Invitation handles the creation of a new invitation and sends an e-mail to
@@ -34,6 +40,10 @@ func init() {
 func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "POST" {
 		return http.StatusMethodNotAllowed, nil
+	}
+
+	if err := initInvitationTemplate(); err != nil {
+		return http.StatusInternalServerError, err
 	}
 
 	p, ok := passenger.FromContext(ctx)

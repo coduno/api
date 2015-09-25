@@ -14,6 +14,10 @@ import (
 	"golang.org/x/net/context"
 )
 
+func init() {
+	router.Handle("/code/download/{name}/{language}", ContextHandlerFunc(Template))
+}
+
 // Template serves the contents of a static file to a client.
 // TODO(flowlo, victorbalan): Decide where the templates will be stored.
 func Template(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {

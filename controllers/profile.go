@@ -15,6 +15,12 @@ import (
 	"golang.org/x/net/context"
 )
 
+func init() {
+	router.Handle("/profiles/{key}", ContextHandlerFunc(GetProfileByKey))
+	router.Handle("/profiles/{key}", ContextHandlerFunc(DeleteProfile))
+	router.Handle("/profiles/{key}/challenges", ContextHandlerFunc(GetChallengesForProfile))
+}
+
 func GetProfileByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil

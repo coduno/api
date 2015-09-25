@@ -13,6 +13,12 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+func init() {
+	router.Handle("/tasks/{key}", ContextHandlerFunc(TaskByKey))
+	router.Handle("/tasks/{key}/tests", ContextHandlerFunc(TestsByTaskKey))
+	router.Handle("/tasks", ContextHandlerFunc(Tasks))
+}
+
 // TaskByKey loads a task by key.
 func TaskByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	p, ok := passenger.FromContext(ctx)

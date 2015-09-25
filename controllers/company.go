@@ -12,6 +12,12 @@ import (
 	"github.com/coduno/api/model"
 )
 
+func init() {
+	router.Handle("/companies", ContextHandlerFunc(PostCompany))
+	router.Handle("/companies/{key}/challenges", ContextHandlerFunc(GetChallengesForCompany))
+	router.Handle("/companies/{key}/users", ContextHandlerFunc(GetUsersByCompany))
+}
+
 // PostCompany creates a new company after validating by key.
 func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "POST" {
