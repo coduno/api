@@ -11,6 +11,12 @@ import (
 	"google.golang.org/appengine/datastore"
 )
 
+func init() {
+	router.HandleFunc("/challenges", setup(CreateChallenge))
+	router.HandleFunc("/challenges/{key}", setup(ChallengeByKey))
+	router.HandleFunc("/challenges/{key}/results", setup(GetResultsByChallenge))
+}
+
 // ChallengeByKey loads a challenge by key.
 func ChallengeByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "GET" {
