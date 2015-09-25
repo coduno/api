@@ -30,10 +30,7 @@ func initSubTemplate() error {
 	}
 	var err error
 	subscription, err = template.ParseFiles(SubTemplatePath)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 type Subscription struct {
