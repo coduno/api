@@ -5,10 +5,10 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/coduno/api/cache"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/cloud/storage"
 )
 
 type InsDel struct {
@@ -84,6 +84,6 @@ func getTaskIndex(c model.Challenge, task *datastore.Key) int {
 	return -1
 }
 
-func readFromGCS(so model.StoredObject) (io.ReadCloser, error) {
-	return storage.NewReader(util.CloudContext(nil), so.Bucket, so.Name)
+func readFromGCS(so model.StoredObject) (io.Reader, error) {
+	return cache.PutGCS(util.CloudContext(nil), so.Bucket, so.Name)
 }
