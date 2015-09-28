@@ -24,7 +24,7 @@ func Simple(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (tes
 	}
 
 	var c *docker.Container
-	if c, err = createDockerContainer(image, []string{}); err != nil {
+	if c, err = itoc(image); err != nil {
 		return
 	}
 

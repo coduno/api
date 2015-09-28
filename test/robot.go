@@ -14,7 +14,6 @@ import (
 	"github.com/coduno/api/ws"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/log"
-	"google.golang.org/cloud/storage"
 )
 
 func init() {
@@ -24,13 +23,16 @@ func init() {
 func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (err error) {
 	log.Debugf(ctx, "Executing robot tester")
 	var testMap, stdin io.ReadCloser
-	if testMap, err = storage.NewReader(util.CloudContext(ctx), util.TemplateBucket, t.Params["tests"]); err != nil {
+	if testMap, err = util.Load(util.CloudContext(ctx), util.TemplateBucket, t.Params["tests"]); err != nil {
 		return
 	}
+	defer testMap.Close()
 
-	if stdin, err = storage.NewReader(util.CloudContext(ctx), sub.Code.Bucket, path.Dir(sub.Code.Name)+"/"+util.FileNames["robot"]); err != nil {
+	if stdin, err = util.Load(util.CloudContext(ctx), sub.Code.Bucket, path.Dir(sub.Code.Name)+"/"+util.FileNames["robot"]); err != nil {
 		return
 	}
+	defer stdin.Close()
+
 	var testMapBytes, stdinBytes []byte
 	if stdinBytes, err = ioutil.ReadAll(stdin); err != nil {
 		return
@@ -46,7 +48,7 @@ func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ba
 	}
 	moves, err := testRobot(m, string(stdinBytes))
 	if err != nil {
-		// TODO(victorbalan): Pass the error to the ws so the client knows what he`s doing wrong
+		// TODO(victorbalan): Pass the error to the ws so the client knows what he's doing wrong
 		return
 	}
 	var body []byte

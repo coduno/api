@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"io"
 	"io/ioutil"
+	"path"
 	"strings"
 	"time"
 
@@ -22,13 +23,37 @@ func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission, ball
 		return nil, err
 	}
 
-	testV, err := createDockerVolume(util.TestsBucket + "/" + testFile)
+	c, err := itoc(image)
 	if err != nil {
 		return nil, err
 	}
 
-	binds := []string{testV.Name + ":/run/src/test/java/" + testFile}
-	c, err := createDockerContainer(image, binds)
+	pr, pw := io.Pipe()
+	go func() {
+		defer pw.Close()
+		rc, err := util.Load(ctx, util.TestsBucket, testFile)
+		if err != nil {
+			return
+		}
+		defer rc.Close()
+		buf, err := ioutil.ReadAll(rc)
+		if err != nil {
+			return
+		}
+		w := tar.NewWriter(pw)
+		defer w.Close()
+		w.WriteHeader(&tar.Header{
+			Name: path.Base(testFile),
+			Mode: 0600,
+			Size: int64(len(buf)),
+		})
+		w.Write(buf)
+	}()
+
+	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
+		Path:        "/run/src/test/java/",
+		InputStream: pr,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -57,12 +82,12 @@ func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission, ball
 	}
 
 	errc := make(chan error)
-	pr, pw := io.Pipe()
+	dpr, dpw := io.Pipe()
 
 	go func() {
 		errc <- dc.DownloadFromContainer(c.ID, docker.DownloadFromContainerOptions{
 			Path:         util.JUnitResultsPath,
-			OutputStream: pw,
+			OutputStream: dpw,
 		})
 	}()
 
@@ -71,7 +96,7 @@ func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission, ball
 	// too, so this replaces the version attribute.
 	// As soon as encoding/xml can parse XML 1.1 we can remove this
 	// and directly stream without buffering.
-	buf, err := ioutil.ReadAll(pr)
+	buf, err := ioutil.ReadAll(dpr)
 	if err != nil {
 		return nil, err
 	}

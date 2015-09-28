@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
@@ -48,10 +47,11 @@ func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission
 	}
 
 	var stdin io.ReadCloser
-	stdin, err = storage.NewReader(util.CloudContext(ctx), util.TestsBucket, t.Params["input"])
+	stdin, err = util.Load(util.CloudContext(ctx), util.TestsBucket, t.Params["input"])
 	if err != nil {
 		return
 	}
+	defer stdin.Close()
 
 	start := time.Now()
 	if err = dc.StartContainer(c.ID, c.HostConfig); err != nil {
@@ -105,10 +105,11 @@ func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubm
 
 func processDiffResults(ctx context.Context, tr model.DiffTestResult, bucket, testFile string, test *datastore.Key) (ts model.TestStats, err error) {
 	var want io.ReadCloser
-	want, err = storage.NewReader(util.CloudContext(ctx), bucket, testFile)
+	want, err = util.Load(util.CloudContext(ctx), bucket, testFile)
 	if err != nil {
 		return
 	}
+	defer want.Close()
 
 	have := strings.NewReader(tr.Stdout)
 	diffLines, ok, err := compare(want, have)
