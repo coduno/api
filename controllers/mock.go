@@ -254,6 +254,53 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+
+	taskPrimeUT, err := model.Task{
+		Assignment: model.Assignment{
+			Name:         "Primes test",
+			Description:  `Test a method which checks wether an integer is prime.`,
+			Instructions: "You have to write java unit tests in order to check wether the method Application.isPrime(int n) returns the correct answer.",
+			Duration:     time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "javaut-task",
+			},
+		},
+		SkillWeights: model.SkillWeights{
+			Algorithmics: 0.4,
+			Readability:  0.3,
+			CodingSpeed:  0.3,
+			Security:     0,
+		},
+		Languages: []string{"java"},
+		Tasker:    int64(logic.JunitTasker),
+		Templates: templateHelper(map[string][]string{"java": []string{"primes/Application.java"}}),
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	model.Test{
+		Name:   "Correct alg",
+		Tester: int64(test.CoderJunit),
+		Params: map[string]string{
+			"code":        "primes/v1/",
+			"resultPath":  "/run/build/test-results/",
+			"imageSuffix": "javaut",
+			"shouldFail":  "false",
+		},
+	}.PutWithParent(ctx, taskPrimeUT)
+
+	model.Test{
+		Name:   "Broken alg",
+		Tester: int64(test.CoderJunit),
+		Params: map[string]string{
+			"code":        "primes/v2/",
+			"resultPath":  "/run/build/test-results/",
+			"imageSuffix": "javaut",
+			"shouldFail":  "true",
+		},
+	}.PutWithParent(ctx, taskPrimeUT)
+
 	MockFrequentisChallenge(ctx, coduno, w, req)
 }
 
@@ -297,6 +344,42 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 		panic(err)
 	}
 
+	taskTwo, err := model.Task{
+		Assignment: model.Assignment{
+			Name:        "AvlTree",
+			Description: "AvlTree",
+			Instructions: `Your task is to write Junit unit tests for an [AvlTree](https://en.wikipedia.org/wiki/AVL_tree) implementation.
+			Below you are given the signatures and descriptions of all public operations of the AvlTree class.
+			 * void insert(int k)	 	Insert k if it doesn't exist. Duplicates will be ignored.
+			 * void remove(int k)	 	Remove x if it exists.
+			 * int size()		 	 	Return number of vertexes.
+			 * boolean contains(int k) 	Returns true if a vertex with value k exists in the tree, false otherwise.
+			 * int findMinimum()    	Returns the smallest value in the tree. If the tree is empty, will return Integer.MIN_VALUE.
+			 * int findMaximum()    	Returns the highest value in the tree. If the tree is empty, will return Integer.MIN_VALUE.
+			 * boolean isEmpty( )       Return true if the tree is empty, false otherwise.
+			 * void empty( )    		Remove all items from the tree.
+			`,
+			Duration: time.Hour,
+			Endpoints: model.Endpoints{
+				WebInterface: "javaut-task",
+			},
+		},
+		SkillWeights: model.SkillWeights{
+			Algorithmics: 0.4,
+			Readability:  0.2,
+			Security:     0,
+			CodingSpeed:  0.4,
+		},
+		Templates: templateHelper(map[string][]string{"java": []string{"avl/AvlTree.java"}}),
+		Languages: []string{"java"},
+		Tasker:    int64(logic.JunitTasker),
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	testsForTaskTwo(ctx, taskTwo)
+
 	_, err = model.Challenge{
 		Assignment: model.Assignment{
 			Name:        "Frequentis hiring challenge",
@@ -312,11 +395,38 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 		},
 		Tasks: []*datastore.Key{
 			taskOne,
+			taskTwo,
 		},
 		Resulter: int64(logic.Average),
 	}.PutWithParent(ctx, coduno)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func testsForTaskTwo(ctx context.Context, taskTwo *datastore.Key) {
+	model.Test{
+		Name:   "v1",
+		Tester: int64(test.CoderJunit),
+		Params: map[string]string{
+			"code":        "avl/v1/",
+			"resultPath":  "/run/build/test-results/",
+			"imageSuffix": "javaut",
+			"shouldFail":  "false",
+		},
+	}.PutWithParent(ctx, taskTwo)
+
+	for _, v := range []string{"v2", "v3", "v4", "v5", "v6", "v7"} {
+		model.Test{
+			Name:   v,
+			Tester: int64(test.CoderJunit),
+			Params: map[string]string{
+				"code":        "avl/" + v + "/",
+				"resultPath":  "/run/build/test-results/",
+				"imageSuffix": "javaut",
+				"shouldFail":  "true",
+			},
+		}.PutWithParent(ctx, taskTwo)
 	}
 }
 
