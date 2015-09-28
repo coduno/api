@@ -1,13 +1,17 @@
 package controllers
 
 import (
+	"archive/tar"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
 
+	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 	"google.golang.org/cloud/storage"
@@ -79,8 +83,10 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		Time: time.Now(),
 	}
 
+	var ball io.Reader
+
 	if body.Code != "" {
-		submission.Code, err = store(ctx, submissionKey, body.Code, body.Language)
+		submission.Code, ball, err = ingest(ctx, submissionKey, body.Code, body.Language)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
@@ -102,12 +108,12 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	for i, t := range tests {
-		go func(i int) {
+		go func(i int, t model.Test) {
 			// TODO(victorbalan, flowlo): Error handling
-			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey)); err != nil {
+			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey), ball); err != nil {
 				log.Warningf(ctx, "%s", err)
 			}
-		}(i)
+		}(i, t)
 	}
 
 	// TODO(flowlo): Return something meaningful.
@@ -115,37 +121,67 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return http.StatusOK, nil
 }
 
-func store(ctx context.Context, key *datastore.Key, code, language string) (model.StoredObject, error) {
-	o := model.StoredObject{}
+// ingest will take an upload, pipe it to GCS and return a tarball.
+func ingest(ctx context.Context, key *datastore.Key, code, language string) (model.StoredObject, io.Reader, error) {
+	var o model.StoredObject
 
-	// We'll be storing code, so check what name the file should have in GCS.
+	pr, pw := io.Pipe()
+
+	// We'll be storing code, so check what
+	// name the file should have in GCS and TAR.
 	fn, ok := util.FileNames[language]
 	if !ok {
-		return o, errors.New("language unknown")
+		return o, nil, errors.New("language unknown")
 	}
 
-	submissionBucket := util.SubmissionBucket()
+	var gcsw io.WriteCloser
 
-	// Now, construct the object.
-	o = model.StoredObject{
-		Bucket: submissionBucket,
-		Name:   nameObject(key) + "/Code/" + fn,
+	if appengine.IsDevAppServer() {
+		// All hail /dev/null!
+		gcsw = struct {
+			io.Writer
+			io.Closer
+		}{
+			ioutil.Discard,
+			ioutil.NopCloser(nil),
+		}
+	} else {
+		// Let's be serious and upload the code to GCS.
+		// TODO(flowlo): Limit this writer, or limit the uploaded code
+		// at some previous point.
+		o = model.StoredObject{
+			Bucket: util.SubmissionBucket(),
+			Name:   nameObject(key) + "/Code/" + fn,
+		}
+
+		gcsw = storage.NewWriter(util.CloudContext(ctx), o.Bucket, o.Name)
+		if gcsw == nil {
+			return o, nil, errors.New("cannot obtain writer to gcs")
+		}
+
+		gcsw.(*storage.Writer).ObjectAttrs = defaultObjectAttrs(fn)
 	}
 
-	// Upload the code to GCS.
-	// TODO(flowlo): Limit this writer, or limit the uploaded code
-	// at some previous point.
-	gcs := storage.NewWriter(util.CloudContext(ctx), o.Bucket, o.Name)
-	if gcs == nil {
-		return o, errors.New("cannot obtain writer to gcs")
-	}
-	gcs.ObjectAttrs = defaultObjectAttrs(fn)
+	bc := []byte(code)
 
-	if _, err := io.WriteString(gcs, code); err != nil {
-		return o, err
-	}
+	// Create a TAR stream.
+	tarw := tar.NewWriter(pw)
 
-	return o, gcs.Close()
+	// Stream to TAR and GCS at the same time.
+	// TODO(flowlo): Pass code as io.Reader.
+	go func() {
+		tarw.WriteHeader(&tar.Header{
+			Name: fn,
+			Mode: 0600,
+			Size: int64(len(bc)),
+		})
+		io.Copy(io.MultiWriter(tarw, gcsw), bytes.NewReader(bc))
+		gcsw.Close()
+		tarw.Close()
+		pw.Close()
+	}()
+
+	return o, pr, nil
 }
 
 // FinalSubmission makes the last submission final.

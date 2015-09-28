@@ -3,7 +3,7 @@ package test
 import (
 	"encoding/json"
 	"errors"
-	goio "io"
+	"io"
 	"io/ioutil"
 	"path"
 	"strconv"
@@ -21,9 +21,9 @@ func init() {
 	RegisterTester(Robot, robot)
 }
 
-func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err error) {
+func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (err error) {
 	log.Debugf(ctx, "Executing robot tester")
-	var testMap, stdin goio.ReadCloser
+	var testMap, stdin io.ReadCloser
 	if testMap, err = storage.NewReader(util.CloudContext(ctx), util.TemplateBucket, t.Params["tests"]); err != nil {
 		return
 	}

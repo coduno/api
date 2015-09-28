@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"path"
 	"strings"
 	"time"
 
@@ -17,15 +16,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (ts model.TestStats, err error) {
+func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (ts model.TestStats, err error) {
 	image := newImage(sub.Language)
 
 	if err = prepareImage(image); err != nil {
-		return
-	}
-
-	var v *docker.Volume
-	if v, err = createDockerVolume(sub.Code.Bucket + "/" + path.Dir(sub.Code.Name)); err != nil {
 		return
 	}
 
@@ -39,8 +33,15 @@ func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission
 		HostConfig: &docker.HostConfig{
 			Privileged: false,
 			Memory:     0, // TODO(flowlo): Limit memory
-			Binds:      []string{v.Name + ":/run"},
 		},
+	})
+	if err != nil {
+		return
+	}
+
+	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
+		Path:        "/run",
+		InputStream: ball,
 	})
 	if err != nil {
 		return
@@ -89,9 +90,9 @@ func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission
 	return processDiffResults(ctx, tr, util.TestsBucket, t.Params["output"], t.Key)
 }
 
-func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (ts model.TestStats, err error) {
+func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (ts model.TestStats, err error) {
 	var str model.SimpleTestResult
-	str, err = Simple(ctx, sub)
+	str, err = Simple(ctx, sub, ball)
 	if err != nil {
 		return
 	}

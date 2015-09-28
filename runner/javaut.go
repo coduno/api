@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"io"
 	"io/ioutil"
-	"path"
 	"strings"
 	"time"
 
@@ -16,42 +15,45 @@ import (
 	"golang.org/x/net/context"
 )
 
-func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission) (testResults model.JunitTestResult, err error) {
+func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission, ball io.Reader) (*model.JunitTestResult, error) {
 	image := newImage("javaut")
 
-	if err = prepareImage(image); err != nil {
-		return
+	if err := prepareImage(image); err != nil {
+		return nil, err
 	}
 
-	var v *docker.Volume
-	if v, err = createDockerVolume(sub.Code.Bucket + "/" + path.Dir(sub.Code.Name)); err != nil {
-		return
+	testV, err := createDockerVolume(util.TestsBucket + "/" + testFile)
+	if err != nil {
+		return nil, err
 	}
 
-	var testV *docker.Volume
-	if testV, err = createDockerVolume(util.TestsBucket + "/" + testFile); err != nil {
-		return
+	binds := []string{testV.Name + ":/run/src/test/java/" + testFile}
+	c, err := createDockerContainer(image, binds)
+	if err != nil {
+		return nil, err
 	}
 
-	binds := []string{v.Name + ":/run/src/main/java", testV.Name + ":/run/src/test/java/" + testFile}
-	var c *docker.Container
-	if c, err = createDockerContainer(image, binds); err != nil {
-		return
+	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
+		Path:        "/run/src/main/java",
+		InputStream: ball,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	start := time.Now()
-	if err = dc.StartContainer(c.ID, c.HostConfig); err != nil {
-		return
+	if err := dc.StartContainer(c.ID, c.HostConfig); err != nil {
+		return nil, err
 	}
 
-	if err = waitForContainer(c.ID); err != nil {
-		return
+	if err := waitForContainer(c.ID); err != nil {
+		return nil, err
 	}
 	end := time.Now()
 
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	if stdout, stderr, err = getLogs(c.ID); err != nil {
-		return
+	stdout, stderr, err := getLogs(c.ID)
+	if err != nil {
+		return nil, err
 	}
 
 	errc := make(chan error)
@@ -69,41 +71,40 @@ func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission) (tes
 	// too, so this replaces the version attribute.
 	// As soon as encoding/xml can parse XML 1.1 we can remove this
 	// and directly stream without buffering.
-	var buf []byte
-	buf, err = ioutil.ReadAll(pr)
+	buf, err := ioutil.ReadAll(pr)
 	if err != nil {
-		return
+		return nil, err
 	}
 	buf = bytes.Replace(buf, []byte(`version="1.1"`), []byte(`version="1.0"`), 1)
 
 	tr := tar.NewReader(bytes.NewReader(buf))
 	d := xml.NewDecoder(tr)
-	var h *tar.Header
+
+	var testResults *model.JunitTestResult
 	for {
-		h, err = tr.Next()
+		h, err := tr.Next()
 		if err == io.EOF {
-			err = nil
 			break
 		}
 		if err != nil {
-			return
+			return nil, err
 		}
 		if !strings.HasSuffix(h.Name, ".xml") {
 			continue
 		}
 
 		var utr model.UnitTestResults
-		if err = d.Decode(&utr); err != nil {
-			return
+		if err := d.Decode(&utr); err != nil {
+			return nil, err
 		}
-		testResults = model.JunitTestResult{
+		testResults = &model.JunitTestResult{
 			Stdout:  stdout.String(),
 			Results: utr,
 			Stderr:  stderr.String(),
 			Start:   start,
-			End:     end}
+			End:     end,
+		}
 	}
 
-	err = <-errc
-	return
+	return testResults, <-errc
 }

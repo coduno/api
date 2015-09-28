@@ -2,41 +2,37 @@ package test
 
 import (
 	"encoding/json"
-	"errors"
+	"io"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/runner"
 	"github.com/coduno/api/ws"
 	"golang.org/x/net/context"
-	"google.golang.org/appengine/log"
 )
 
 func init() {
 	RegisterTester(Junit, junit)
 }
 
-func junit(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err error) {
-	log.Debugf(ctx, "Executing junit tester")
-	if !checkJunitParams(t.Params) {
-		return errors.New("params missing")
+func junit(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) error {
+	if _, ok := t.Params["test"]; !ok {
+		return ErrMissingParam("test")
 	}
-	var tr model.JunitTestResult
-	if tr, err = runner.JUnit(ctx, t.Params["test"], sub); err != nil {
-		return
-	}
-	if _, err = tr.Put(ctx, nil); err != nil {
-		return
-	}
-	var body []byte
-	if body, err = json.Marshal(tr); err != nil {
-		return
-	}
-	return ws.Write(sub.Key.Parent(), body)
-}
 
-func checkJunitParams(params map[string]string) (ok bool) {
-	if _, ok = params["test"]; !ok {
-		return
+	tr, err := runner.JUnit(ctx, t.Params["test"], sub, ball)
+	if err != nil {
+		return err
 	}
-	return true
+
+	if _, err := tr.Put(ctx, nil); err != nil {
+		return err
+	}
+
+	// TODO(flowlo): Use a json.Encoder
+	body, err := json.Marshal(tr)
+	if err != nil {
+		return err
+	}
+
+	return ws.Write(sub.Key.Parent(), body)
 }

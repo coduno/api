@@ -2,7 +2,7 @@ package runner
 
 import (
 	"bytes"
-	"path"
+	"io"
 	"time"
 
 	"golang.org/x/net/context"
@@ -16,20 +16,23 @@ type waitResult struct {
 	Err      error
 }
 
-func Simple(ctx context.Context, sub model.KeyedSubmission) (testResult model.SimpleTestResult, err error) {
+func Simple(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (testResult model.SimpleTestResult, err error) {
 	image := newImage(sub.Language)
 
 	if err = prepareImage(image); err != nil {
 		return
 	}
 
-	var v *docker.Volume
-	if v, err = createDockerVolume(sub.Code.Bucket + "/" + path.Dir(sub.Code.Name)); err != nil {
+	var c *docker.Container
+	if c, err = createDockerContainer(image, []string{}); err != nil {
 		return
 	}
 
-	var c *docker.Container
-	if c, err = createDockerContainer(image, []string{v.Name + ":/run"}); err != nil {
+	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
+		Path:        "/run",
+		InputStream: ball,
+	})
+	if err != nil {
 		return
 	}
 

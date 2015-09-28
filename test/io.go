@@ -2,46 +2,43 @@ package test
 
 import (
 	"encoding/json"
-	"errors"
+	"io"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/runner"
 	"github.com/coduno/api/ws"
 	"golang.org/x/net/context"
-	"google.golang.org/appengine/log"
 )
 
 func init() {
-	RegisterTester(IO, io)
+	RegisterTester(IO, iot)
 }
 
-func io(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err error) {
-	log.Debugf(ctx, "Executing io tester")
-	if !checkIoParams(t.Params) {
-		return errors.New("params missing")
-	}
-	var ts model.TestStats
-	if ts, err = runner.IODiffRun(ctx, t, sub); err != nil {
-		return
+func iot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) error {
+	if err := checkIoParams(t.Params); err != nil {
+		return err
 	}
 
+	ts, err := runner.IODiffRun(ctx, t, sub, ball)
+	if err != nil {
+		return err
+	}
+
+	// TODO(flowlo): Use a json.Encoder
 	var body []byte
 	if body, err = json.Marshal(ts); err != nil {
 		return err
 	}
+
 	return ws.Write(sub.Key.Parent(), body)
 }
 
-func checkIoParams(params map[string]string) (ok bool) {
-	if _, ok = params["bucket"]; !ok {
-		return
-	}
+func checkIoParams(params map[string]string) error {
 	// TODO(victorbalan): check if len matches too
-	if _, ok = params["input"]; !ok {
-		return
+	for _, param := range [...]string{"bucket", "input", "output"} {
+		if _, ok := params[param]; !ok {
+			return ErrMissingParam(param)
+		}
 	}
-	if _, ok = params["output"]; !ok {
-		return
-	}
-	return true
+	return nil
 }
