@@ -2,13 +2,14 @@ package controllers
 
 import (
 	"archive/tar"
-	"bytes"
-	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
+	"mime"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"google.golang.org/appengine"
@@ -36,18 +37,17 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusMethodNotAllowed, nil
 	}
 
-	var body = struct {
-		Code     string
-		Language string
-	}{}
-
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		return http.StatusBadRequest, err
-	}
-
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, nil
+	}
+
+	mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+	if !strings.HasPrefix(mediaType, "multipart/") {
+		return http.StatusUnsupportedMediaType, nil
 	}
 
 	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
@@ -64,9 +64,14 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusNotFound, err
 	}
 
+	form, err := multipart.NewReader(r.Body, params["boundary"]).ReadForm(16 << 20)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
 	var task model.Task
 	if err = datastore.Get(ctx, taskKey, &task); err != nil {
-		return http.StatusInternalServerError, err
+		return http.StatusNotFound, err
 	}
 
 	// Furthermore, the name of the GCS object is derived from the of the
@@ -77,32 +82,28 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	submissionKey := datastore.NewKey(ctx, model.SubmissionKind, "", low, resultKey)
-
+	storedCode := model.StoredObject{
+		Bucket: util.SubmissionBucket(),
+		Name:   nameObject(submissionKey) + "Code/",
+	}
 	submission := model.Submission{
-		Task: taskKey,
-		Time: time.Now(),
+		Task:     taskKey,
+		Time:     time.Now(),
+		Language: detectLanguage(form),
+		Code:     storedCode,
 	}
 
-	var ball io.Reader
-
-	if body.Code != "" {
-		submission.Code, ball, err = ingest(ctx, submissionKey, body.Code, body.Language)
-		if err != nil {
-			return http.StatusInternalServerError, err
-		}
-		submission.Language = body.Language
-	}
-
-	// Set the submission in stone.
 	if _, err = datastore.Put(ctx, submissionKey, &submission); err != nil {
 		return http.StatusInternalServerError, err
 	}
+
+	pr, pw := io.Pipe()
+	go maketar(pw, form)
 
 	var tests model.Tests
 	testKeys, err := model.NewQueryForTest().
 		Ancestor(taskKey).
 		GetAll(ctx, &tests)
-
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -110,78 +111,152 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	for i, t := range tests {
 		go func(i int, t model.Test) {
 			// TODO(victorbalan, flowlo): Error handling
-			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey), ball); err != nil {
+			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey), pr); err != nil {
 				log.Warningf(ctx, "%s", err)
 			}
 		}(i, t)
 	}
 
-	// TODO(flowlo): Return something meaningful.
+	if err := upload(ctx, storedCode.Bucket, storedCode.Name, form); err != nil {
+		return http.StatusInternalServerError, err
+	}
 
+	// TODO(flowlo): Return something meaningful.
 	return http.StatusOK, nil
 }
 
-// ingest will take an upload, pipe it to GCS and return a tarball.
-func ingest(ctx context.Context, key *datastore.Key, code, language string) (model.StoredObject, io.Reader, error) {
-	var o model.StoredObject
+type multiError []error
 
-	pr, pw := io.Pipe()
-
-	// We'll be storing code, so check what
-	// name the file should have in GCS and TAR.
-	fn, ok := util.FileNames[language]
-	if !ok {
-		return o, nil, errors.New("language unknown")
+func (e multiError) Error() string {
+	s := make([]string, 0, len(e))
+	for i := range e {
+		s = append(s, e[i].Error())
 	}
+	return strings.Join(s, "\n")
+}
 
-	var gcsw io.WriteCloser
-
+func upload(ctx context.Context, bucket, base string, form *multipart.Form) multiError {
 	if appengine.IsDevAppServer() {
-		// All hail /dev/null!
-		gcsw = struct {
-			io.Writer
-			io.Closer
-		}{
-			ioutil.Discard,
-			ioutil.NopCloser(nil),
-		}
-	} else {
-		// Let's be serious and upload the code to GCS.
-		// TODO(flowlo): Limit this writer, or limit the uploaded code
-		// at some previous point.
-		o = model.StoredObject{
-			Bucket: util.SubmissionBucket(),
-			Name:   nameObject(key) + "/Code/" + fn,
-		}
-
-		gcsw = storage.NewWriter(util.CloudContext(ctx), o.Bucket, o.Name)
-		if gcsw == nil {
-			return o, nil, errors.New("cannot obtain writer to gcs")
-		}
-
-		gcsw.(*storage.Writer).ObjectAttrs = defaultObjectAttrs(fn)
+		return nil
 	}
 
-	bc := []byte(code)
+	errc := make(chan error)
+	var errs []error
 
-	// Create a TAR stream.
-	tarw := tar.NewWriter(pw)
+	for _, fhs := range form.File {
+		go func(fhs []*multipart.FileHeader) {
+			if len(fhs) > 1 {
+				errc <- errors.New("cannot read split files")
+				return
+			}
 
-	// Stream to TAR and GCS at the same time.
-	// TODO(flowlo): Pass code as io.Reader.
-	go func() {
+			fh := fhs[0]
+			f, err := fh.Open()
+			if err != nil {
+				errc <- err
+				return
+			}
+
+			name := base + fh.Filename
+			wc := storage.NewWriter(ctx, bucket, name)
+
+			if _, err := io.Copy(wc, f); err != nil {
+				errc <- err
+				return
+			}
+
+			if err := wc.Close(); err != nil {
+				errc <- err
+				return
+			}
+
+			if err := f.Close(); err != nil {
+				errc <- err
+				return
+			}
+
+			errc <- nil
+		}(fhs)
+	}
+
+	for range form.File {
+		err := <-errc
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	close(errc)
+	return errs
+}
+
+func maketar(wc io.WriteCloser, form *multipart.Form) error {
+	defer wc.Close()
+
+	tarw := tar.NewWriter(wc)
+	defer tarw.Close()
+
+	sizeFunc := func(s io.Seeker) int64 {
+		size, err := s.Seek(0, os.SEEK_END)
+		if err != nil {
+			return -1
+		}
+		if _, err = s.Seek(0, os.SEEK_SET); err != nil {
+			return -1
+		}
+		return size
+	}
+
+	for _, fhs := range form.File {
+		if len(fhs) > 1 {
+			return errors.New("cannot read split files")
+		}
+		fh := fhs[0]
+		f, err := fh.Open()
+		if err != nil {
+			return err
+		}
+		size := sizeFunc(f)
+		if size < 0 {
+			return errors.New("seeker can't seek")
+		}
 		tarw.WriteHeader(&tar.Header{
-			Name: fn,
+			Name: fh.Filename,
 			Mode: 0600,
-			Size: int64(len(bc)),
+			Size: size,
 		})
-		io.Copy(io.MultiWriter(tarw, gcsw), bytes.NewReader(bc))
-		gcsw.Close()
-		tarw.Close()
-		pw.Close()
-	}()
+		io.Copy(tarw, f)
+		f.Close()
+	}
+	return nil
+}
 
-	return o, pr, nil
+func detectLanguage(form *multipart.Form) string {
+	l := ""
+	m := map[string]int{
+		"py":   0,
+		"java": 0,
+		"c":    0,
+		"cpp":  0,
+	}
+	max := 0
+	for name := range form.File {
+		dot := strings.LastIndex(name, ".") + 1
+		if dot == 0 || dot == len(name) {
+			continue
+		}
+		ext := name[dot:]
+		cnt, ok := m[ext]
+		if !ok {
+			continue
+		}
+		cnt++
+		if cnt > max {
+			l = ext
+		}
+		m[ext] = cnt
+	}
+	return l
 }
 
 // FinalSubmission makes the last submission final.
@@ -242,7 +317,8 @@ func nameObject(key *datastore.Key) string {
 		key = key.Parent()
 	}
 	// NOTE: The name of a GCS object must not be prefixed "/",
-	// this will give you a major headache.
+	// this will give you a major headache when working with
+	// gcsfuse. Just don't.
 	return name[1:]
 }
 
