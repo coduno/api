@@ -1,10 +1,13 @@
 package controllers
 
 import (
-	"errors"
-	"io"
+	"encoding/json"
 	"net/http"
+	"time"
 
+	"google.golang.org/appengine/datastore"
+
+	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
 	"github.com/gorilla/mux"
 
@@ -12,38 +15,38 @@ import (
 )
 
 func init() {
-	router.Handle("/code/download/{name}/{language}", ContextHandlerFunc(Template))
+	router.Handle("/tasks/{key}/templates", ContextHandlerFunc(Templates))
 }
 
 // Template serves the contents of a static file to a client.
 // TODO(flowlo, victorbalan): Decide where the templates will be stored.
-func Template(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
+func Templates(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
 	}
 
-	templateName, ok := mux.Vars(r)["name"]
-
-	if !ok {
-		return http.StatusBadRequest, errors.New("template name missing")
-	}
-
-	// TODO(victorbalan): pass the template file and not just the folder
-	// so we can be more flexible with templates.
-	language := mux.Vars(r)["language"]
-	fileName, ok := util.FileNames[language]
-
-	if !ok {
-		return http.StatusInternalServerError, errors.New("language unknown")
-	}
-	fn := templateName + "/" + fileName
-	rc, err := util.Load(ctx, util.TemplateBucket, fn)
+	taskKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
 	if err != nil {
-		return http.StatusInternalServerError, err
+		return http.StatusBadRequest, err
 	}
-	defer rc.Close()
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", "attachment; filename='"+fileName+"'")
-	io.Copy(w, rc)
+
+	var t model.Task
+	if err = datastore.Get(ctx, taskKey, &t); err != nil {
+		return http.StatusInternalServerError, nil
+	}
+
+	// TODO(flowlo): Use correct duration.
+	expiry := time.Now().Add(time.Hour * 2)
+
+	urls := make([]string, 0, len(t.Templates))
+	for _, template := range t.Templates {
+		u, err := util.Expose(template.Bucket, template.Name, expiry)
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		urls = append(urls, u)
+	}
+
+	json.NewEncoder(w).Encode(urls)
 	return http.StatusOK, nil
 }
