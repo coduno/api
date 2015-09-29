@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"archive/tar"
+	"encoding/json"
 	"errors"
 	"io"
 	"mime"
@@ -13,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 	"google.golang.org/cloud/storage"
@@ -30,6 +30,9 @@ import (
 func init() {
 	router.Handle("/results/{resultKey}/tasks/{taskKey}/submissions", ContextHandlerFunc(PostSubmission))
 	router.Handle("/results/{resultKey}/finalSubmissions/{index}", ContextHandlerFunc(FinalSubmission))
+	router.Handle("/results/{resultKey}/task/{taskKey}/submissions", ContextHandlerFunc(GetSubmissionsForResult))
+	router.Handle("/submissions/{key}", ContextHandlerFunc(GetSubmissionByKey))
+	router.Handle("/submissions/{key}/testresults", ContextHandlerFunc(GetTestResultsForSubmission))
 }
 
 // PostSubmission creates a new submission.
@@ -90,7 +93,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	submissionKey := datastore.NewKey(ctx, model.SubmissionKind, "", low, resultKey)
 	storedCode := model.StoredObject{
 		Bucket: util.SubmissionBucket(),
-		Name:   nameObject(submissionKey) + "Code/",
+		Name:   nameObject(submissionKey) + "/Code/",
 	}
 	submission := model.Submission{
 		Task:     taskKey,
@@ -123,11 +126,143 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}(i, t)
 	}
 
-	if err := upload(ctx, storedCode.Bucket, storedCode.Name, files); err != nil {
+	if err := upload(util.CloudContext(ctx), storedCode.Bucket, storedCode.Name, files); err != nil {
+		return http.StatusInternalServerError, err
+	}
+	// TODO(flowlo): Return something meaningful.
+	return http.StatusOK, nil
+}
+
+func GetSubmissionsForResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
+	// TODO(victorbalan): Check if user is company or if user is parent of result
+	// else return http.StatusUnauthorized
+	_, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
+	if err != nil {
+		return http.StatusNotFound, err
+	}
+
+	taskKey, err := datastore.DecodeKey(mux.Vars(r)["taskKey"])
+	if err != nil {
+		return http.StatusNotFound, err
+	}
+
+	var submissions model.Submissions
+	var keys []*datastore.Key
+	keys, err = model.NewQueryForSubmission().
+		Ancestor(resultKey).
+		Filter("Task =", taskKey).
+		Order("Time").
+		GetAll(ctx, &submissions)
+	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	// TODO(flowlo): Return something meaningful.
+	json.NewEncoder(w).Encode(submissions.Key(keys))
+	return http.StatusOK, nil
+}
+
+func GetSubmissionByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
+	// TODO(victorbalan): Check if user is company or if user is parent of result
+	// else return http.StatusUnauthorized
+	_, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	submissionKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
+	if err != nil {
+		return http.StatusNotFound, err
+	}
+
+	var submission model.Submission
+	if err = datastore.Get(ctx, submissionKey, &submission); err != nil {
+		return
+	}
+
+	codeFilesURLs, err := util.ExposeMultiURL(ctx, submission.Code.Bucket, submission.Code.Name)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	s := struct {
+		Time     time.Time
+		CodeURLs []string
+		Language string
+	}{
+		Time:     submission.Time,
+		Language: submission.Language,
+		CodeURLs: codeFilesURLs,
+	}
+
+	json.NewEncoder(w).Encode(s)
+	return http.StatusOK, nil
+}
+
+func GetTestResultsForSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
+	// TODO(victorbalan): Check if user is company or if user is parent of result
+	// else return http.StatusUnauthorized
+	_, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	submissionKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
+	if err != nil {
+		return http.StatusNotFound, err
+	}
+
+	keys, err := datastore.NewQuery("").
+		Ancestor(submissionKey).
+		Filter("__key__ >", submissionKey).
+		KeysOnly().
+		GetAll(ctx, nil)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	if len(keys) == 0 {
+		json.NewEncoder(w).Encode([]string{})
+		return http.StatusOK, nil
+	}
+
+	switch keys[0].Kind() {
+	case model.JunitTestResultKind:
+		var results model.JunitTestResults
+		_, err = datastore.NewQuery(keys[0].Kind()).
+			Ancestor(submissionKey).
+			GetAll(ctx, &results)
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		json.NewEncoder(w).Encode(results)
+	case model.DiffTestResultKind:
+		var results model.DiffTestResults
+		_, err = datastore.NewQuery(keys[0].Kind()).
+			Ancestor(submissionKey).
+			GetAll(ctx, &results)
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		json.NewEncoder(w).Encode(results)
+	default:
+		w.Write([]byte("[]"))
+	}
 	return http.StatusOK, nil
 }
 
@@ -142,10 +277,6 @@ func (e multiError) Error() string {
 }
 
 func upload(ctx context.Context, bucket, base string, files []*multipart.FileHeader) multiError {
-	if appengine.IsDevAppServer() {
-		return nil
-	}
-
 	errc := make(chan error)
 	var errs []error
 

@@ -100,11 +100,12 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 			return nil, err
 		}
 		testResults = &model.JunitTestResult{
-			Stdout:  stdout.String(),
-			Results: utr,
-			Stderr:  stderr.String(),
-			Start:   start,
-			End:     end,
+			Stdout:   stdout.String(),
+			Results:  utr,
+			Stderr:   stderr.String(),
+			Start:    start,
+			End:      end,
+			Endpoint: "junit-result",
 		}
 	}
 

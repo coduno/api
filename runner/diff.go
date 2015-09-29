@@ -85,9 +85,10 @@ func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission
 			Start:  start,
 			End:    end,
 		},
+		Endpoint: "diff-result",
 	}
 
-	return processDiffResults(ctx, tr, util.TestsBucket, t.Params["output"], t.Key)
+	return processDiffResults(ctx, sub, tr, util.TestsBucket, t.Params["output"], t.Key)
 }
 
 func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (ts model.TestStats, err error) {
@@ -98,12 +99,13 @@ func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubm
 	}
 	tr := model.DiffTestResult{
 		SimpleTestResult: str,
+		Endpoint:         "diff-result",
 	}
 
-	return processDiffResults(ctx, tr, util.TestsBucket, t.Params["tests"], t.Key)
+	return processDiffResults(ctx, sub, tr, util.TestsBucket, t.Params["tests"], t.Key)
 }
 
-func processDiffResults(ctx context.Context, tr model.DiffTestResult, bucket, testFile string, test *datastore.Key) (ts model.TestStats, err error) {
+func processDiffResults(ctx context.Context, sub model.KeyedSubmission, tr model.DiffTestResult, bucket, testFile string, test *datastore.Key) (ts model.TestStats, err error) {
 	var want io.ReadCloser
 	want, err = util.Load(util.CloudContext(ctx), bucket, testFile)
 	if err != nil {
@@ -117,6 +119,7 @@ func processDiffResults(ctx context.Context, tr model.DiffTestResult, bucket, te
 		return
 	}
 	tr.DiffLines = diffLines
+	tr.Failed = !ok
 
 	ts = model.TestStats{
 		Stdout: tr.Stdout,
@@ -124,7 +127,8 @@ func processDiffResults(ctx context.Context, tr model.DiffTestResult, bucket, te
 		Test:   test,
 		Failed: !ok,
 	}
-	_, err = tr.Put(ctx, nil)
+
+	_, err = tr.PutWithParent(ctx, sub.Key)
 	return
 }
 
@@ -145,11 +149,13 @@ func compare(want, have io.Reader) ([]int, bool, error) {
 	}
 
 	var diff []int
+	ok := true
 	for i := 0; i < len(wb); i++ {
 		if bytes.Compare(wb[i], hb[i]) != 0 {
 			diff = append(diff, i)
+			ok = false
 		}
 	}
 
-	return diff, true, nil
+	return diff, ok, nil
 }
