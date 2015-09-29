@@ -2,14 +2,11 @@ package controllers
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/coduno/api/util"
 	"github.com/gorilla/mux"
-
-	"google.golang.org/appengine/memcache"
-	"google.golang.org/cloud/storage"
 
 	"golang.org/x/net/context"
 )
@@ -40,49 +37,13 @@ func Template(ctx context.Context, w http.ResponseWriter, r *http.Request) (int,
 		return http.StatusInternalServerError, errors.New("language unknown")
 	}
 	fn := templateName + "/" + fileName
-	var content []byte
-	var err error
-	if content, err = fromCache(ctx, fn); err != nil {
-		if content, err = fromStorage(ctx, fn); err != nil {
-			return http.StatusInternalServerError, err
-		}
-	}
+	rc, err := util.Load(ctx, util.TemplateBucket, fn)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
+	defer rc.Close()
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment; filename='"+fileName+"'")
-	w.Write(content)
+	io.Copy(w, rc)
 	return http.StatusOK, nil
-}
-
-func fromCache(ctx context.Context, fileName string) ([]byte, error) {
-	item, err := memcache.Get(ctx, fileName)
-	if err != nil {
-		return nil, err
-	}
-	return item.Value, nil
-}
-
-func fromStorage(ctx context.Context, fileName string) ([]byte, error) {
-	rc, err := storage.NewReader(util.CloudContext(ctx), util.TemplateBucket, fileName)
-	if err != nil {
-		return nil, err
-	}
-
-	content, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return nil, err
-	}
-
-	item := &memcache.Item{
-		Key:   fileName,
-		Value: content,
-	}
-
-	if err = memcache.Set(ctx, item); err != nil {
-		return nil, err
-	}
-
-	return content, nil
 }

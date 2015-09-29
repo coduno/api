@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"path"
 	"strings"
 	"time"
 
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/cloud/storage"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
@@ -17,15 +15,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (ts model.TestStats, err error) {
+func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (ts model.TestStats, err error) {
 	image := newImage(sub.Language)
 
 	if err = prepareImage(image); err != nil {
-		return
-	}
-
-	var v *docker.Volume
-	if v, err = createDockerVolume(sub.Code.Bucket + "/" + path.Dir(sub.Code.Name)); err != nil {
 		return
 	}
 
@@ -39,18 +32,26 @@ func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission
 		HostConfig: &docker.HostConfig{
 			Privileged: false,
 			Memory:     0, // TODO(flowlo): Limit memory
-			Binds:      []string{v.Name + ":/run"},
 		},
 	})
 	if err != nil {
 		return
 	}
 
-	var stdin io.ReadCloser
-	stdin, err = storage.NewReader(util.CloudContext(ctx), util.TestsBucket, t.Params["input"])
+	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
+		Path:        "/run",
+		InputStream: ball,
+	})
 	if err != nil {
 		return
 	}
+
+	var stdin io.ReadCloser
+	stdin, err = util.Load(util.CloudContext(ctx), util.TestsBucket, t.Params["input"])
+	if err != nil {
+		return
+	}
+	defer stdin.Close()
 
 	start := time.Now()
 	if err = dc.StartContainer(c.ID, c.HostConfig); err != nil {
@@ -89,9 +90,9 @@ func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission
 	return processDiffResults(ctx, tr, util.TestsBucket, t.Params["output"], t.Key)
 }
 
-func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (ts model.TestStats, err error) {
+func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (ts model.TestStats, err error) {
 	var str model.SimpleTestResult
-	str, err = Simple(ctx, sub)
+	str, err = Simple(ctx, sub, ball)
 	if err != nil {
 		return
 	}
@@ -104,10 +105,11 @@ func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubm
 
 func processDiffResults(ctx context.Context, tr model.DiffTestResult, bucket, testFile string, test *datastore.Key) (ts model.TestStats, err error) {
 	var want io.ReadCloser
-	want, err = storage.NewReader(util.CloudContext(ctx), bucket, testFile)
+	want, err = util.Load(util.CloudContext(ctx), bucket, testFile)
 	if err != nil {
 		return
 	}
+	defer want.Close()
 
 	have := strings.NewReader(tr.Stdout)
 	diffLines, ok, err := compare(want, have)

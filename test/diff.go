@@ -2,39 +2,32 @@ package test
 
 import (
 	"encoding/json"
-	"errors"
+	"io"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/runner"
 	"github.com/coduno/api/ws"
 	"golang.org/x/net/context"
-	"google.golang.org/appengine/log"
 )
 
 func init() {
 	RegisterTester(Diff, diff)
 }
 
-func diff(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission) (err error) {
-	log.Debugf(ctx, "Executing diff tester")
-	if !checkDiffParams(t.Params) {
-		return errors.New("params missing")
+func diff(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (err error) {
+	if _, ok := t.Params["tests"]; !ok {
+		return ErrMissingParam("tests")
 	}
-	var ts model.TestStats
-	if ts, err = runner.OutMatchDiffRun(ctx, t, sub); err != nil {
+
+	ts, err := runner.OutMatchDiffRun(ctx, t, sub, ball)
+	if err != nil {
 		return
 	}
 
+	// TODO(flowlo): Use a json.Encoder
 	var body []byte
 	if body, err = json.Marshal(ts); err != nil {
 		return err
 	}
 	return ws.Write(sub.Key.Parent(), body)
-}
-
-func checkDiffParams(params map[string]string) (ok bool) {
-	if _, ok = params["tests"]; !ok {
-		return
-	}
-	return true
 }

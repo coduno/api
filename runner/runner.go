@@ -28,7 +28,7 @@ func init() {
 	}
 }
 
-func createDockerContainer(image string, binds []string) (*docker.Container, error) {
+func itoc(image string) (*docker.Container, error) {
 	// TODO(victorbalan): Pass the memory limit from test
 	return dc.CreateContainer(docker.CreateContainerOptions{
 		Config: &docker.Config{
@@ -37,7 +37,6 @@ func createDockerContainer(image string, binds []string) (*docker.Container, err
 		HostConfig: &docker.HostConfig{
 			Privileged: false,
 			Memory:     0, // TODO(flowlo): Limit memory
-			Binds:      binds,
 		},
 	})
 }
