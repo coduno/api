@@ -135,7 +135,7 @@ func ping(ws *websocket.Conn, id id) {
 			die(id, err)
 			return
 		}
-		log.Debugf(appengine.BackgroundContext(), "ws: ping %x for %v sent", b, id)
+		log.Debugf(appengine.BackgroundContext(), "ws: ping %x for %s(%d %q) sent", b, id.kind, id.intID, id.stringID)
 	}
 }
 

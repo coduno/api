@@ -64,6 +64,11 @@ func Templates(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 		}
 	}
 
-	json.NewEncoder(w).Encode(urls)
+	if len(urls) == 0 {
+		w.Write([]byte("[]"))
+	} else {
+		json.NewEncoder(w).Encode(urls)
+	}
+
 	return http.StatusOK, nil
 }

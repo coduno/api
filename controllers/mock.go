@@ -280,7 +280,7 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 			Security:     0.1,
 			CodingSpeed:  0.7,
 		},
-		Templates: templateHelper(map[string][]string{"": []string{"robot/robot.json"}}),
+		Templates: templateHelper(map[string][]string{"json": []string{"robot/robot.json"}}),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -320,7 +320,7 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 	}
 }
 
-func templateHelper(m map[string][]string) model.LanguageTemplates {
+func templateHelper(m map[string][]string) map[string][]model.StoredObject {
 	res := map[string][]model.StoredObject{}
 	for k, files := range m {
 		sos := make([]model.StoredObject, 0, len(files))
@@ -332,5 +332,5 @@ func templateHelper(m map[string][]string) model.LanguageTemplates {
 		}
 		res[k] = sos
 	}
-	return model.LanguageTemplates(res)
+	return res
 }
