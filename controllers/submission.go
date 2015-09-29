@@ -69,6 +69,11 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusBadRequest, err
 	}
 
+	files, ok := form.File["files"]
+	if !ok {
+		return http.StatusBadRequest, errors.New("missing files")
+	}
+
 	var task model.Task
 	if err = datastore.Get(ctx, taskKey, &task); err != nil {
 		return http.StatusNotFound, err
@@ -89,7 +94,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	submission := model.Submission{
 		Task:     taskKey,
 		Time:     time.Now(),
-		Language: detectLanguage(form),
+		Language: detectLanguage(files),
 		Code:     storedCode,
 	}
 
@@ -98,7 +103,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	pr, pw := io.Pipe()
-	go maketar(pw, form)
+	go maketar(pw, files)
 
 	var tests model.Tests
 	testKeys, err := model.NewQueryForTest().
@@ -117,7 +122,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}(i, t)
 	}
 
-	if err := upload(ctx, storedCode.Bucket, storedCode.Name, form); err != nil {
+	if err := upload(ctx, storedCode.Bucket, storedCode.Name, files); err != nil {
 		return http.StatusInternalServerError, err
 	}
 
@@ -135,7 +140,7 @@ func (e multiError) Error() string {
 	return strings.Join(s, "\n")
 }
 
-func upload(ctx context.Context, bucket, base string, form *multipart.Form) multiError {
+func upload(ctx context.Context, bucket, base string, files []*multipart.FileHeader) multiError {
 	if appengine.IsDevAppServer() {
 		return nil
 	}
@@ -143,14 +148,8 @@ func upload(ctx context.Context, bucket, base string, form *multipart.Form) mult
 	errc := make(chan error)
 	var errs []error
 
-	for _, fhs := range form.File {
-		go func(fhs []*multipart.FileHeader) {
-			if len(fhs) > 1 {
-				errc <- errors.New("cannot read split files")
-				return
-			}
-
-			fh := fhs[0]
+	for _, fh := range files {
+		go func(fh *multipart.FileHeader) {
 			f, err := fh.Open()
 			if err != nil {
 				errc <- err
@@ -176,10 +175,10 @@ func upload(ctx context.Context, bucket, base string, form *multipart.Form) mult
 			}
 
 			errc <- nil
-		}(fhs)
+		}(fh)
 	}
 
-	for range form.File {
+	for range files {
 		err := <-errc
 		if err != nil {
 			errs = append(errs, err)
@@ -190,7 +189,7 @@ func upload(ctx context.Context, bucket, base string, form *multipart.Form) mult
 	return errs
 }
 
-func maketar(wc io.WriteCloser, form *multipart.Form) error {
+func maketar(wc io.WriteCloser, files []*multipart.FileHeader) error {
 	defer wc.Close()
 
 	tarw := tar.NewWriter(wc)
@@ -207,11 +206,7 @@ func maketar(wc io.WriteCloser, form *multipart.Form) error {
 		return size
 	}
 
-	for _, fhs := range form.File {
-		if len(fhs) > 1 {
-			return errors.New("cannot read split files")
-		}
-		fh := fhs[0]
+	for _, fh := range files {
 		f, err := fh.Open()
 		if err != nil {
 			return err
@@ -231,7 +226,7 @@ func maketar(wc io.WriteCloser, form *multipart.Form) error {
 	return nil
 }
 
-func detectLanguage(form *multipart.Form) string {
+func detectLanguage(files []*multipart.FileHeader) string {
 	l := ""
 	m := map[string]int{
 		"py":   0,
@@ -240,7 +235,9 @@ func detectLanguage(form *multipart.Form) string {
 		"cpp":  0,
 	}
 	max := 0
-	for name := range form.File {
+
+	for _, fh := range files {
+		name := fh.Filename
 		dot := strings.LastIndex(name, ".") + 1
 		if dot == 0 || dot == len(name) {
 			continue
