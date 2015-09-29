@@ -195,7 +195,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Languages: []string{"java"},
 		Tasker:    int64(logic.JunitTasker),
-		Templates: templateHelper("ngram/Application.java"),
+		Templates: templateHelper(map[string][]string{"java": []string{"ngram/Application.java"}}),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -280,7 +280,7 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 			Security:     0.1,
 			CodingSpeed:  0.7,
 		},
-		Templates: templateHelper("robot/robot.json"),
+		Templates: templateHelper(map[string][]string{"": []string{"robot/robot.json"}}),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -320,13 +320,17 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 	}
 }
 
-func templateHelper(files ...string) []model.StoredObject {
-	sos := make([]model.StoredObject, 0, len(files))
-	for _, file := range files {
-		sos = append(sos, model.StoredObject{
-			Bucket: util.TemplateBucket,
-			Name:   file,
-		})
+func templateHelper(m map[string][]string) model.LanguageTemplates {
+	res := map[string][]model.StoredObject{}
+	for k, files := range m {
+		sos := make([]model.StoredObject, 0, len(files))
+		for _, file := range files {
+			sos = append(sos, model.StoredObject{
+				Bucket: util.TemplateBucket,
+				Name:   file,
+			})
+		}
+		res[k] = sos
 	}
-	return sos
+	return model.LanguageTemplates(res)
 }

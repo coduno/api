@@ -18,8 +18,6 @@ func init() {
 	router.Handle("/tasks/{key}/templates", ContextHandlerFunc(Templates))
 }
 
-// Template serves the contents of a static file to a client.
-// TODO(flowlo, victorbalan): Decide where the templates will be stored.
 func Templates(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
@@ -30,6 +28,8 @@ func Templates(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 		return http.StatusBadRequest, err
 	}
 
+	ls := r.URL.Query()["language"]
+
 	var t model.Task
 	if err = datastore.Get(ctx, taskKey, &t); err != nil {
 		return http.StatusInternalServerError, nil
@@ -37,14 +37,31 @@ func Templates(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 
 	// TODO(flowlo): Use correct duration.
 	expiry := time.Now().Add(time.Hour * 2)
+	var urls []string
 
-	urls := make([]string, 0, len(t.Templates))
-	for _, template := range t.Templates {
-		u, err := util.Expose(template.Bucket, template.Name, expiry)
-		if err != nil {
-			return http.StatusInternalServerError, err
+	expose := func(objs []model.StoredObject) error {
+		for _, obj := range objs {
+			u, err := util.Expose(obj.Bucket, obj.Name, expiry)
+			if err != nil {
+				return err
+			}
+			urls = append(urls, u)
 		}
-		urls = append(urls, u)
+		return nil
+	}
+
+	if len(ls) == 0 {
+		for _, objs := range t.Templates {
+			if err := expose(objs); err != nil {
+				return http.StatusInternalServerError, err
+			}
+		}
+	} else {
+		for _, l := range ls {
+			if err := expose(t.Templates[l]); err != nil {
+				return http.StatusInternalServerError, err
+			}
+		}
 	}
 
 	json.NewEncoder(w).Encode(urls)
