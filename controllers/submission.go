@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -158,6 +159,8 @@ func upload(ctx context.Context, bucket, base string, files []*multipart.FileHea
 
 			name := base + fh.Filename
 			wc := storage.NewWriter(ctx, bucket, name)
+
+			wc.ObjectAttrs = defaultObjectAttrs(path.Base(fh.Filename))
 
 			if _, err := io.Copy(wc, f); err != nil {
 				errc <- err
