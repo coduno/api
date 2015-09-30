@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"io"
 	"io/ioutil"
-	"path"
 	"strings"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission, ball io.Reader) (*model.JunitTestResult, error) {
+func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, error) {
 	image := newImage("javaut")
 
 	if err := prepareImage(image); err != nil {
@@ -28,31 +27,9 @@ func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission, ball
 		return nil, err
 	}
 
-	pr, pw := io.Pipe()
-	go func() {
-		defer pw.Close()
-		rc, err := util.Load(ctx, util.TestsBucket, testFile)
-		if err != nil {
-			return
-		}
-		defer rc.Close()
-		buf, err := ioutil.ReadAll(rc)
-		if err != nil {
-			return
-		}
-		w := tar.NewWriter(pw)
-		defer w.Close()
-		w.WriteHeader(&tar.Header{
-			Name: path.Base(testFile),
-			Mode: 0600,
-			Size: int64(len(buf)),
-		})
-		w.Write(buf)
-	}()
-
 	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
 		Path:        "/run/src/test/java/",
-		InputStream: pr,
+		InputStream: tests,
 	})
 	if err != nil {
 		return nil, err
@@ -60,7 +37,7 @@ func JUnit(ctx context.Context, testFile string, sub model.KeyedSubmission, ball
 
 	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
 		Path:        "/run/src/main/java",
-		InputStream: ball,
+		InputStream: code,
 	})
 	if err != nil {
 		return nil, err

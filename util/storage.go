@@ -16,10 +16,11 @@ import (
 )
 
 var FileNames = map[string]string{
-	"py":    "app.py",
-	"c":     "app.c",
-	"cpp":   "app.cpp",
-	"java":  "Application.java",
+	"py":     "app.py",
+	"c":      "app.c",
+	"cpp":    "app.cpp",
+	"java":   "Application.java",
+	"javaut": "Tests.java",
 	"robot": "robot.json",
 }
 

@@ -20,6 +20,7 @@ const (
 	Diff
 	IO
 	Robot
+	CoderJunit
 	maxTester
 )
 
