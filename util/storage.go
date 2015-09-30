@@ -2,10 +2,14 @@ package util
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
+	"time"
 
 	"golang.org/x/net/context"
+	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/jwt"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/memcache"
 	"google.golang.org/cloud/storage"
@@ -26,6 +30,14 @@ const (
 	// the result file name.
 	JUnitResultsPath = "/run/build/test-results/TEST-Tests.xml"
 )
+
+var jwtc *jwt.Config
+
+func init() {
+	if raw, err := ioutil.ReadFile("service-account.json"); err == nil {
+		jwtc, _ = google.JWTConfigFromJSON(raw, storage.ScopeFullControl)
+	}
+}
 
 func SubmissionBucket() string {
 	if appengine.IsDevAppServer() {
@@ -90,4 +102,17 @@ func fromStorage(ctx context.Context, bucket, name string) (io.ReadCloser, error
 
 func key(bucket, name string) string {
 	return "gcs://" + bucket + "/" + name
+}
+
+func Expose(bucket, name string, expiry time.Time) (string, error) {
+	if jwtc == nil {
+		return "", errors.New("JWT configuration invalid")
+	}
+	opts := &storage.SignedURLOptions{
+		GoogleAccessID: jwtc.Email,
+		PrivateKey:     jwtc.PrivateKey,
+		Method:         "GET",
+		Expires:        expiry,
+	}
+	return storage.SignedURL(bucket, name, opts)
 }
