@@ -106,9 +106,6 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusInternalServerError, err
 	}
 
-	pr, pw := io.Pipe()
-	go maketar(pw, files)
-
 	var tests model.Tests
 	testKeys, err := model.NewQueryForTest().
 		Ancestor(taskKey).
@@ -117,10 +114,18 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusInternalServerError, err
 	}
 
+	wrs := make([]io.Writer, len(tests))
+	rrs := make([]*io.PipeReader, len(tests))
+	for i := range tests {
+		rrs[i], wrs[i] = io.Pipe()
+		go io.Copy(wrs[i], rrs[i])
+	}
+	go maketar(io.MultiWriter(wrs...), files)
+
 	for i, t := range tests {
 		go func(i int, t model.Test) {
 			// TODO(victorbalan, flowlo): Error handling
-			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey), pr); err != nil {
+			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey), rrs[i]); err != nil {
 				log.Warningf(ctx, "%s", err)
 			}
 		}(i, t)
@@ -323,9 +328,7 @@ func upload(ctx context.Context, bucket, base string, files []*multipart.FileHea
 	return errs
 }
 
-func maketar(wc io.WriteCloser, files []*multipart.FileHeader) error {
-	defer wc.Close()
-
+func maketar(wc io.Writer, files []*multipart.FileHeader) error {
 	tarw := tar.NewWriter(wc)
 	defer tarw.Close()
 
