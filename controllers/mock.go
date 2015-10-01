@@ -195,7 +195,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Languages: []string{"java"},
 		Tasker:    int64(logic.JunitTasker),
-		Templates: templateHelper(map[string][]string{"java": []string{"ngram/Application.java"}}),
+		Templates: templateHelper(map[string][]string{"java": {"ngram/Application.java"}}),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -273,7 +273,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		},
 		Languages: []string{"java"},
 		Tasker:    int64(logic.JunitTasker),
-		Templates: templateHelper(map[string][]string{"java": []string{"primes/Application.java"}}),
+		Templates: templateHelper(map[string][]string{"java": {"primes/Application.java"}}),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -327,7 +327,7 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 			Security:     0.1,
 			CodingSpeed:  0.7,
 		},
-		Templates: templateHelper(map[string][]string{"json": []string{"robot/robot.json"}}),
+		Templates: templateHelper(map[string][]string{"json": {"robot/robot.json"}}),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
@@ -370,7 +370,7 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 			Security:     0,
 			CodingSpeed:  0.4,
 		},
-		Templates: templateHelper(map[string][]string{"javaut": []string{"avl/Tests.java"}}),
+		Templates: templateHelper(map[string][]string{"javaut": {"avl/Tests.java"}}),
 		Languages: []string{"javaut"},
 		Tasker:    int64(logic.JunitTasker),
 	}.Put(ctx, nil)

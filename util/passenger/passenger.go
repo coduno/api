@@ -286,6 +286,14 @@ func FromBasicAuth(ctx context.Context, username, pw string) (p *Passenger, err 
 // FromRequest inspects the HTTP Authorization header of the given request
 // and tries to identify a passenger.
 func FromRequest(ctx context.Context, r *http.Request) (*Passenger, error) {
+	cookie, err := r.Cookie("token")
+	if err != nil && err != http.ErrNoCookie {
+		return nil, err
+	}
+	if err == nil {
+		return FromToken(ctx, cookie.Value)
+	}
+
 	auth := ""
 	if auth = r.Header.Get("Authorization"); auth == "" {
 		return nil, ErrNoAuthHeader
