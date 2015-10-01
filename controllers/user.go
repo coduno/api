@@ -31,14 +31,14 @@ func init() {
 }
 
 func User(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	p, ok := passenger.FromContext(ctx)
-	if !ok {
-		return http.StatusUnauthorized, nil
-	}
 	switch r.Method {
 	case "POST":
 		return createUser(ctx, w, r)
 	case "GET":
+		p, ok := passenger.FromContext(ctx)
+		if !ok {
+			return http.StatusUnauthorized, nil
+		}
 		return getUsers(p, ctx, w, r)
 	default:
 		return http.StatusMethodNotAllowed, nil
