@@ -15,7 +15,8 @@ type JunitTestResult struct {
 	Start time.Time `datastore:",index"`
 	End   time.Time `datastore:",index"`
 
-	Results UnitTestResults `datastore:",noindex"`
+	Results  UnitTestResults `datastore:",noindex"`
+	Endpoint string
 }
 
 // UnitTestResults holds the unit test result created by JUnit.

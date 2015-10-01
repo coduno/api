@@ -7,4 +7,6 @@ type DiffTestResult struct {
 	SimpleTestResult
 
 	DiffLines []int `datastore:",noindex"`
+	Endpoint  string
+	Failed    bool
 }

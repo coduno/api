@@ -35,7 +35,7 @@ func junit(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ba
 		return err
 	}
 
-	if _, err := tr.Put(ctx, nil); err != nil {
+	if _, err := tr.PutWithParent(ctx, sub.Key); err != nil {
 		return err
 	}
 

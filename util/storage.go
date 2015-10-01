@@ -58,6 +58,26 @@ func Load(ctx context.Context, bucket, name string) (io.ReadCloser, error) {
 	return fromStorage(ctx, bucket, name)
 }
 
+func ExposeMultiURL(ctx context.Context, bucket, name string) ([]string, error) {
+	// TODO(victorbalan): Change this to session expiry time
+	expiry := time.Now().Add(time.Hour * 2)
+	query := &storage.Query{Prefix: name}
+	objects, err := storage.ListObjects(CloudContext(ctx), bucket, query)
+	if err != nil {
+		return nil, err
+	}
+	var urls []string
+	for _, obj := range objects.Results {
+		u, err := Expose(bucket, obj.Name, expiry)
+		if err != nil {
+			return nil, err
+		}
+		urls = append(urls, u)
+	}
+
+	return urls, nil
+}
+
 type cachingCloser struct {
 	ctx context.Context
 	key string

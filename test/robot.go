@@ -1,11 +1,11 @@
 package test
 
 import (
+	"archive/tar"
 	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
-	"path"
 	"strconv"
 	"strings"
 
@@ -22,20 +22,21 @@ func init() {
 
 func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (err error) {
 	log.Debugf(ctx, "Executing robot tester")
-	var testMap, stdin io.ReadCloser
+	var testMap io.ReadCloser
 	if testMap, err = util.Load(util.CloudContext(ctx), util.TemplateBucket, t.Params["tests"]); err != nil {
 		return
 	}
 	defer testMap.Close()
 
-	if stdin, err = util.Load(util.CloudContext(ctx), sub.Code.Bucket, path.Dir(sub.Code.Name)+"/"+util.FileNames["robot"]); err != nil {
-		return
-	}
-	defer stdin.Close()
-
 	var testMapBytes, stdinBytes []byte
-	if stdinBytes, err = ioutil.ReadAll(stdin); err != nil {
-		return
+
+	tr := tar.NewReader(ball)
+	if _, err = tr.Next(); err != nil {
+		return err
+	}
+
+	if stdinBytes, err = ioutil.ReadAll(tr); err != nil {
+		return err
 	}
 
 	if testMapBytes, err = ioutil.ReadAll(testMap); err != nil {
@@ -146,6 +147,7 @@ func turnRight(d int) int {
 func testRobot(m Map, in string) (moves []TypedPosition, err error) {
 	moves = append(moves, TypedPosition{Position: m.Start, Type: "MOVE"})
 
+	in = strings.ToLower(in)
 	commands := strings.Split(in, "\n")
 
 	direction := right
@@ -153,7 +155,7 @@ func testRobot(m Map, in string) (moves []TypedPosition, err error) {
 	for counter, val := range commands {
 		c := strings.Split(val, " ")
 		switch c[0] {
-		case "MOVE":
+		case "move":
 			n, err := strconv.Atoi(c[1])
 			if err != nil {
 				return moves, errors.New("bad move argument")
@@ -164,11 +166,11 @@ func testRobot(m Map, in string) (moves []TypedPosition, err error) {
 			if !ok {
 				return moves, nil
 			}
-		case "RIGHT":
+		case "right":
 			direction = turnRight(direction)
-		case "LEFT":
+		case "left":
 			direction = turnLeft(direction)
-		case "PICK":
+		case "pick":
 			moves = pick(moves, m.Coins)
 		default:
 			return moves, errors.New("bad command")
