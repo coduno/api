@@ -23,7 +23,7 @@ func coderJunit(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmissio
 
 	code := model.StoredObject{
 		Bucket: util.TestsBucket,
-		Name:   t.Params["test"],
+		Name:   t.Params["code"],
 	}
 	codeStream := stream(ctx, code)
 	var tr *model.JunitTestResult
