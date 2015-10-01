@@ -21,7 +21,7 @@ var FileNames = map[string]string{
 	"cpp":    "app.cpp",
 	"java":   "Application.java",
 	"javaut": "Tests.java",
-	"robot": "robot.json",
+	"robot":  "robot.json",
 }
 
 const (

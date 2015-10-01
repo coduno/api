@@ -370,8 +370,8 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 			Security:     0,
 			CodingSpeed:  0.4,
 		},
-		Templates: templateHelper(map[string][]string{"java": []string{"avl/Tests.java"}}),
-		Languages: []string{"java"},
+		Templates: templateHelper(map[string][]string{"javaut": []string{"avl/Tests.java"}}),
+		Languages: []string{"javaut"},
 		Tasker:    int64(logic.JunitTasker),
 	}.Put(ctx, nil)
 	if err != nil {

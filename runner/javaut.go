@@ -36,7 +36,7 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	}
 
 	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
-		Path:        "/run/src/main/java",
+		Path:        "/run/src/main/java/",
 		InputStream: code,
 	})
 	if err != nil {
