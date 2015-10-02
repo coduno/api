@@ -46,7 +46,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusUnauthorized, nil
 	}
 
-	mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
@@ -68,12 +68,11 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusNotFound, err
 	}
 
-	form, err := multipart.NewReader(r.Body, params["boundary"]).ReadForm(16 << 20)
-	if err != nil {
+	if err := r.ParseMultipartForm(16 << 20); err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	files, ok := form.File["files"]
+	files, ok := r.MultipartForm.File["files"]
 	if !ok {
 		return http.StatusBadRequest, errors.New("missing files")
 	}
