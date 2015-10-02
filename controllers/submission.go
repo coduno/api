@@ -113,27 +113,28 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusInternalServerError, err
 	}
 
+	prrs, pwrs := multiPipe(len(tests))
+
 	wrs := make([]io.Writer, len(tests))
-	rrs := make([]*io.PipeReader, len(tests))
-	for i := range tests {
-		rrs[i], wrs[i] = io.Pipe()
-		go io.Copy(wrs[i], rrs[i])
+	for i := range wrs {
+		wrs[i] = pwrs[i]
 	}
+
 	go maketar(io.MultiWriter(wrs...), files)
 
 	for i, t := range tests {
 		go func(i int, t model.Test) {
-			// TODO(victorbalan, flowlo): Error handling
-			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey), rrs[i]); err != nil {
+			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey), prrs[i]); err != nil {
 				log.Warningf(ctx, "%s", err)
 			}
 		}(i, t)
+		go io.Copy(pwrs[i], prrs[i])
 	}
 
 	if err := upload(util.CloudContext(ctx), storedCode.Bucket, storedCode.Name, files); err != nil {
 		return http.StatusInternalServerError, err
 	}
-	// TODO(flowlo): Return something meaningful.
+
 	return http.StatusOK, nil
 }
 
@@ -360,6 +361,15 @@ func maketar(wc io.Writer, files []*multipart.FileHeader) error {
 		f.Close()
 	}
 	return nil
+}
+
+func multiPipe(n int) ([]*io.PipeReader, []*io.PipeWriter) {
+	wrs := make([]*io.PipeWriter, n)
+	rrs := make([]*io.PipeReader, n)
+	for i := 0; i < n; i++ {
+		rrs[i], wrs[i] = io.Pipe()
+	}
+	return rrs, wrs
 }
 
 func detectLanguage(files []*multipart.FileHeader) string {
