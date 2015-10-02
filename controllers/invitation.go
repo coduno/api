@@ -13,7 +13,6 @@ import (
 	"github.com/coduno/api/util/passenger"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/log"
 	appmail "google.golang.org/appengine/mail"
 
 	"golang.org/x/net/context"
@@ -165,12 +164,6 @@ func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (st
 		prefix + "/#!/token/" + query,
 	}); err != nil {
 		return http.StatusInternalServerError, err
-	}
-
-	// If we're on dev, it is very likely that the e-mail won't be sent.
-	// Print the body for quick debugging.
-	if appengine.IsDevAppServer() {
-		log.Infof(ctx, "%s", buf.String())
 	}
 
 	if err = appmail.Send(ctx, &appmail.Message{
