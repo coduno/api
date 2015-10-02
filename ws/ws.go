@@ -3,6 +3,7 @@ package ws
 import (
 	"crypto/rand"
 	"errors"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -171,27 +172,23 @@ func ktoi(key *datastore.Key) id {
 	}
 }
 
-// Write picks the right WebSocket to communicate with the user owning
-// the entity references by the passed key and writes data to the socket.
-func Write(key *datastore.Key, buf []byte) error {
+// NewWriter picks the right WebSocket to communicate with the user owning
+// the entity referenced by the passed key and returns a writer suitable to
+// send a WebSocket text message.
+func NewWriter(key *datastore.Key) (io.WriteCloser, error) {
 	id := ktoi(key)
 	ws, ok := lookup(id)
 
 	if !ok {
-		return ErrNoSocket
+		return nil, ErrNoSocket
 	}
 
 	if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 		die(id, err)
-		return err
+		return nil, err
 	}
 
-	if err := ws.WriteMessage(websocket.TextMessage, buf); err != nil {
-		die(id, err)
-		return err
-	}
-
-	return nil
+	return ws.NextWriter(websocket.TextMessage)
 }
 
 // Close closes the WebSocket associated with the given key. It does not take care of

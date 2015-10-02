@@ -11,7 +11,6 @@ import (
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
-	"github.com/coduno/api/ws"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/log"
 )
@@ -52,11 +51,7 @@ func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ba
 		// TODO(victorbalan): Pass the error to the ws so the client knows what he's doing wrong
 		return
 	}
-	var body []byte
-	if body, err = json.Marshal(moves); err != nil {
-		return
-	}
-	return ws.Write(sub.Key.Parent(), body)
+	return marshalJSON(&sub, moves)
 }
 
 type Position struct {

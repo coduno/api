@@ -1,12 +1,10 @@
 package test
 
 import (
-	"encoding/json"
 	"io"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/runner"
-	"github.com/coduno/api/ws"
 	"golang.org/x/net/context"
 )
 
@@ -24,13 +22,7 @@ func iot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball
 		return err
 	}
 
-	// TODO(flowlo): Use a json.Encoder
-	var body []byte
-	if body, err = json.Marshal(ts); err != nil {
-		return err
-	}
-
-	return ws.Write(sub.Key.Parent(), body)
+	return marshalJSON(&sub, ts)
 }
 
 func checkIoParams(params map[string]string) error {
