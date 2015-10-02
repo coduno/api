@@ -52,12 +52,12 @@ func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ba
 		return
 	}
 
-	var m *model.Map
-	if err = json.Unmarshal(tmap, m); err != nil {
+	var m model.Map
+	if err = json.Unmarshal(tmap, &m); err != nil {
 		return
 	}
 
-	tr, err := testRobot(m, in)
+	tr, err := testRobot(&m, in)
 	if err != nil {
 		// TODO(victorbalan): Pass the error to the ws so the client knows what he's doing wrong
 		return
@@ -66,24 +66,24 @@ func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ba
 	if _, err = tr.PutWithParent(ctx, sub.Key); err != nil {
 		return
 	}
-	return marshalJSON(&sub, moves)
+	return marshalJSON(&sub, tr.Moves)
 }
 
 func testRobot(m *model.Map, in io.Reader) (tr model.RobotTestResults, err error) {
 	tr.Moves = append(tr.Moves, model.RobotLogEntry{Position: m.Start, Event: model.Move})
 	direction := model.Right
 	r := bufio.NewReader(in)
-	picked := 0
-
+	var picks []int
 	for {
 		current, err := r.ReadBytes('\n')
-		if err == io.EOF || len(current) == 0 {
+		if len(current) == 0 {
 			break
-		} else if err != nil {
+		} else if err != nil && err != io.EOF {
 			return tr, err
 		}
 
 		current = bytes.ToLower(current)
+		current = bytes.TrimSuffix(current, []byte("\n"))
 
 		c := bytes.Split(current, []byte(" "))
 		switch string(c[0]) {
@@ -105,9 +105,8 @@ func testRobot(m *model.Map, in io.Reader) (tr model.RobotTestResults, err error
 		case "left":
 			direction = turnLeft(direction)
 		case "pick":
-			if pick(&tr, m) {
-				picked++
-			}
+			tr.Moves = append(tr.Moves, tr.Moves[len(tr.Moves)-1])
+			picks = append(picks, len(tr.Moves)-1)
 		default:
 			return tr, errors.New("bad command")
 		}
@@ -115,33 +114,21 @@ func testRobot(m *model.Map, in io.Reader) (tr model.RobotTestResults, err error
 	if m.Finish == tr.Moves[len(tr.Moves)-1].Position {
 		tr.ReachedFinish = true
 	}
+
+	picked := 0
+	for _, pick := range picks {
+		if m.CoinAt(tr.Moves[pick].Position) {
+			picked++
+			tr.Moves[pick].Event = model.Picked
+		} else {
+			tr.Failed = true
+			tr.Moves[pick].Event = model.WrongPick
+		}
+	}
 	if picked != len(m.Coins) {
 		tr.Failed = true
 	}
 	return tr, nil
-}
-
-func pick(tr *model.RobotTestResults, m *model.Map) bool {
-	i := len(tr.Moves) - 1
-
-	// Check whether there is a coin.
-	if !m.CoinAt(tr.Moves[i].Position) {
-		tr.Moves[i].Event = model.WrongPick
-		tr.Failed = true
-		return false
-	}
-
-	// Check whether the coin has been picked up already.
-	for _, m := range tr.Moves {
-		if m == (model.RobotLogEntry{tr.Moves[i].Position, model.Picked}) {
-			tr.Moves[i].Event = model.WrongPick
-			tr.Failed = true
-			return false
-		}
-	}
-
-	tr.Moves[i].Event = model.Picked
-	return true
 }
 
 func move(tr *model.RobotTestResults, n int, direction model.RobotDirection, m *model.Map) bool {
@@ -149,7 +136,7 @@ func move(tr *model.RobotTestResults, n int, direction model.RobotDirection, m *
 		n--
 
 		i := len(tr.Moves) - 1
-		tr.Moves = append(tr.Moves, tr.Moves[i])
+		tr.Moves = append(tr.Moves, tr.Moves[i].Move(direction))
 		i++
 
 		if tr.Moves[i].Validate(m) {

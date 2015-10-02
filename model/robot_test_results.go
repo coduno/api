@@ -51,6 +51,21 @@ func (p *RobotLogEntry) Validate(m *Map) bool {
 	}
 	return true
 }
+func (p RobotLogEntry) Move(d RobotDirection) RobotLogEntry {
+	tp := p
+	tp.Event = Move
+	switch d {
+	case Up:
+		tp.X--
+	case Down:
+		tp.X++
+	case Left:
+		tp.Y--
+	case Right:
+		tp.Y++
+	}
+	return tp
+}
 
 type Map struct {
 	Start, Finish, Max Position
