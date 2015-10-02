@@ -25,21 +25,28 @@ critical in order to contribute.
 
 ### Commit messages
 
-  1. First line should be a tagged headline, maximum 50 chars.
+  1. First is a tagged headline, maximum 50 chars.
     * Tags of what you changed (all lowercase, separated by `", "`)
     * `": "`
     * Headline
   2. Second line is empty.
-  3. Rest of the message must be a description of what you did. Enumerations are welcome.
+  3. Rest of the message must be an exhaustive description of what the changeset contains. Enumerations are welcome.
 
 There's currently no signing policy in place, but feel free to sign your commits.
 
 #### Tags
 
- * `gae` if you changed AppEngine configuration like `app.yaml`, or modified `Dockerfile` or something else that has to do with running on AppEngine
- * `sec` if your change has security implications in general.
- * `ctrl` if you changed a controller
- * `sess` if you change sessions, authentication or cookie handling.
- * `dep` if you introduce a new dependency
+Tags allow for better querying the history and provide context. Please use them, but to a sensible degree. It's okay to introduce new tags; just be consistent.
+
+ * `ctrl` if you changed a controller.
+ * `dep` if you introduce a new dependency.
+ * `doc` when touching only documentation.
+ * `gae` for App Engine configuration like `app.yaml`, `index.yaml`, `Dockerfile` or something else that has to do with running on App Engine.
+ * `gen` if the changes are all automatically generated.
+ * `gcs` anything that talks or refers to Google Cloud Storage.
+ * `sec` if your change has security implications.
+ * `sub` when changing ingestion of submissions.
+ * `test` when touching a tester implementation.
+ * `ws` regarding WebSockets.
 
 If your tag list does not fit in 20 chars, you are probably doing something wrong.
