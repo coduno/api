@@ -15,14 +15,6 @@ import (
 	"google.golang.org/cloud/storage"
 )
 
-var FileNames = map[string]string{
-	"py":    "app.py",
-	"c":     "app.c",
-	"cpp":   "app.cpp",
-	"java":  "Application.java",
-	"robot": "robot.json",
-}
-
 const (
 	TemplateBucket = "coduno-templates"
 	TestsBucket    = "coduno-tests"
