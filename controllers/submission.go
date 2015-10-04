@@ -115,12 +115,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	prrs, pwrs := multiPipe(len(tests))
 
-	wrs := make([]io.Writer, len(tests))
-	for i := range wrs {
-		wrs[i] = pwrs[i]
-	}
-
-	go maketar(io.MultiWriter(wrs...), files)
+	go maketar(pwrs, files)
 
 	for i, t := range tests {
 		go func(i int, t model.Test) {
@@ -128,7 +123,6 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 				log.Warningf(ctx, "%s", err)
 			}
 		}(i, t)
-		go io.Copy(pwrs[i], prrs[i])
 	}
 
 	if err := upload(util.CloudContext(ctx), storedCode.Bucket, storedCode.Name, files); err != nil {
@@ -328,8 +322,13 @@ func upload(ctx context.Context, bucket, base string, files []*multipart.FileHea
 	return errs
 }
 
-func maketar(wc io.Writer, files []*multipart.FileHeader) error {
-	tarw := tar.NewWriter(wc)
+func maketar(pw []*io.PipeWriter, files []*multipart.FileHeader) error {
+	var w []io.Writer
+	for i := range pw {
+		w = append(w, pw[i])
+		defer pw[i].Close()
+	}
+	tarw := tar.NewWriter(io.MultiWriter(w...))
 	defer tarw.Close()
 
 	sizeFunc := func(s io.Seeker) int64 {
