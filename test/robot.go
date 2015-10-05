@@ -2,210 +2,150 @@ package test
 
 import (
 	"archive/tar"
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
 	"strconv"
-	"strings"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util"
 	"golang.org/x/net/context"
-	"google.golang.org/appengine/log"
 )
+
+func turnLeft(d model.RobotDirection) model.RobotDirection {
+	d--
+	if d < 0 {
+		d = model.Left
+	}
+	return d
+}
+
+func turnRight(d model.RobotDirection) model.RobotDirection {
+	d++
+	if d > 3 {
+		d = model.Up
+	}
+	return d
+}
 
 func init() {
 	RegisterTester(Robot, robot)
 }
 
 func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (err error) {
-	log.Debugf(ctx, "Executing robot tester")
-	var testMap io.ReadCloser
-	if testMap, err = util.Load(util.CloudContext(ctx), util.TemplateBucket, t.Params["tests"]); err != nil {
+	testrc, err := util.Load(util.CloudContext(ctx), util.TemplateBucket, t.Params["tests"])
+	if err != nil {
 		return
 	}
-	defer testMap.Close()
+	defer testrc.Close()
 
-	var testMapBytes, stdinBytes []byte
-
-	tr := tar.NewReader(ball)
-	if _, err = tr.Next(); err != nil {
+	in := tar.NewReader(ball)
+	if _, err = in.Next(); err != nil {
 		return err
 	}
 
-	if stdinBytes, err = ioutil.ReadAll(tr); err != nil {
-		return err
-	}
-
-	if testMapBytes, err = ioutil.ReadAll(testMap); err != nil {
+	var tmap []byte
+	if tmap, err = ioutil.ReadAll(testrc); err != nil {
 		return
 	}
 
-	var m Map
-	if err = json.Unmarshal(testMapBytes, &m); err != nil {
+	var m model.Map
+	if err = json.Unmarshal(tmap, &m); err != nil {
 		return
 	}
-	moves, err := testRobot(m, string(stdinBytes))
+
+	tr, err := testRobot(&m, in)
 	if err != nil {
 		// TODO(victorbalan): Pass the error to the ws so the client knows what he's doing wrong
 		return
 	}
-	return marshalJSON(&sub, moves)
-}
 
-type Position struct {
-	X,
-	Y int
-}
-
-func (p Position) Equals(pos Position) bool {
-	return p.X == pos.X && p.Y == pos.Y
-}
-
-type TypedPosition struct {
-	Position
-	Type string
-}
-
-func (p TypedPosition) move(d int) TypedPosition {
-	tp := p
-	tp.Type = "MOVE"
-	switch d {
-	case up:
-		tp.X--
-	case down:
-		tp.X++
-	case left:
-		tp.Y--
-	case right:
-		tp.Y++
+	if _, err = tr.PutWithParent(ctx, sub.Key); err != nil {
+		return
 	}
-	return tp
+	return marshalJSON(&sub, tr.Moves)
 }
 
-func (move *TypedPosition) validate(m Map) bool {
-	if move.X < 0 || move.Y < 0 || move.X > m.Max.X || move.X > m.Max.Y {
-		move.Type = "OUT_OF_BOUNDS"
-		return false
-	}
-	for _, val := range m.Obstacles {
-		if move.X == val.X && move.Y == val.Y {
-			move.Type = "HIT_OBSTACLE"
-			return false
+func testRobot(m *model.Map, in io.Reader) (tr model.RobotTestResults, err error) {
+	tr.Moves = append(tr.Moves, model.RobotLogEntry{Position: m.Start, Event: model.Move})
+	direction := model.Right
+	r := bufio.NewReader(in)
+	var picks []int
+	for {
+		current, err := r.ReadBytes('\n')
+		if len(current) == 0 {
+			break
+		} else if err != nil && err != io.EOF {
+			return tr, err
 		}
-	}
-	return true
-}
 
-type Moves []TypedPosition
+		current = bytes.ToLower(current)
+		current = bytes.TrimSuffix(current, []byte("\n"))
 
-func (m Moves) last() TypedPosition {
-	return m[len(m)-1]
-}
-
-func (mv Moves) validate(pos int, m Map) bool {
-	return (&mv[pos]).validate(m)
-}
-
-type Map struct {
-	Start     Position
-	Finish    Position
-	Coins     []Position
-	Obstacles []Position
-	Max       Position
-}
-
-const (
-	up = iota
-	right
-	down
-	left
-)
-
-func turnLeft(d int) int {
-	d--
-	if d < 0 {
-		d = left
-	}
-	return d
-}
-
-func turnRight(d int) int {
-	d++
-	if d > 3 {
-		d = up
-	}
-	return d
-}
-
-func testRobot(m Map, in string) (moves []TypedPosition, err error) {
-	moves = append(moves, TypedPosition{Position: m.Start, Type: "MOVE"})
-
-	in = strings.ToLower(in)
-	commands := strings.Split(in, "\n")
-
-	direction := right
-
-	for counter, val := range commands {
-		c := strings.Split(val, " ")
-		switch c[0] {
+		c := bytes.Split(current, []byte(" "))
+		switch string(c[0]) {
 		case "move":
-			n, err := strconv.Atoi(c[1])
-			if err != nil {
-				return moves, errors.New("bad move argument")
+			if len(c) < 2 {
+				return tr, errors.New("move missing parameter")
 			}
-			nextIsPick := !((counter < len(commands)-1 && commands[counter+1] != "PICK") || counter > len(commands))
-			var ok bool
-			moves, ok = move(moves, n, direction, m, nextIsPick)
-			if !ok {
-				return moves, nil
+
+			n, err := strconv.Atoi(string(c[1]))
+			if err != nil {
+				return tr, err
+			}
+
+			if ok := move(&tr, n, direction, m); !ok {
+				return tr, nil
 			}
 		case "right":
 			direction = turnRight(direction)
 		case "left":
 			direction = turnLeft(direction)
 		case "pick":
-			moves = pick(moves, m.Coins)
+			tr.Moves = append(tr.Moves, tr.Moves[len(tr.Moves)-1])
+			picks = append(picks, len(tr.Moves)-1)
 		default:
-			return moves, errors.New("bad command")
+			return tr, errors.New("bad command")
 		}
 	}
-	return
+	if m.Finish == tr.Moves[len(tr.Moves)-1].Position {
+		tr.ReachedFinish = true
+	}
+
+	picked := 0
+	for _, pick := range picks {
+		if m.CoinAt(tr.Moves[pick].Position) {
+			picked++
+			tr.Moves[pick].Event = model.Picked
+		} else {
+			tr.Failed = true
+			tr.Moves[pick].Event = model.WrongPick
+		}
+	}
+	if picked != len(m.Coins) {
+		tr.Failed = true
+	}
+	return tr, nil
 }
 
-func pick(moves Moves, coins []Position) []TypedPosition {
-	pos := moves.last()
-	if !isCoin(pos.Position, coins) {
-		pos.Type = "WRONG_PICK"
-	} else {
-		pos.Type = "PICKED"
-	}
-	moves[len(moves)-1] = pos
-	return moves
-}
+func move(tr *model.RobotTestResults, n int, direction model.RobotDirection, m *model.Map) bool {
+	for n > 0 {
+		n--
 
-func move(moves Moves, n, direction int, m Map, nextIsPick bool) ([]TypedPosition, bool) {
-	for i := 0; i < n; i++ {
-		moves = append(moves, moves.last().move(direction))
-		if !moves.validate(len(moves)-1, m) {
-			return moves, false
+		i := len(tr.Moves) - 1
+		tr.Moves = append(tr.Moves, tr.Moves[i].Move(direction))
+		i++
+
+		if tr.Moves[i].Validate(m) {
+			continue
 		}
 
-		if isCoin(moves.last().Position, m.Coins) && (!nextIsPick || i < n-1) {
-			move := moves.last()
-			move.Type = "MISSED_COIN"
-			moves[len(moves)-1] = move
-		}
+		tr.Failed = true
+		tr.ReachedFinish = false
+		return false
 	}
-	return moves, true
-}
-
-func isCoin(pos Position, coins []Position) bool {
-	for _, val := range coins {
-		if pos.Equals(val) {
-			return true
-		}
-	}
-	return false
+	return true
 }
