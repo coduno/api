@@ -34,7 +34,6 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 	}{}
 
 	p, ok := passenger.FromContext(ctx)
-
 	if !ok {
 		return http.StatusUnauthorized, nil
 	}
@@ -73,8 +72,17 @@ func CreateResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (
 	}
 
 	if len(resultKeys) == 1 {
-		json.NewEncoder(w).Encode(results[0].Key(resultKeys[0]))
-		return http.StatusOK, nil
+		var u model.User
+		if err = datastore.Get(ctx, p.User, &u); err != nil {
+			return http.StatusInternalServerError, nil
+		}
+
+		if results[0].Finished.Equal(time.Time{}) || u.Company != nil {
+			json.NewEncoder(w).Encode(results[0].Key(resultKeys[0]))
+			return http.StatusOK, nil
+		}
+
+		return http.StatusForbidden, errors.New("you already finished this challenge")
 	}
 
 	var challenge model.Challenge
