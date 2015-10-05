@@ -6,13 +6,14 @@ import (
 	"encoding/xml"
 	"io"
 	"io/ioutil"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/coduno/api/model"
 	"github.com/fsouza/go-dockerclient"
 	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/log"
 )
 
 func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (*model.JunitTestResult, error) {
@@ -63,7 +64,7 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 	go func() {
 		errc <- dc.DownloadFromContainer(c.ID, docker.DownloadFromContainerOptions{
 			Path:         "/run/target/surefire-reports/TEST-test.ControllerTestApplicationTests.xml",
-			OutputStream: io.MultiWriter(dpw, os.Stderr),
+			OutputStream: dpw,
 		})
 	}()
 
@@ -76,6 +77,7 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 	if err != nil {
 		return nil, err
 	}
+
 	buf = bytes.Replace(buf, []byte(`version="1.1"`), []byte(`version="1.0"`), 1)
 
 	tr := tar.NewReader(bytes.NewReader(buf))
@@ -106,6 +108,7 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 		// that no XML file was found.
 		return nil, err
 	}
+	log.Debugf(ctx, "Spring runner done %+v", testResults)
 
 	return testResults, <-errc
 }

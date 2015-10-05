@@ -420,7 +420,7 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 		},
 		Templates: templateHelper(map[string][]string{"java": []string{"spring-integration/UserController.java"}}),
 		Languages: []string{"java"},
-		Tasker:    int64(-1),
+		Tasker:    int64(0),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
