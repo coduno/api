@@ -373,6 +373,8 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 		panic(err)
 	}
 
+	testsForTaskTwo(ctx, taskTwo)
+
 	taskThree, err := model.Task{
 		Assignment: model.Assignment{
 			Name:        "Building a Spring Controller",
@@ -418,13 +420,20 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 		},
 		Templates: templateHelper(map[string][]string{"java": []string{"spring-integration/UserController.java"}}),
 		Languages: []string{"java"},
-		Tasker:    int64(test.SpringInt),
+		Tasker:    int64(-1),
 	}.Put(ctx, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	testsForTaskTwo(ctx, taskTwo)
+	model.Test{
+		Name:   "Controller Tests",
+		Tester: int64(test.SpringInt),
+		Params: map[string]string{
+			"imageSuffix": "spring-integration",
+			"shouldFail":  "false",
+		},
+	}.PutWithParent(ctx, taskThree)
 
 	_, err = model.Challenge{
 		Assignment: model.Assignment{
