@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -177,36 +178,40 @@ func deal(ctx context.Context, w http.ResponseWriter, r *http.Request, status in
 		status = http.StatusInternalServerError
 	}
 
-	msg := "Sorry, Coduno encountered an error: " + http.StatusText(status) + "\n\n"
-	msg += "If you think this is a bug, please consider filing\n"
-	msg += "it at https://github.com/coduno/api/issues\n\n"
+	codunoError := struct {
+		Message,
+		Reason,
+		RequestID,
+		StatusText,
+		Trace string
+		Status int
+	}{}
 
+	codunoError.Status = status
+	codunoError.StatusText = http.StatusText(status)
 	if ctx != nil {
-		msg += "Your request ID is " + appengine.RequestID(ctx) + " (important to track down what went wrong)\n\n"
-	}
-
-	// If we don't have an error it's really hard to make sense.
-	if err == nil {
-		w.WriteHeader(status)
-		w.Write([]byte(msg))
-		return
-	}
-
-	if t, ok := err.(trace); ok {
-		msg += "Trace:\n"
-		msg += strings.Replace(string(t.t), "\n", "\n\t", -1)
-		msg += "\n"
-		err = t.e
-	}
-
-	if appengine.IsOverQuota(err) {
-		msg += "Reason: Over Quota"
-	} else if appengine.IsTimeoutError(err) {
-		msg += "Reason: Timeout Error"
-	} else {
-		msg += fmt.Sprintf("Reason: %s", err)
+		codunoError.RequestID = appengine.RequestID(ctx)
 	}
 
 	w.WriteHeader(status)
-	w.Write([]byte(msg))
+
+	// If we don't have an error it's really hard to make sense.
+	if err == nil {
+		json.NewEncoder(w).Encode(codunoError)
+		return
+	}
+
+	if appengine.IsOverQuota(err) {
+		codunoError.Reason = "Over Quota"
+	} else if appengine.IsTimeoutError(err) {
+		codunoError.Reason = "Timeout Error"
+	} else {
+		codunoError.Reason = err.Error()
+	}
+
+	if t, ok := err.(trace); ok {
+		codunoError.Trace = strings.Replace(string(t.t), "\n", "\n\t", -1)
+	}
+
+	json.NewEncoder(w).Encode(codunoError)
 }
