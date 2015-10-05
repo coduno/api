@@ -356,7 +356,7 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 				"* `void empty()` Remove all items from the tree.\n",
 			Duration: time.Hour,
 			Endpoints: model.Endpoints{
-				WebInterface: "javaut-task",
+				WebInterface: "coder-javaut-task",
 			},
 		},
 		SkillWeights: model.SkillWeights{

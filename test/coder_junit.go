@@ -38,9 +38,26 @@ func coderJunit(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmissio
 		JunitTestResult: *tr,
 		ShouldFail:      shouldFail,
 	}
+
 	if _, err = ctr.Put(ctx, nil); err != nil {
 		return
 	}
 
-	return marshalJSON(&sub, ctr)
+	return marshalJSON(&sub, processResult(t, ctr))
+}
+
+func processResult(t model.KeyedTest, result model.CoderJunitTestResult) (ts model.TestStats) {
+	ts = model.TestStats{
+		Stdout: result.Stdout,
+		Test:   t.Key,
+	}
+
+	if result.Results.Tests == 0 {
+		ts.Stderr = result.Stderr
+		ts.Failed = true
+		return
+	}
+
+	ts.Failed = result.ShouldFail == (result.Results.Failures == 0)
+	return
 }
