@@ -19,16 +19,17 @@ const (
 	// Time allowed to write messages to the client.
 	// If a write takes longer than this duration, the connection
 	// is declared dead and removed from the global pool.
-	writeWait = 10 * time.Second
+	writeWait = 300 * time.Second
 
 	// Time allowed to read the next pong message from the client.
 	// If there is no pong received after this duration, the connection
 	// is declared dead and removed from the global pool.
-	pongWait = 30 * time.Second
+	pongWait = 900 * time.Second
 
 	// Send pings to client with this period. Must be less than pongWait to
 	// allow for a full roundtrip.
-	pingPeriod = (pongWait * 9) / 10
+	// pingPeriod = (pongWait * 9) / 10
+	pingPeriod = 10 * time.Second
 )
 
 // ErrNoSocket is returned if there could be no WebSocket found for some key.
@@ -102,7 +103,8 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Advance deadline if we receive a pong.
 	// TODO(flowlo): maybe check whether the contents of the
 	// message actually match those of a pending ping.
-	ws.SetPongHandler(func(_ string) error {
+	ws.SetPongHandler(func(s string) error {
+		log.Debugf(appengine.BackgroundContext(), "ws: pong %x for %s(%d %q) sent", s, id.kind, id.intID, id.stringID)
 		return ws.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
