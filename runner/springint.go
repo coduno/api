@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/coduno/api/model"
-	"github.com/coduno/api/util"
 	"github.com/fsouza/go-dockerclient"
 	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/log"
 )
 
-func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, error) {
-	image := newImage("javaut")
+func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (*model.JunitTestResult, error) {
+	image := newImage("spring-integration")
 
 	if err := prepareImage(image); err != nil {
 		return nil, err
@@ -28,16 +29,8 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	}
 
 	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
-		Path:        "/run/src/test/java/",
-		InputStream: tests,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = dc.UploadToContainer(c.ID, docker.UploadToContainerOptions{
-		Path:        "/run/src/main/java/",
-		InputStream: code,
+		Path:        "/run/src/main/java/test/controller/",
+		InputStream: ball,
 	})
 	if err != nil {
 		return nil, err
@@ -59,11 +52,10 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	}
 
 	testResults := &model.JunitTestResult{
-		Stdout:   stdout.String(),
-		Stderr:   stderr.String(),
-		Start:    start,
-		End:      end,
-		Endpoint: "junit-result",
+		Stdout: stdout.String(),
+		Stderr: stderr.String(),
+		Start:  start,
+		End:    end,
 	}
 
 	errc := make(chan error)
@@ -71,7 +63,7 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 
 	go func() {
 		errc <- dc.DownloadFromContainer(c.ID, docker.DownloadFromContainerOptions{
-			Path:         util.JUnitResultsPath,
+			Path:         "/run/target/surefire-reports/TEST-test.ControllerTestApplicationTests.xml",
 			OutputStream: dpw,
 		})
 	}()
@@ -83,8 +75,9 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	// and directly stream without buffering.
 	buf, err := ioutil.ReadAll(dpr)
 	if err != nil {
-		return testResults, err
+		return nil, err
 	}
+
 	buf = bytes.Replace(buf, []byte(`version="1.1"`), []byte(`version="1.0"`), 1)
 
 	tr := tar.NewReader(bytes.NewReader(buf))
@@ -93,19 +86,29 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
+			// We reached EOF, so this loop has no
+			// chance to continue. Later reads from
+			// err will EOF too, which is acceptable.
 			break
 		}
 		if err != nil {
-			return testResults, err
+			return nil, err
 		}
 		if strings.HasSuffix(h.Name, ".xml") {
+			// We're definitely looking for an XML
+			// file, so skip everything else.
 			break
 		}
 	}
 
 	if err := d.Decode(&testResults.Results); err != nil {
-		return testResults, err
+		// Decode might very well error, for
+		// example with the EOF from above.
+		// This at the same time indicates
+		// that no XML file was found.
+		return nil, err
 	}
+	log.Debugf(ctx, "Spring runner done %+v", testResults)
 
 	return testResults, <-errc
 }

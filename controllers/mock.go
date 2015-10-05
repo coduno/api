@@ -283,7 +283,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Name:   "Correct alg",
 		Tester: int64(test.CoderJunit),
 		Params: map[string]string{
-			"code":        "primes/v1/",
+			"code":        "primes/v1/Application.java",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 			"shouldFail":  "false",
@@ -294,7 +294,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Name:   "Broken alg",
 		Tester: int64(test.CoderJunit),
 		Params: map[string]string{
-			"code":        "primes/v2/",
+			"code":        "primes/v2/Application.java",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 			"shouldFail":  "true",
@@ -307,16 +307,10 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.ResponseWriter, req *http.Request) {
 	taskOne, err := model.Task{
 		Assignment: model.Assignment{
-			Name:        "CoinBot",
-			Description: "CoinBot is a simple remote-controlled robot. He is placed in a big hall, that contains coins. His task is to collect all coins and return to the position he started from.",
-			Instructions: `You are given an overview of the hall that ConBot is placed in.
-			  	Furthermore, you'll controll him by issuing simple commands. You can tell CoinBot to move forward, by using the "move n"
-			   	command where n is the number of fields he should move. Also, you can make him turn left or right
-		 			by using the commands "left" and "right" respectively. If CoinBot is at the location of a coin, you need to
-		 			instruct him to pick up the coin with the command "pick". You can make CoinBot carry out your commands by hitting the arrow.
-				 	If you do this repeatedly, it will cause a reset of the game, so that you always start with the same environment.
-			 		Once CoinBot has fulfilled his mission, you will automatically advance to the next task.`,
-			Duration: time.Hour,
+			Name:         "CoinBot",
+			Description:  "CoinBot is a simple remote-controlled robot. He is placed in a big hall, that contains coins. His task is to collect all coins and return to the position he started from.",
+			Instructions: "You are given an overview of the hall that CoinBot is placed in. Furthermore, you'll controll him by issuing simple commands. You can tell CoinBot to move forward, by using the `move n` command where `n` is the number of fields he should move. Also, you can make him turn left or right by using the commands `left` and `right` respectively. If CoinBot is at the location of a coin, you need to instruct him to pick up the coin with the command `pick`. You can make CoinBot carry out your commands by hitting the arrow. If you do this repeatedly, it will cause a reset of the game, so that you always start with the same environment. Once CoinBot has fulfilled his mission, you will automatically advance to the next task.",
+			Duration:     time.Hour,
 			Endpoints: model.Endpoints{
 				WebInterface: "canvas-game-task",
 			},
@@ -348,17 +342,18 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 		Assignment: model.Assignment{
 			Name:        "AvlTree",
 			Description: "AvlTree",
-			Instructions: `Your task is to write Junit unit tests for an [AvlTree](https://en.wikipedia.org/wiki/AVL_tree) implementation.
-			Below you are given the signatures and descriptions of all public operations of the AvlTree class.
-			 * void insert(int k)	 	Insert k if it doesn't exist. Duplicates will be ignored.
-			 * void remove(int k)	 	Remove x if it exists.
-			 * int size()		 	 	Return number of vertexes.
-			 * boolean contains(int k) 	Returns true if a vertex with value k exists in the tree, false otherwise.
-			 * int findMinimum()    	Returns the smallest value in the tree. If the tree is empty, will return Integer.MIN_VALUE.
-			 * int findMaximum()    	Returns the highest value in the tree. If the tree is empty, will return Integer.MIN_VALUE.
-			 * boolean isEmpty( )       Return true if the tree is empty, false otherwise.
-			 * void empty( )    		Remove all items from the tree.
-			`,
+			Instructions: "Your task is to write Junit unit tests for an [AvlTree](https://en.wikipedia.org/wiki/AVL_tree) implementation.\n" +
+				"\n" +
+				"Below you are given the signatures and descriptions of all public operations of the AvlTree class.\n" +
+				"\n" +
+				"* `void insert(int k)` Insert k if it doesn't exist. Duplicates will be ignored.\n" +
+				"* `void remove(int k)`	Remove x if it exists.\n" +
+				"* `int size()` Return number of vertexes.\n" +
+				"* `int findMinimum()` Returns the smallest value in the tree. If the tree is empty, will return Integer.MIN_VALUE.\n" +
+				"* `boolean contains(int k)` Returns true if a vertex with value k exists in the tree, false otherwise.\n" +
+				"* `int findMaximum()` Returns the highest value in the tree. If the tree is empty, will return Integer.MIN_VALUE.\n" +
+				"* `boolean isEmpty()` Return true if the tree is empty, false otherwise.\n" +
+				"* `void empty()` Remove all items from the tree.\n",
 			Duration: time.Hour,
 			Endpoints: model.Endpoints{
 				WebInterface: "javaut-task",
@@ -380,6 +375,66 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 
 	testsForTaskTwo(ctx, taskTwo)
 
+	taskThree, err := model.Task{
+		Assignment: model.Assignment{
+			Name:        "Building a Spring Controller",
+			Description: "Building a Spring Controller",
+			Instructions: "This exercise is about building a [Spring Controller MVC](https://spring.io/guides/gs/serving-web-content/). You should be familiar with the Model-View-Controller pattern and RESTful APIs.\n" +
+				"\n" +
+				"We provide you a service that encapsulates the logic, you are only responsible for building a RESTful API around it. The following endpoints are expected:\n" +
+				"\n" +
+				"API:\n" +
+				"\n" +
+				"* `/user/list` returning a JSON list, the data should be fetched from `userService.listUsers()`\n" +
+				"* `/user/list?filter=asdf` returning a JSON list, the data should be fetched from `userService.listUsers(asdf)`\n" +
+				"* `/user/create` for creating users. A user has two attributes, **username** and **email**. A valid **username** is at least 2 characters long, and 30 characters at max. The **email** should be validated as well, it is not necessary to have a fully 100% compliant RFC 2822 validator, but completely invalid email addresses should not pass. Those constraints shall be checked before sending them to the service. If the request is not well-formed, return an appropriate (RESTful) error. This endpoint should be implemented using the HTTP POST method.\n" +
+				"* `/user/delete/X` should delete the user with the identifier X, X has to be a value of the type `Long`. If no user is found, return an appropriate error.\n" +
+				"* `/user/update` is similar to `/user/create`. It updates already existing records. This endpoint should be implemented using the HTTP PUT method.\n" +
+				"\n" +
+				"User Interface:\n" +
+				"\n" +
+				"* `/user` should display a view named `userview`. The corresponding model should contain a `msg` attribute with the value `test`\n" +
+				"* `/` should redirect the users browser to `/user`\n" +
+				"\n" +
+				"The service interface is defined as\n" +
+				"```java\n" +
+				"public interface UserService {\n" +
+				"    List<String> listUsers();\n" +
+				"    List<String> listUsers(String filter);\n" +
+				"    boolean deleteUser(Long id);\n" +
+				"    void createUser(String username, String email);\n" +
+				"    void updateUser(String username, String email);\n" +
+				"}\n" +
+				"```\n" +
+				"This interface is heavily simplified for this exercise.\n",
+			Duration: time.Hour * 2,
+			Endpoints: model.Endpoints{
+				WebInterface: "javaut-task",
+			},
+		},
+		SkillWeights: model.SkillWeights{
+			Algorithmics: 0.1,
+			Readability:  0.4,
+			Security:     0.3,
+			CodingSpeed:  0.4,
+		},
+		Templates: templateHelper(map[string][]string{"java": []string{"spring-integration/UserController.java"}}),
+		Languages: []string{"java"},
+		Tasker:    int64(0),
+	}.Put(ctx, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	model.Test{
+		Name:   "Controller Tests",
+		Tester: int64(test.SpringInt),
+		Params: map[string]string{
+			"imageSuffix": "spring-integration",
+			"shouldFail":  "false",
+		},
+	}.PutWithParent(ctx, taskThree)
+
 	_, err = model.Challenge{
 		Assignment: model.Assignment{
 			Name:        "Frequentis hiring challenge",
@@ -396,6 +451,7 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 		Tasks: []*datastore.Key{
 			taskOne,
 			taskTwo,
+			taskThree,
 		},
 		Resulter: int64(logic.Average),
 	}.PutWithParent(ctx, coduno)
@@ -409,7 +465,7 @@ func testsForTaskTwo(ctx context.Context, taskTwo *datastore.Key) {
 		Name:   "v1",
 		Tester: int64(test.CoderJunit),
 		Params: map[string]string{
-			"code":        "avl/v1/",
+			"code":        "avl/v1/AvlTree.java",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 			"shouldFail":  "false",
@@ -421,7 +477,7 @@ func testsForTaskTwo(ctx context.Context, taskTwo *datastore.Key) {
 			Name:   v,
 			Tester: int64(test.CoderJunit),
 			Params: map[string]string{
-				"code":        "avl/" + v + "/",
+				"code":        "avl/" + v + "/AvlTree.java",
 				"resultPath":  "/run/build/test-results/",
 				"imageSuffix": "javaut",
 				"shouldFail":  "true",

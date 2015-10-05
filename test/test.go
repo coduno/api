@@ -23,6 +23,7 @@ const (
 	IO
 	Robot
 	CoderJunit
+	SpringInt
 	maxTester
 )
 
