@@ -57,16 +57,7 @@ func processResult(t model.KeyedTest, result model.CoderJunitTestResult) (ts mod
 		ts.Failed = true
 		return
 	}
-	var failed bool
-	if result.ShouldFail && result.Results.Failures == 0 {
-		failed = true
-	} else if result.ShouldFail && result.Results.Failures > 0 {
-		failed = false
-	} else if !result.ShouldFail && result.Results.Failures == 0 {
-		failed = false
-	} else {
-		failed = true
-	}
-	ts.Failed = failed
+
+	ts.Failed = result.ShouldFail == (result.Results.Failures == 0)
 	return
 }
