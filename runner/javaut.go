@@ -82,7 +82,14 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	tr := tar.NewReader(bytes.NewReader(buf))
 	d := xml.NewDecoder(tr)
 
-	var testResults *model.JunitTestResult
+	testResults := &model.JunitTestResult{
+		Stdout:   stdout.String(),
+		Stderr:   stderr.String(),
+		Start:    start,
+		End:      end,
+		Endpoint: "junit-result",
+	}
+
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
@@ -99,15 +106,13 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 		if err := d.Decode(&utr); err != nil {
 			return nil, err
 		}
-		testResults = &model.JunitTestResult{
-			Stdout:   stdout.String(),
-			Results:  utr,
-			Stderr:   stderr.String(),
-			Start:    start,
-			End:      end,
-			Endpoint: "junit-result",
-		}
+		testResults.Results = utr
 	}
 
-	return testResults, <-errc
+	derr := <-errc
+	if derr != nil && stderr.String() == "" {
+		//Tests are missing.
+		testResults.Stderr = "There are no tests to run."
+	}
+	return testResults, nil
 }
