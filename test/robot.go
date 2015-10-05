@@ -59,8 +59,11 @@ func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ba
 
 	tr, err := testRobot(&m, in)
 	if err != nil {
-		// TODO(victorbalan): Pass the error to the ws so the client knows what he's doing wrong
-		return
+		return marshalJSON(&sub, struct {
+			Error string
+		}{
+			Error: err.Error(),
+		})
 	}
 
 	if _, err = tr.PutWithParent(ctx, sub.Key); err != nil {
