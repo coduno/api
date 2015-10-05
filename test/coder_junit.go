@@ -1,14 +1,12 @@
 package test
 
 import (
-	"encoding/json"
 	"io"
 	"strconv"
 
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/runner"
 	"github.com/coduno/api/util"
-	"github.com/coduno/api/ws"
 	"golang.org/x/net/context"
 )
 
@@ -44,9 +42,5 @@ func coderJunit(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmissio
 		return
 	}
 
-	var body []byte
-	if body, err = json.Marshal(ctr); err != nil {
-		return
-	}
-	return ws.Write(sub.Key.Parent(), body)
+	return marshalJSON(&sub, ctr)
 }
