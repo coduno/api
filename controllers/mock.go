@@ -361,7 +361,7 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 			`,
 			Duration: time.Hour,
 			Endpoints: model.Endpoints{
-				WebInterface: "javaut-task",
+				WebInterface: "coder-javaut-task",
 			},
 		},
 		SkillWeights: model.SkillWeights{
