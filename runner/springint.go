@@ -50,6 +50,13 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 		return nil, err
 	}
 
+	testResults := &model.JunitTestResult{
+		Stdout: stdout.String(),
+		Stderr: stderr.String(),
+		Start:  start,
+		End:    end,
+	}
+
 	errc := make(chan error)
 	dpr, dpw := io.Pipe()
 
@@ -74,30 +81,30 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 	tr := tar.NewReader(bytes.NewReader(buf))
 	d := xml.NewDecoder(tr)
 
-	var testResults *model.JunitTestResult
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
+			// We reached EOF, so this loop has no
+			// chance to continue. Later reads from
+			// err will EOF too, which is acceptable.
 			break
 		}
 		if err != nil {
 			return nil, err
 		}
-		if !strings.HasSuffix(h.Name, ".xml") {
-			continue
+		if strings.HasSuffix(h.Name, ".xml") {
+			// We're definitely looking for an XML
+			// file, so skip everything else.
+			break
 		}
+	}
 
-		var utr model.UnitTestResults
-		if err := d.Decode(&utr); err != nil {
-			return nil, err
-		}
-		testResults = &model.JunitTestResult{
-			Stdout:  stdout.String(),
-			Results: utr,
-			Stderr:  stderr.String(),
-			Start:   start,
-			End:     end,
-		}
+	if err := d.Decode(&testResults.Results); err != nil {
+		// Decode might very well error, for
+		// example with the EOF from above.
+		// This at the same time indicates
+		// that no XML file was found.
+		return nil, err
 	}
 
 	return testResults, <-errc

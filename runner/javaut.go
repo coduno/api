@@ -58,6 +58,14 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 		return nil, err
 	}
 
+	testResults := &model.JunitTestResult{
+		Stdout:   stdout.String(),
+		Stderr:   stderr.String(),
+		Start:    start,
+		End:      end,
+		Endpoint: "junit-result",
+	}
+
 	errc := make(chan error)
 	dpr, dpw := io.Pipe()
 
@@ -75,38 +83,28 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	// and directly stream without buffering.
 	buf, err := ioutil.ReadAll(dpr)
 	if err != nil {
-		return nil, err
+		return testResults, err
 	}
 	buf = bytes.Replace(buf, []byte(`version="1.1"`), []byte(`version="1.0"`), 1)
 
 	tr := tar.NewReader(bytes.NewReader(buf))
 	d := xml.NewDecoder(tr)
 
-	var testResults *model.JunitTestResult
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return testResults, err
 		}
-		if !strings.HasSuffix(h.Name, ".xml") {
-			continue
+		if strings.HasSuffix(h.Name, ".xml") {
+			break
 		}
+	}
 
-		var utr model.UnitTestResults
-		if err := d.Decode(&utr); err != nil {
-			return nil, err
-		}
-		testResults = &model.JunitTestResult{
-			Stdout:   stdout.String(),
-			Results:  utr,
-			Stderr:   stderr.String(),
-			Start:    start,
-			End:      end,
-			Endpoint: "junit-result",
-		}
+	if err := d.Decode(&testResults.Results); err != nil {
+		return testResults, err
 	}
 
 	return testResults, <-errc

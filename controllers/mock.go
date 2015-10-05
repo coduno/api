@@ -283,7 +283,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Name:   "Correct alg",
 		Tester: int64(test.CoderJunit),
 		Params: map[string]string{
-			"code":        "primes/v1/",
+			"code":        "primes/v1/Application.java",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 			"shouldFail":  "false",
@@ -294,7 +294,7 @@ func Mock(w http.ResponseWriter, req *http.Request) {
 		Name:   "Broken alg",
 		Tester: int64(test.CoderJunit),
 		Params: map[string]string{
-			"code":        "primes/v2/",
+			"code":        "primes/v2/Application.java",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 			"shouldFail":  "true",
@@ -456,7 +456,7 @@ func testsForTaskTwo(ctx context.Context, taskTwo *datastore.Key) {
 		Name:   "v1",
 		Tester: int64(test.CoderJunit),
 		Params: map[string]string{
-			"code":        "avl/v1/",
+			"code":        "avl/v1/AvlTree.java",
 			"resultPath":  "/run/build/test-results/",
 			"imageSuffix": "javaut",
 			"shouldFail":  "false",
@@ -468,7 +468,7 @@ func testsForTaskTwo(ctx context.Context, taskTwo *datastore.Key) {
 			Name:   v,
 			Tester: int64(test.CoderJunit),
 			Params: map[string]string{
-				"code":        "avl/" + v + "/",
+				"code":        "avl/" + v + "/AvlTree.java",
 				"resultPath":  "/run/build/test-results/",
 				"imageSuffix": "javaut",
 				"shouldFail":  "true",
