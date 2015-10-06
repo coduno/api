@@ -25,6 +25,7 @@ deploy:
   version: staging
   verbosity: debug
   aedeploy: true
+  no_promote: true
   on:
     branch: master
     go: 1.5.1
