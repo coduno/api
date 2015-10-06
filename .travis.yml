@@ -18,10 +18,13 @@ before_install:
 
 deploy:
   provider: gae
-  default: true
+  edge:
+    source: flowlo/dpl
+    branch: aedeploy
   docker_build: local
   version: staging
   verbosity: debug
+  aedeploy: true
   on:
     branch: master
     go: 1.5.1
