@@ -41,6 +41,7 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 		return nil, err
 	}
 
+	log.Debugf(ctx, "SpringInt: Waiting for container")
 	if err := waitForContainer(c.ID); err != nil {
 		return nil, err
 	}
@@ -61,6 +62,7 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 	errc := make(chan error)
 	dpr, dpw := io.Pipe()
 
+	log.Debugf(ctx, "SpringInt: Download for container")
 	go func() {
 		errc <- dc.DownloadFromContainer(c.ID, docker.DownloadFromContainerOptions{
 			Path:         "/run/target/surefire-reports/TEST-test.ControllerTestApplicationTests.xml",
@@ -73,16 +75,19 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 	// too, so this replaces the version attribute.
 	// As soon as encoding/xml can parse XML 1.1 we can remove this
 	// and directly stream without buffering.
+	log.Debugf(ctx, "SpringInt: Before read")
 	buf, err := ioutil.ReadAll(dpr)
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf(ctx, "SpringInt: after read")
 
 	buf = bytes.Replace(buf, []byte(`version="1.1"`), []byte(`version="1.0"`), 1)
 
 	tr := tar.NewReader(bytes.NewReader(buf))
 	d := xml.NewDecoder(tr)
 
+	log.Debugf(ctx, "SpringInt: after decoder")
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
@@ -101,11 +106,13 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 		}
 	}
 
+	log.Debugf(ctx, "SpringInt: after decoding")
 	if err := d.Decode(&testResults.Results); err != nil {
 		// Decode might very well error, for
 		// example with the EOF from above.
 		// This at the same time indicates
 		// that no XML file was found.
+		log.Debugf(ctx, "SpringInt: error decoding %s", err)
 		return nil, err
 	}
 	log.Debugf(ctx, "Spring runner done %+v", testResults)
