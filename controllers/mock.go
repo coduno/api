@@ -341,10 +341,12 @@ func MockFrequentisChallenge(ctx context.Context, coduno *datastore.Key, w http.
 	taskTwo, err := model.Task{
 		Assignment: model.Assignment{
 			Name:        "AvlTree",
-			Description: "AvlTree",
-			Instructions: "Your task is to write Junit unit tests for an [AvlTree](https://en.wikipedia.org/wiki/AVL_tree) implementation.\n" +
+			Description: "Testing an Avl Tree",
+			Instructions: "Your task is to write tests for an [AVL Tree](https://en.wikipedia.org/wiki/AVL_tree) implementation. You should be familiar with writing Java unit tests using the [JUnit Framework](http://junit.org/)\n" +
+				"We provide an AVL Tree implementation and your responsibility is to test its logic. \n" +
+				"Your test suite will be run against multiple versions of the `AvlTree` class, some of which are bugged. Make sure that you cover all possible cases\n" +
 				"\n" +
-				"Below you are given the signatures and descriptions of all public operations of the AvlTree class.\n" +
+				"Below you are given the signatures and descriptions of all public operations of `AvlTree`:\n" +
 				"\n" +
 				"* `void insert(int k)` Insert k if it doesn't exist. Duplicates will be ignored.\n" +
 				"* `void remove(int k)`	Remove x if it exists.\n" +
