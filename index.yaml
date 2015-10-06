@@ -10,8 +10,47 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application.
 
+- kind: DiffTestResult
+  ancestor: yes
+  properties:
+  - name: Start
+
+- kind: JunitTestResult
+  ancestor: yes
+  properties:
+  - name: Start
+
 - kind: Result
   ancestor: yes
   properties:
   - name: Finished
     direction: desc
+
+- kind: Submission
+  ancestor: yes
+  properties:
+  - name: Start
+
+- kind: Submission
+  ancestor: yes
+  properties:
+  - name: Task
+  - name: Start
+
+- kind: Submission
+  ancestor: yes
+  properties:
+  - name: Task
+  - name: Time
+
+- kind: Submission
+  ancestor: yes
+  properties:
+  - name: Task
+  - name: Time
+    direction: desc
+
+- kind: Submission
+  ancestor: yes
+  properties:
+  - name: Time
