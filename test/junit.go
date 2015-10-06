@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"path"
 
+	"google.golang.org/appengine"
+
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/runner"
 	"github.com/coduno/api/util"
@@ -16,7 +18,9 @@ func init() {
 	RegisterTester(Junit, junit)
 }
 
-func junit(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) error {
+func junit(_ context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) error {
+	// TODO: use real context here if possible
+	ctx := appengine.BackgroundContext()
 	if _, ok := t.Params["test"]; !ok {
 		return ErrMissingParam("test")
 	}

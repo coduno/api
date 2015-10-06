@@ -62,7 +62,7 @@ func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (
 	errc := make(chan error)
 	dpr, dpw := io.Pipe()
 
-	log.Debugf(ctx, "SpringInt: Download for container")
+	log.Debugf(ctx, "SpringInt: Download from container")
 	go func() {
 		errc <- dc.DownloadFromContainer(c.ID, docker.DownloadFromContainerOptions{
 			Path:         "/run/target/surefire-reports/TEST-test.ControllerTestApplicationTests.xml",
