@@ -415,10 +415,8 @@ func MockFrequentisChallenge(ctx context.Context, company *datastore.Key, w http
 	taskThree, err := model.Task{
 		Assignment: model.Assignment{
 			Name:        "Building a Spring Controller",
-			Description: "Building a Spring Controller",
-			Instructions: "This exercise is about building a [Spring Controller MVC](https://spring.io/guides/gs/serving-web-content/). You should be familiar with the Model-View-Controller pattern and RESTful APIs.\n" +
-				"\n" +
-				"We provide you a service that encapsulates the logic, you are only responsible for building a RESTful API around it. The following endpoints are expected:\n" +
+			Description: "This exercise is about building a [Spring Controller MVC](https://spring.io/guides/gs/serving-web-content/). You should be familiar with the Model-View-Controller pattern and RESTful APIs.\n",
+			Instructions: "We provide you with a service that encapsulates logic, you are only responsible for building a RESTful API around it. The following endpoints are expected:\n" +
 				"\n" +
 				"API:\n" +
 				"\n" +
