@@ -101,7 +101,7 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
-			break
+			return testResults, nil
 		}
 		if err != nil {
 			return testResults, err
