@@ -30,8 +30,9 @@ func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission
 			StdinOnce: true,
 		},
 		HostConfig: &docker.HostConfig{
-			Privileged: false,
-			Memory:     0, // TODO(flowlo): Limit memory
+			Privileged:  false,
+			NetworkMode: "none",
+			Memory:      0, // TODO(flowlo): Limit memory
 		},
 	})
 	if err != nil {
