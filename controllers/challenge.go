@@ -3,7 +3,10 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
+	"time"
 
+	"github.com/coduno/api/dto"
 	"github.com/coduno/api/logic"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/util/passenger"
@@ -140,4 +143,109 @@ func CreateChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	json.NewEncoder(w).Encode(challenge.Key(key))
 	return http.StatusOK, nil
+}
+
+func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
+	if r.Method != "GET" {
+		return http.StatusMethodNotAllowed, nil
+	}
+
+	p, ok := passenger.FromContext(ctx)
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	var user model.User
+	if err = datastore.Get(ctx, p.User, &user); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	if user.Company == nil {
+		return http.StatusUnauthorized, nil
+	}
+
+	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	var challenge model.Challenge
+	if err = datastore.Get(ctx, key, &challenge); err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	var results []model.Result
+	resultKeys, err := model.NewQueryForResult().
+		Filter("Challenge =", key).
+		GetAll(ctx, &results)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	users := make(map[*datastore.Key]model.KeyedUser, len(results))
+	for _, val := range resultKeys {
+		var user model.User
+		if err = datastore.Get(ctx, val.Parent().Parent(), &user); err != nil {
+			return http.StatusInternalServerError, err
+		}
+		users[val] = *user.Key(val.Parent().Parent())
+	}
+
+	var cr dto.ChallengeResults
+	for i, result := range results {
+		cro := dto.ChallengeResult{
+			User: users[resultKeys[i]],
+		}
+		taskResults, err := getTaskResults(ctx, challenge, *result.Key(resultKeys[i]))
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		cro.TaskResults = taskResults
+		cro.TotalTime = getTotalTime(taskResults)
+		cr = append(cr, cro)
+	}
+
+	sort.Sort(cr)
+	json.NewEncoder(w).Encode(cr)
+
+	return http.StatusOK, nil
+}
+
+func getTotalTime(taskOverviews []dto.TaskResult) time.Duration {
+	var d time.Duration
+	for _, t := range taskOverviews {
+		d += t.CodingTime
+	}
+	return d
+}
+
+func getTaskResults(ctx context.Context, challenge model.Challenge, result model.KeyedResult) ([]dto.TaskResult, error) {
+	var results []dto.TaskResult
+	for i, task := range challenge.Tasks {
+		tro := dto.TaskResult{
+			Task: task,
+		}
+		var codingTime time.Duration
+		if i == len(challenge.Tasks)-1 {
+			codingTime = result.Finished.Sub(result.StartTimes[i])
+		} else {
+			codingTime = result.Finished.Sub(result.StartTimes[i])
+		}
+		if codingTime < 0 {
+			codingTime = 0
+		}
+
+		submissionKeys, err := model.NewQueryForSubmission().
+			Ancestor(result.Key).
+			Filter("Task = ", task).
+			KeysOnly().
+			GetAll(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+		tro.CodingTime = codingTime
+		tro.NrOfSubmissions = len(submissionKeys)
+		results = append(results, tro)
+	}
+	return results, nil
 }

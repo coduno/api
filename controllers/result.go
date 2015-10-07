@@ -147,30 +147,6 @@ func GetResultForUserChallenge(ctx context.Context, w http.ResponseWriter, r *ht
 	return http.StatusOK, nil
 }
 
-// GetResultsByChallenge queries the results for a certain challenge to be reviewed by a company.
-func GetResultsByChallenge(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
-	if r.Method != "GET" {
-		return http.StatusMethodNotAllowed, nil
-	}
-
-	key, err := datastore.DecodeKey(mux.Vars(r)["key"])
-	if err != nil {
-		return http.StatusBadRequest, err
-	}
-
-	var results model.Results
-	keys, err := model.NewQueryForResult().
-		Filter("Challenge =", key).
-		GetAll(ctx, &results)
-
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	json.NewEncoder(w).Encode(results.Key(keys))
-	return http.StatusOK, nil
-}
-
 func GetResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
