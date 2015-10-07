@@ -13,6 +13,8 @@ import (
 	"github.com/coduno/api/util"
 	"github.com/fsouza/go-dockerclient"
 	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/log"
 )
 
 func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, error) {
@@ -48,6 +50,7 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 		return nil, err
 	}
 
+	log.Debugf(ctx, "JUnit: Waiting for container")
 	if err := waitForContainer(c.ID); err != nil {
 		return nil, err
 	}
@@ -69,6 +72,7 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	errc := make(chan error)
 	dpr, dpw := io.Pipe()
 
+	log.Debugf(ctx, "JUnit: Download from container")
 	go func() {
 		errc <- dc.DownloadFromContainer(c.ID, docker.DownloadFromContainerOptions{
 			Path:         util.JUnitResultsPath,
@@ -81,15 +85,19 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	// too, so this replaces the version attribute.
 	// As soon as encoding/xml can parse XML 1.1 we can remove this
 	// and directly stream without buffering.
+	log.Debugf(ctx, "JUnit: Before read")
 	buf, err := ioutil.ReadAll(dpr)
 	if err != nil {
 		return testResults, err
 	}
+	log.Debugf(ctx, "JUnit: after read")
+
 	buf = bytes.Replace(buf, []byte(`version="1.1"`), []byte(`version="1.0"`), 1)
 
 	tr := tar.NewReader(bytes.NewReader(buf))
 	d := xml.NewDecoder(tr)
 
+	log.Debugf(ctx, "JUnit: after decoder")
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
@@ -102,10 +110,13 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 			break
 		}
 	}
+	log.Debugf(ctx, "JUnit: after decoding")
 
 	if err := d.Decode(&testResults.Results); err != nil {
+		log.Debugf(ctx, "JUnit: error decoding %+v", err)
 		return testResults, err
 	}
+	log.Debugf(ctx, "JUnit runner done %+v", testResults)
 
 	return testResults, <-errc
 }

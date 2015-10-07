@@ -96,6 +96,10 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 
 	id := ktoi(key)
 
+	if _, ok := conns.m[id]; ok {
+		die(id, errors.New("ws: duplicate websocket opened"))
+	}
+
 	conns.Lock()
 	conns.m[ktoi(key)] = ws
 	conns.Unlock()
@@ -110,7 +114,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 
 	// Periodically ping the client, so the pong handler will
 	// advance the read deadline.
-	go ping(ws, id)
+	go ping(id)
 
 	// Read infinitely. This is needed because otherwise
 	// our pong handler will never be triggered.
@@ -119,6 +123,11 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// connection dies and times out, because no pong
 	// was reveived within pongWait.
 	for {
+		ws, ok := lookup(id)
+		if !ok {
+			return
+		}
+
 		_, _, err := ws.ReadMessage()
 		if err != nil {
 			die(id, err)
@@ -129,9 +138,14 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 
 // ping will loop infinitely and send ping messages over ws. If a write takes
 // longer than writeWait, it will remove ws from the connection pool.
-func ping(ws *websocket.Conn, id id) {
+func ping(id id) {
 	b := make([]byte, 2)
 	for range time.Tick(pingPeriod) {
+		ws, ok := lookup(id)
+		if !ok {
+			return
+		}
+
 		rand.Read(b)
 		deadline := time.Now().Add(writeWait)
 		if err := ws.WriteControl(websocket.PingMessage, b, deadline); err != nil {
