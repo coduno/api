@@ -20,7 +20,7 @@ const (
 	TestsBucket    = "coduno-tests"
 	// TODO(victorbalan): Add param in the test struct to not hardcode
 	// the result file name.
-	JUnitResultsPath = "/run/build/test-results/TEST-Tests.xml"
+	JUnitResultsPath = "/run/target/surefire-reports/TEST-Tests.xml"
 )
 
 var jwtc *jwt.Config

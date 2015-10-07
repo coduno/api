@@ -113,6 +113,7 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	log.Debugf(ctx, "JUnit: after decoding")
 
 	if err := d.Decode(&testResults.Results); err != nil {
+		log.Debugf(ctx, "JUnit: error decoding %+v", err)
 		return testResults, err
 	}
 	log.Debugf(ctx, "JUnit runner done %+v", testResults)
