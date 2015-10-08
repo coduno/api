@@ -35,8 +35,9 @@ func itoc(image string) (*docker.Container, error) {
 			Image: image,
 		},
 		HostConfig: &docker.HostConfig{
-			Privileged: false,
-			Memory:     0, // TODO(flowlo): Limit memory
+			Privileged:  false,
+			NetworkMode: "none",
+			Memory:      0, // TODO(flowlo): Limit memory
 		},
 	})
 }
