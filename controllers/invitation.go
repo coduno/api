@@ -37,10 +37,16 @@ func initInvitationTemplate() error {
 // Invitation handles the creation of a new invitation and sends an e-mail to
 // the user.
 func Invitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if r.Method != "POST" {
+	switch r.Method {
+	case "POST":
+		return createInvitation(ctx, w, r)
+	case "GET":
+		return GetUsersInvitedByCompany(ctx, w, r)
+	default:
 		return http.StatusMethodNotAllowed, nil
 	}
-
+}
+func createInvitation(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if err := initInvitationTemplate(); err != nil {
 		return http.StatusInternalServerError, err
 	}
