@@ -24,6 +24,7 @@ func ChallengeByKey(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusMethodNotAllowed, nil
 	}
 
+	// TODO: create an Authorize adapter
 	p, ok := passenger.FromContext(ctx)
 	if !ok {
 		return http.StatusUnauthorized, nil

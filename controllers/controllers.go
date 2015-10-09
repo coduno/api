@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coduno/api/db"
 	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
@@ -22,6 +23,38 @@ var router = mux.NewRouter()
 
 func Handler() http.Handler {
 	return router
+}
+
+func decode(r *http.Request, dst interface{}) error {
+	if err := json.NewDecoder(r.Body).Decode(&dst); err != nil {
+		return err
+	}
+	return nil
+}
+
+type SimpleContextHandlerFunc func(context.Context, http.ResponseWriter, *http.Request)
+
+func (h SimpleContextHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if p := recover(); p != nil {
+			deal(nil, w, r, http.StatusInternalServerError, errors.New(fmt.Sprint(p)))
+		}
+	}()
+
+	ctx := appengine.NewContext(r)
+	hsts(w)
+	if !cors(w, r) {
+		return
+	}
+
+	// Add authentication metadata.
+	ctx, err := passenger.NewContextFromRequest(ctx, r)
+	if err != nil {
+		deal(ctx, w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	h(ctx, w, r)
 }
 
 // ContextHandlerFunc is similar to a http.HandlerFunc, but also gets passed
@@ -164,6 +197,20 @@ func tracable(err error) error {
 	return r
 }
 
+func respond(ctx context.Context, w http.ResponseWriter, r *http.Request, status int, data interface{}) {
+	if err, ok := data.(error); ok || status < 200 || status >= 300 {
+		deal(ctx, w, r, status, err)
+		return
+	}
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(status)
+	io.Copy(w, &buf)
+}
+
 // deal makes the response in error cases somewhat nicer. It will try
 // to figure out what actually went wrong and inform the user.
 // It should not be called if the request went fine. If status is below
@@ -175,7 +222,12 @@ func deal(ctx context.Context, w http.ResponseWriter, r *http.Request, status in
 	// Also, if the status is the zero value, assume that we're dealing
 	// with an internal server error.
 	if err != nil && status < 400 || status == 0 {
-		status = http.StatusInternalServerError
+		switch err {
+		case db.NotValid:
+			status = http.StatusBadRequest
+		default:
+			status = http.StatusInternalServerError
+		}
 	}
 
 	codunoError := struct {
