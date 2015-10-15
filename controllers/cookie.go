@@ -49,7 +49,6 @@ func putCookie(ctx context.Context, w http.ResponseWriter, r *http.Request) (int
 		Expires:  token.Expiry,
 	})
 
-	w.Write([]byte("OK"))
 	return http.StatusOK, nil
 }
 
