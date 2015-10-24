@@ -15,3 +15,7 @@ type Company struct {
 	// on GitHub/Twitter/...
 	Nick string `datastore:",index",json:",omitempty"`
 }
+
+func (c Company) IsValid() bool {
+	return true
+}

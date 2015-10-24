@@ -1,56 +1,49 @@
 package controllers
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"golang.org/x/net/context"
 
-	"google.golang.org/appengine/datastore"
-
+	"github.com/coduno/api/db"
 	"github.com/coduno/api/model"
 )
 
 func init() {
-	router.Handle("/companies", ContextHandlerFunc(PostCompany))
+	router.Handle("/companies", SimpleContextHandlerFunc(PostCompany)).Methods("POST")
 	router.Handle("/companies/{key}/challenges", ContextHandlerFunc(GetChallengesForCompany))
 	router.Handle("/companies/{key}/users", ContextHandlerFunc(GetUsersByCompany))
 }
 
 // PostCompany creates a new company after validating by key.
-func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if r.Method != "POST" {
-		return http.StatusMethodNotAllowed, nil
+func PostCompany(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	var c model.Company
+	if err := decode(r, &c); err != nil {
+		respond(ctx, w, r, http.StatusBadRequest, err)
+		return
+	}
+	if !c.IsValid() {
+		respond(ctx, w, r, http.StatusBadRequest, db.NotValid)
+		return
 	}
 
-	var company model.Company
-	if err = json.NewDecoder(r.Body).Decode(&company); err != nil {
-		return http.StatusBadRequest, err
-	}
-
-	var companies model.Companys
-	_, err = model.NewQueryForCompany().
-		Filter("Address =", company.Address.Address).
-		Limit(1).
-		GetAll(ctx, &companies)
-
+	cs := db.NewCompanyService(ctx)
+	existing, err := cs.GetByAddress(c.Address.Address)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		respond(ctx, w, r, http.StatusInternalServerError, err)
+		return
+	}
+	if existing != nil {
+		respond(ctx, w, r, http.StatusConflict, errors.New("already registered"))
+		return
 	}
 
-	if len(companies) > 0 {
-		return http.StatusConflict, errors.New("already registered")
+	kc, err := cs.Save(c)
+	if err != nil {
+		respond(ctx, w, r, http.StatusInternalServerError, err)
+		return
 	}
 
-	var key *datastore.Key
-	if key, err = company.Put(ctx, nil); err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	// TODO(flowlo): Respond with HTTP 201 and include a
-	// location header and caching information.
-
-	json.NewEncoder(w).Encode(company.Key(key))
-	return http.StatusOK, nil
+	respond(ctx, w, r, http.StatusOK, kc)
 }
