@@ -1,10 +1,6 @@
 package model
 
-import (
-	"time"
-
-	"google.golang.org/appengine/datastore"
-)
+import "time"
 
 //go:generate generator
 
@@ -26,7 +22,7 @@ import (
 //
 type Submission struct {
 	Time     time.Time
-	Task     *datastore.Key
+	Task     int64
 	Code     StoredObject
 	Language string
 }

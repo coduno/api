@@ -1,8 +1,6 @@
 package model
 
-import (
-	"google.golang.org/appengine/datastore"
-)
+import "google.golang.org/appengine/datastore"
 
 //go:generate generator
 
@@ -23,6 +21,7 @@ type Challenge struct {
 	// affects the rendering of this Challenge with
 	// respect to the user. Therefore it must be
 	// guaranteed to be stable.
+	// TODO replace with []int64
 	Tasks []*datastore.Key `datastore:",noindex",json:",omitempty"`
 
 	// The Resulter to use to compute skills (and

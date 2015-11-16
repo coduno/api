@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	"google.golang.org/appengine/datastore"
+	"google.golang.org/cloud/datastore"
 )
 
 //go:generate generator
 
 type Test struct {
+	ID     int64
 	Tester int64
 	Name   string
 	Params map[string]string

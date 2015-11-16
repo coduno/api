@@ -16,7 +16,7 @@ type waitResult struct {
 	Err      error
 }
 
-func Simple(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (testResult model.SimpleTestResult, err error) {
+func Simple(ctx context.Context, sub model.Submission, ball io.Reader) (testResult model.SimpleTestResult, err error) {
 	image := newImage(sub.Language)
 
 	if err = prepareImage(image); err != nil {

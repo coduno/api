@@ -1,20 +1,18 @@
 package test
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
 
 	"github.com/coduno/api/model"
-	"github.com/coduno/api/ws"
 
 	"golang.org/x/net/context"
 )
 
 type Tester int
 
-type TesterFunc func(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) error
+type TesterFunc func(ctx context.Context, t model.Test, sub model.Submission, ball io.Reader) error
 
 const (
 	Simple Tester = 1 + iota
@@ -45,7 +43,7 @@ func RegisterTester(t Tester, f TesterFunc) {
 }
 
 // Call looks up a registered Resulter and calls it.
-func (t Tester) Call(ctx context.Context, test model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) error {
+func (t Tester) Call(ctx context.Context, test model.Test, sub model.Submission, ball io.Reader) error {
 	if t > 0 && t < maxTester {
 		f := testers[t]
 		if f != nil {
@@ -56,12 +54,12 @@ func (t Tester) Call(ctx context.Context, test model.KeyedTest, sub model.KeyedS
 }
 
 // marshalJSON is a helper that will write to the WebSocket identified by key.
-func marshalJSON(sub *model.KeyedSubmission, v interface{}) error {
-	ww, err := ws.NewWriter(sub.Key.Parent())
-	if err != nil {
-		return err
-	}
-	err = json.NewEncoder(ww).Encode(v)
-	ww.Close()
-	return err
+func marshalJSON(sub *model.Submission, v interface{}) error {
+	// ww, err := ws.NewWriter(sub.Key.Parent())
+	// if err != nil {
+	// 	return err
+	// }
+	// err = json.NewEncoder(ww).Encode(v)
+	// ww.Close()
+	return nil
 }

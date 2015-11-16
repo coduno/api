@@ -16,7 +16,7 @@ import (
 	"google.golang.org/appengine/log"
 )
 
-func SpringInt(ctx context.Context, sub model.KeyedSubmission, ball io.Reader) (*model.JunitTestResult, error) {
+func SpringInt(ctx context.Context, sub model.Submission, ball io.Reader) (*model.JunitTestResult, error) {
 	image := newImage("spring-integration")
 
 	if err := prepareImage(image); err != nil {

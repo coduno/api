@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/coduno/api/model"
-	"github.com/coduno/api/util"
 	"github.com/fsouza/go-dockerclient"
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/log"
 )
+
+const JUnitResultsPath = "/run/target/surefire-reports/TEST-Tests.xml"
 
 func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, error) {
 	image := newImage("javaut")
@@ -75,7 +76,7 @@ func JUnit(ctx context.Context, tests, code io.Reader) (*model.JunitTestResult, 
 	log.Debugf(ctx, "JUnit: Download from container")
 	go func() {
 		errc <- dc.DownloadFromContainer(c.ID, docker.DownloadFromContainerOptions{
-			Path:         util.JUnitResultsPath,
+			Path:         JUnitResultsPath,
 			OutputStream: dpw,
 		})
 	}()

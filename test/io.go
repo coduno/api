@@ -12,7 +12,7 @@ func init() {
 	RegisterTester(IO, iot)
 }
 
-func iot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) error {
+func iot(ctx context.Context, t model.Test, sub model.Submission, ball io.Reader) error {
 	if err := checkIoParams(t.Params); err != nil {
 		return err
 	}

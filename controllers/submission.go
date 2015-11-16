@@ -18,6 +18,7 @@ import (
 	"google.golang.org/appengine/log"
 	"google.golang.org/cloud/storage"
 
+	"github.com/coduno/api/db"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/test"
 	"github.com/coduno/api/util"
@@ -63,7 +64,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusBadRequest, errors.New("cannot submit answer for other users")
 	}
 
-	taskKey, err := datastore.DecodeKey(mux.Vars(r)["taskKey"])
+	taskId, err := strconv.ParseInt(mux.Vars(r)["task"], 10, 64)
 	if err != nil {
 		return http.StatusNotFound, err
 	}
@@ -77,10 +78,10 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusBadRequest, errors.New("missing files")
 	}
 
-	var task model.Task
-	if err = datastore.Get(ctx, taskKey, &task); err != nil {
-		return http.StatusNotFound, err
-	}
+	// var task model.Task
+	// if err = datastore.Get(ctx, taskKey, &task); err != nil {
+	// 	return http.StatusNotFound, err
+	// }
 
 	// Furthermore, the name of the GCS object is derived from the of the
 	// encapsulating Submission. To avoid race conditions, allocate an ID.
@@ -95,20 +96,17 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		Name:   nameObject(submissionKey) + "/Code/",
 	}
 	submission := model.Submission{
-		Task:     taskKey,
+		Task:     taskId,
 		Time:     time.Now(),
 		Language: detectLanguage(files),
 		Code:     storedCode,
 	}
 
-	if _, err = datastore.Put(ctx, submissionKey, &submission); err != nil {
+	if err := db.SaveSubmission(submission); err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	var tests model.Tests
-	testKeys, err := model.NewQueryForTest().
-		Ancestor(taskKey).
-		GetAll(ctx, &tests)
+	tests, err := db.LoadTestsForTask(taskId)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -119,7 +117,7 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	for i, t := range tests {
 		go func(i int, t model.Test) {
-			if err := test.Tester(t.Tester).Call(ctx, *t.Key(testKeys[i]), *submission.Key(submissionKey), prrs[i]); err != nil {
+			if err := test.Tester(t.Tester).Call(ctx, t, submission, prrs[i]); err != nil {
 				log.Warningf(ctx, "%s", err)
 			}
 		}(i, t)

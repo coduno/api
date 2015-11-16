@@ -4,12 +4,11 @@ import (
 	"io"
 	"strconv"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
 
+	"github.com/coduno/api/db"
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/runner"
-	"github.com/coduno/api/util"
 	"golang.org/x/net/context"
 )
 
@@ -17,19 +16,13 @@ func init() {
 	RegisterTester(CoderJunit, coderJunit)
 }
 
-func coderJunit(_ context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (err error) {
-	// TODO: use real context here if possible
-	ctx := appengine.BackgroundContext()
+func coderJunit(ctx context.Context, t model.Test, sub model.Submission, ball io.Reader) (err error) {
 	if _, ok := t.Params["code"]; !ok {
 		log.Debugf(ctx, "JUnit Coder Runner: missing param")
 		return ErrMissingParam("code")
 	}
 
-	code := model.StoredObject{
-		Bucket: util.TestsBucket,
-		Name:   t.Params["code"],
-	}
-	codeStream := stream(ctx, code)
+	codeStream := db.LoadFile(t.Params["code"])
 	var tr *model.JunitTestResult
 	if tr, err = runner.JUnit(ctx, ball, codeStream); err != nil {
 		log.Debugf(ctx, "JUnit Coder Runner: should fail %+v", err)
@@ -47,18 +40,18 @@ func coderJunit(_ context.Context, t model.KeyedTest, sub model.KeyedSubmission,
 		ShouldFail:      shouldFail,
 	}
 
-	if _, err = ctr.Put(ctx, nil); err != nil {
-		log.Debugf(ctx, "JUnit Coder Runner: store %+v", err)
-		return
-	}
+	// if _, err = ctr.Put(ctx, nil); err != nil {
+	// 	log.Debugf(ctx, "JUnit Coder Runner: store %+v", err)
+	// 	return
+	// }
 
 	return marshalJSON(&sub, processResult(t, ctr))
 }
 
-func processResult(t model.KeyedTest, result model.CoderJunitTestResult) (ts model.TestStats) {
+func processResult(t model.Test, result model.CoderJunitTestResult) (ts model.TestStats) {
 	ts = model.TestStats{
 		Stdout: result.Stdout,
-		Test:   t.Key,
+		Test:   t.ID,
 	}
 
 	if result.Results.Tests == 0 {

@@ -7,15 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/appengine/datastore"
-
-	"github.com/coduno/api/model"
-	"github.com/coduno/api/util"
-	"github.com/fsouza/go-dockerclient"
 	"golang.org/x/net/context"
+
+	"github.com/coduno/api/db"
+	"github.com/coduno/api/model"
+	"github.com/fsouza/go-dockerclient"
 )
 
-func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (ts model.TestStats, err error) {
+func IODiffRun(ctx context.Context, t model.Test, sub model.Submission, ball io.Reader) (ts model.TestStats, err error) {
 	image := newImage(sub.Language)
 
 	if err = prepareImage(image); err != nil {
@@ -47,11 +46,7 @@ func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission
 		return
 	}
 
-	var stdin io.ReadCloser
-	stdin, err = util.Load(util.CloudContext(ctx), util.TestsBucket, t.Params["input"])
-	if err != nil {
-		return
-	}
+	stdin := db.LoadFile(t.Params["input"])
 	defer stdin.Close()
 
 	start := time.Now()
@@ -89,10 +84,10 @@ func IODiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission
 		Endpoint: "diff-result",
 	}
 
-	return processDiffResults(ctx, sub, tr, util.TestsBucket, t.Params["output"], t.Key)
+	return processDiffResults(sub, tr, t.Params["output"], t.ID)
 }
 
-func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (ts model.TestStats, err error) {
+func OutMatchDiffRun(ctx context.Context, t model.Test, sub model.Submission, ball io.Reader) (ts model.TestStats, err error) {
 	var str model.SimpleTestResult
 	str, err = Simple(ctx, sub, ball)
 	if err != nil {
@@ -103,15 +98,11 @@ func OutMatchDiffRun(ctx context.Context, t model.KeyedTest, sub model.KeyedSubm
 		Endpoint:         "diff-result",
 	}
 
-	return processDiffResults(ctx, sub, tr, util.TestsBucket, t.Params["tests"], t.Key)
+	return processDiffResults(sub, tr, t.Params["tests"], t.ID)
 }
 
-func processDiffResults(ctx context.Context, sub model.KeyedSubmission, tr model.DiffTestResult, bucket, testFile string, test *datastore.Key) (ts model.TestStats, err error) {
-	var want io.ReadCloser
-	want, err = util.Load(util.CloudContext(ctx), bucket, testFile)
-	if err != nil {
-		return
-	}
+func processDiffResults(sub model.Submission, tr model.DiffTestResult, testFile string, test int64) (ts model.TestStats, err error) {
+	want := db.LoadFile(testFile)
 	defer want.Close()
 
 	have := strings.NewReader(tr.Stdout)
@@ -129,7 +120,7 @@ func processDiffResults(ctx context.Context, sub model.KeyedSubmission, tr model
 		Failed: !ok,
 	}
 
-	_, err = tr.PutWithParent(ctx, sub.Key)
+	// _, err = tr.PutWithParent(ctx, sub.Key)
 	return
 }
 

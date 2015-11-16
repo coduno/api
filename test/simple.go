@@ -12,7 +12,7 @@ func init() {
 	RegisterTester(Simple, simple)
 }
 
-func simple(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (err error) {
+func simple(ctx context.Context, t model.Test, sub model.Submission, ball io.Reader) (err error) {
 	str, err := runner.Simple(ctx, sub, ball)
 	if err != nil {
 		return

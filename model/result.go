@@ -25,7 +25,8 @@ type Result struct {
 
 	// Challenge refers to the challenge that this
 	// result provides data for.
-	Challenge *datastore.Key `datastore:",index",json:",omitempty"`
+	ChallengeID int64          `datastore:",index",json:",omitempty"`
+	Challenge   *datastore.Key `datastore:",index",json:",omitempty"`
 
 	// Indicates when the user has started to work on
 	// a Task (meaning as soon as the Task
@@ -44,7 +45,8 @@ type Result struct {
 	// corresponding Task.
 	//
 	// Indexed the same as Challenge.Tasks.
-	FinalSubmissions []*datastore.Key `datastore:",noindex",json:",omitempty"`
+	FinalSubmissionIDs []int64          `datastore:",noindex",json:",omitempty"`
+	FinalSubmissions   []*datastore.Key `datastore:",noindex",json:",omitempty"`
 
 	// The time when the coder started the Challenge.
 	Started time.Time `datastore:",index",json:",omitempty"`

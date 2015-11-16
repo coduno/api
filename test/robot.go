@@ -10,8 +10,8 @@ import (
 	"io/ioutil"
 	"strconv"
 
+	"github.com/coduno/api/db"
 	"github.com/coduno/api/model"
-	"github.com/coduno/api/util"
 	"golang.org/x/net/context"
 )
 
@@ -35,11 +35,8 @@ func init() {
 	RegisterTester(Robot, robot)
 }
 
-func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (err error) {
-	testrc, err := util.Load(util.CloudContext(ctx), util.TemplateBucket, t.Params["tests"])
-	if err != nil {
-		return
-	}
+func robot(ctx context.Context, t model.Test, sub model.Submission, ball io.Reader) (err error) {
+	testrc := db.LoadFile(t.Params["tests"])
 	defer testrc.Close()
 
 	in := tar.NewReader(ball)
@@ -66,9 +63,9 @@ func robot(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ba
 		})
 	}
 
-	if _, err = tr.PutWithParent(ctx, sub.Key); err != nil {
-		return
-	}
+	// if _, err = tr.PutWithParent(ctx, sub.Key); err != nil {
+	// 	return
+	// }
 	return marshalJSON(&sub, tr.Moves)
 }
 

@@ -12,7 +12,7 @@ func init() {
 	RegisterTester(Diff, diff)
 }
 
-func diff(ctx context.Context, t model.KeyedTest, sub model.KeyedSubmission, ball io.Reader) (err error) {
+func diff(ctx context.Context, t model.Test, sub model.Submission, ball io.Reader) (err error) {
 	if _, ok := t.Params["tests"]; !ok {
 		return ErrMissingParam("tests")
 	}
