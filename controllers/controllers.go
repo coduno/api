@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine"
@@ -42,9 +41,6 @@ func (h ContextHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !cors(w, r) {
 		return
 	}
-
-	// Add authentication metadata.
-	ctx, err := passenger.NewContextFromRequest(ctx, r)
 
 	buf := bufferedResponseWriter{
 		b: new(bytes.Buffer),

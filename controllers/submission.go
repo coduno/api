@@ -22,17 +22,13 @@ import (
 	"github.com/coduno/api/model"
 	"github.com/coduno/api/test"
 	"github.com/coduno/api/util"
-	"github.com/coduno/api/util/passenger"
 	"github.com/gorilla/mux"
 
 	"golang.org/x/net/context"
 )
 
 func init() {
-	router.Handle("/results/{resultKey}/tasks/{taskKey}/submissions", ContextHandlerFunc(PostSubmission))
-	router.Handle("/results/{resultKey}/finalSubmissions/{index}", ContextHandlerFunc(FinalSubmission))
-	router.Handle("/results/{resultKey}/task/{taskKey}/submissions", ContextHandlerFunc(GetSubmissionsForResult))
-	router.Handle("/submissions/{key}", ContextHandlerFunc(GetSubmissionByKey))
+	router.Handle("/results/{result}/tasks/{task}/submissions", ContextHandlerFunc(PostSubmission))
 	router.Handle("/submissions/{key}/testresults", ContextHandlerFunc(GetTestResultsForSubmission))
 }
 
@@ -40,11 +36,6 @@ func init() {
 func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "POST" {
 		return http.StatusMethodNotAllowed, nil
-	}
-
-	p, ok := passenger.FromContext(ctx)
-	if !ok {
-		return http.StatusUnauthorized, nil
 	}
 
 	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -55,13 +46,9 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return http.StatusUnsupportedMediaType, nil
 	}
 
-	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
+	_, err = strconv.ParseInt(mux.Vars(r)["result"], 10, 64)
 	if err != nil {
 		return http.StatusNotFound, err
-	}
-
-	if !util.HasParent(p.User, resultKey) {
-		return http.StatusBadRequest, errors.New("cannot submit answer for other users")
 	}
 
 	taskId, err := strconv.ParseInt(mux.Vars(r)["task"], 10, 64)
@@ -85,15 +72,15 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	// Furthermore, the name of the GCS object is derived from the of the
 	// encapsulating Submission. To avoid race conditions, allocate an ID.
-	low, _, err := datastore.AllocateIDs(ctx, model.SubmissionKind, resultKey, 1)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
+	// low, _, err := datastore.AllocateIDs(ctx, model.SubmissionKind, resultId, 1)
+	// if err != nil {
+	// return http.StatusInternalServerError, err
+	// }
 
-	submissionKey := datastore.NewKey(ctx, model.SubmissionKind, "", low, resultKey)
+	// submissionKey := datastore.NewKey(ctx, model.SubmissionKind, "", low, resultKey)
 	storedCode := model.StoredObject{
 		Bucket: util.SubmissionBucket(),
-		Name:   nameObject(submissionKey) + "/Code/",
+		// Name:   nameObject(submissionKey) + "/Code/",
 	}
 	submission := model.Submission{
 		Task:     taskId,
@@ -130,94 +117,9 @@ func PostSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return http.StatusOK, nil
 }
 
-func GetSubmissionsForResult(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if r.Method != "GET" {
-		return http.StatusMethodNotAllowed, nil
-	}
-
-	// TODO(victorbalan): Check if user is company or if user is parent of result
-	// else return http.StatusUnauthorized
-	_, ok := passenger.FromContext(ctx)
-	if !ok {
-		return http.StatusUnauthorized, nil
-	}
-
-	resultKey, err := datastore.DecodeKey(mux.Vars(r)["resultKey"])
-	if err != nil {
-		return http.StatusNotFound, err
-	}
-
-	taskKey, err := datastore.DecodeKey(mux.Vars(r)["taskKey"])
-	if err != nil {
-		return http.StatusNotFound, err
-	}
-
-	var submissions model.Submissions
-	var keys []*datastore.Key
-	keys, err = model.NewQueryForSubmission().
-		Ancestor(resultKey).
-		Filter("Task =", taskKey).
-		Order("Time").
-		GetAll(ctx, &submissions)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	json.NewEncoder(w).Encode(submissions.Key(keys))
-	return http.StatusOK, nil
-}
-
-func GetSubmissionByKey(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if r.Method != "GET" {
-		return http.StatusMethodNotAllowed, nil
-	}
-
-	// TODO(victorbalan): Check if user is company or if user is parent of result
-	// else return http.StatusUnauthorized
-	_, ok := passenger.FromContext(ctx)
-	if !ok {
-		return http.StatusUnauthorized, nil
-	}
-
-	submissionKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
-	if err != nil {
-		return http.StatusNotFound, err
-	}
-
-	var submission model.Submission
-	if err = datastore.Get(ctx, submissionKey, &submission); err != nil {
-		return
-	}
-
-	codeFilesURLs, err := util.ExposeMultiURL(ctx, submission.Code.Bucket, submission.Code.Name)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	s := struct {
-		Time     time.Time
-		CodeURLs []string
-		Language string
-	}{
-		Time:     submission.Time,
-		Language: submission.Language,
-		CodeURLs: codeFilesURLs,
-	}
-
-	json.NewEncoder(w).Encode(s)
-	return http.StatusOK, nil
-}
-
 func GetTestResultsForSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
 	if r.Method != "GET" {
 		return http.StatusMethodNotAllowed, nil
-	}
-
-	// TODO(victorbalan): Check if user is company or if user is parent of result
-	// else return http.StatusUnauthorized
-	_, ok := passenger.FromContext(ctx)
-	if !ok {
-		return http.StatusUnauthorized, nil
 	}
 
 	submissionKey, err := datastore.DecodeKey(mux.Vars(r)["key"])
@@ -397,53 +299,6 @@ func detectLanguage(files []*multipart.FileHeader) string {
 		m[ext] = cnt
 	}
 	return l
-}
-
-// FinalSubmission makes the last submission final.
-func FinalSubmission(ctx context.Context, w http.ResponseWriter, r *http.Request) (status int, err error) {
-	if r.Method != "POST" {
-		return http.StatusMethodNotAllowed, nil
-	}
-
-	p, ok := passenger.FromContext(ctx)
-	if !ok {
-		return http.StatusUnauthorized, nil
-	}
-
-	var resultKey *datastore.Key
-	if resultKey, err = datastore.DecodeKey(mux.Vars(r)["resultKey"]); err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	if !util.HasParent(p.User, resultKey) {
-		return http.StatusBadRequest, errors.New("cannot submit answer for other users")
-	}
-
-	var index int
-	if index, err = strconv.Atoi(mux.Vars(r)["index"]); err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	if len(r.URL.Query()["submissionKey"]) == 0 {
-		return http.StatusOK, nil
-	}
-	var submissionKey *datastore.Key
-	if submissionKey, err = datastore.DecodeKey(r.URL.Query()["submissionKey"][0]); err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	var result model.Result
-	if err = datastore.Get(ctx, resultKey, &result); err != nil {
-		return http.StatusInternalServerError, err
-	}
-
-	result.FinalSubmissions[index] = submissionKey
-
-	if _, err = result.Put(ctx, resultKey); err != nil {
-		return http.StatusInternalServerError, err
-	}
-	w.Write([]byte("OK"))
-	return
 }
 
 func nameObject(key *datastore.Key) string {
