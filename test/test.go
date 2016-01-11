@@ -1,11 +1,13 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
 
 	"github.com/coduno/api/model"
+	"github.com/coduno/api/ws"
 
 	"golang.org/x/net/context"
 )
@@ -55,11 +57,11 @@ func (t Tester) Call(ctx context.Context, test model.Test, sub model.Submission,
 
 // marshalJSON is a helper that will write to the WebSocket identified by key.
 func marshalJSON(sub *model.Submission, v interface{}) error {
-	// ww, err := ws.NewWriter(sub.Key.Parent())
-	// if err != nil {
-	// 	return err
-	// }
-	// err = json.NewEncoder(ww).Encode(v)
-	// ww.Close()
+	ww, err := ws.NewWriter(sub.ID)
+	if err != nil {
+		return err
+	}
+	err = json.NewEncoder(ww).Encode(v)
+	ww.Close()
 	return nil
 }

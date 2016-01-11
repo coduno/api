@@ -21,6 +21,7 @@ import "time"
 //	}
 //
 type Submission struct {
+	ID       int64
 	Time     time.Time
 	Task     int64
 	Code     StoredObject
