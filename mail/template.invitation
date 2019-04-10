@@ -1,13 +1,21 @@
 Hi {{.UserAddress.Name}},
 
-As part of the application process at {{.CompanyAddress.Name}}, you're invited to
-do a quick coding challenge.
+You are invited to test a preview version of Coduno for {{.CompanyAddress.Name}}.
 
-You can access it via
+This means you are asked to do a coding assessment that will require a range of skills
+in connection with software engineering. You might want to brush up your skills before
+taking up the challenge.
+
+Once you feel confident and have at least an hour of spare time, you can access the
+challenge via:
 
 	{{.URL}}
 
-All further information is provided there!
+As soon as you point your browser there, the challenge is on!
+
+Further instructions are provided there.
+
+If you have trouble, contact the Coduno team at +43 680 3031228.
 
 Good luck!
 Coduno

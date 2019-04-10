@@ -3,7 +3,7 @@ language: go
 sudo: required
 
 go:
-- 1.5
+- 1.5.1
 - tip
 
 services:
@@ -20,9 +20,12 @@ deploy:
   provider: gae
   edge:
     source: flowlo/dpl
-    branch: gae
-  default: true
+    branch: aedeploy
   docker_build: local
+  version: staging
+  verbosity: debug
+  aedeploy: true
+  no_promote: true
   on:
-    condition: "$(git describe --tags) = prod"
-    go: 1.5
+    branch: master
+    go: 1.5.1

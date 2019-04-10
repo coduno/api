@@ -291,7 +291,9 @@ func FromRequest(ctx context.Context, r *http.Request) (*Passenger, error) {
 		return nil, err
 	}
 	if err == nil {
-		return FromToken(ctx, cookie.Value)
+		if p, err := FromToken(ctx, cookie.Value); err == nil {
+			return p, err
+		}
 	}
 
 	auth := ""

@@ -3,6 +3,7 @@ package ws
 import (
 	"crypto/rand"
 	"errors"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -18,16 +19,17 @@ const (
 	// Time allowed to write messages to the client.
 	// If a write takes longer than this duration, the connection
 	// is declared dead and removed from the global pool.
-	writeWait = 10 * time.Second
+	writeWait = 300 * time.Second
 
 	// Time allowed to read the next pong message from the client.
 	// If there is no pong received after this duration, the connection
 	// is declared dead and removed from the global pool.
-	pongWait = 30 * time.Second
+	pongWait = 900 * time.Second
 
 	// Send pings to client with this period. Must be less than pongWait to
 	// allow for a full roundtrip.
-	pingPeriod = (pongWait * 9) / 10
+	// pingPeriod = (pongWait * 9) / 10
+	pingPeriod = 10 * time.Second
 )
 
 // ErrNoSocket is returned if there could be no WebSocket found for some key.
@@ -94,6 +96,10 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 
 	id := ktoi(key)
 
+	if _, ok := conns.m[id]; ok {
+		die(id, errors.New("ws: duplicate websocket opened"))
+	}
+
 	conns.Lock()
 	conns.m[ktoi(key)] = ws
 	conns.Unlock()
@@ -101,13 +107,14 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Advance deadline if we receive a pong.
 	// TODO(flowlo): maybe check whether the contents of the
 	// message actually match those of a pending ping.
-	ws.SetPongHandler(func(_ string) error {
+	ws.SetPongHandler(func(s string) error {
+		log.Debugf(appengine.BackgroundContext(), "ws: pong %x for %s(%d %q) sent", s, id.kind, id.intID, id.stringID)
 		return ws.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
 	// Periodically ping the client, so the pong handler will
 	// advance the read deadline.
-	go ping(ws, id)
+	go ping(id)
 
 	// Read infinitely. This is needed because otherwise
 	// our pong handler will never be triggered.
@@ -116,6 +123,11 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// connection dies and times out, because no pong
 	// was reveived within pongWait.
 	for {
+		ws, ok := lookup(id)
+		if !ok {
+			return
+		}
+
 		_, _, err := ws.ReadMessage()
 		if err != nil {
 			die(id, err)
@@ -126,9 +138,14 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 
 // ping will loop infinitely and send ping messages over ws. If a write takes
 // longer than writeWait, it will remove ws from the connection pool.
-func ping(ws *websocket.Conn, id id) {
+func ping(id id) {
 	b := make([]byte, 2)
 	for range time.Tick(pingPeriod) {
+		ws, ok := lookup(id)
+		if !ok {
+			return
+		}
+
 		rand.Read(b)
 		deadline := time.Now().Add(writeWait)
 		if err := ws.WriteControl(websocket.PingMessage, b, deadline); err != nil {
@@ -171,27 +188,23 @@ func ktoi(key *datastore.Key) id {
 	}
 }
 
-// Write picks the right WebSocket to communicate with the user owning
-// the entity references by the passed key and writes data to the socket.
-func Write(key *datastore.Key, buf []byte) error {
+// NewWriter picks the right WebSocket to communicate with the user owning
+// the entity referenced by the passed key and returns a writer suitable to
+// send a WebSocket text message.
+func NewWriter(key *datastore.Key) (io.WriteCloser, error) {
 	id := ktoi(key)
 	ws, ok := lookup(id)
 
 	if !ok {
-		return ErrNoSocket
+		return nil, ErrNoSocket
 	}
 
 	if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 		die(id, err)
-		return err
+		return nil, err
 	}
 
-	if err := ws.WriteMessage(websocket.TextMessage, buf); err != nil {
-		die(id, err)
-		return err
-	}
-
-	return nil
+	return ws.NextWriter(websocket.TextMessage)
 }
 
 // Close closes the WebSocket associated with the given key. It does not take care of
